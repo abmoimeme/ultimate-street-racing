@@ -19,6 +19,20 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 | T | Quick chat (online), then 1–9 to send |
 | P / Esc | Pause menu (graphics quality is here) |
 
+## Boosters
+Drive through the glowing rings during races and police chases:
+| Booster | What it does |
+|---|---|
+| ⚡ Turbo | Huge speed burst for a few seconds |
+| 🔋 Nitro refill | Fills your nitro tank |
+| 🛡️ Shield | No crash damage, and cops can't bust you |
+| 👻 Ghost | Drive straight through traffic |
+| 🔧 Repair | Fixes your car by 40% |
+| 💨 Smoke screen (chases) | Cops behind you slow down |
+| 📡 Radio jammer (chases) | Drops your heat level |
+
+Your rivals can grab boosters too, so race for them!
+
 ## Signing in with a player code
 - Each player gets a **player code** from the game owner, like `LION-1234`, printed on a player card.
 - Scan the QR code on the card, or open the game and type the code. You only need to do it once on each phone or computer.

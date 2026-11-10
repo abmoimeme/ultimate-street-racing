@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v0.9 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.0 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -3883,7 +3883,7 @@ function buildCity(key){
  const C=CITY[key],night=C.night,rng=mulberry(key==='tokyo'?1337:2024);setGrid(C.grid);EVENTS=C.events;logoTexCache={};MEET=null;RIDERS=[];PEOPLE=[];CARTS=[];BOATS=[];PMAT={};BLDS=[];S.ball=null;
  world=new THREE.Group();scene.add(world);makeEnv(night);
  BCELL=[];for(let i=0;i<N;i++){BCELL.push([]);for(let j=0;j<N;j++)BCELL[i].push([]);}
- RAMPS=[];TRAMPS=[];ZONES=[];COINS=[];MARKERS=[];
+ RAMPS=[];TRAMPS=[];ZONES=[];COINS=[];MARKERS=[];if(typeof BOOST!=='undefined'){BOOST.items=[];BOOST.smoke=0;}
  S.screens=[];S.expressCars=null;S.tl=null;S.skyMesh=null;
  if(night){scene.background=new THREE.Color(0x07040f);scene.fog=new THREE.FogExp2(0x1c1024,C.fog*.8);S.skyMesh=makeNightSky();world.add(S.skyMesh);S.sunDir=null;}
  else{scene.background=new THREE.Color(0xa9c9e6);scene.fog=new THREE.FogExp2(0xa8c3da,C.fog*.65);S.skyMesh=makeDaySky();if(S.skyMesh)world.add(S.skyMesh);}
@@ -4071,6 +4071,7 @@ function stepCar(c,inp,dt){
  if(!c.air){
   const dmg=.55+.45*c.health/100;let top=st.top*dmg,acc=st.accel;
   if(inp.nitro&&c.nitro>.02&&inp.throttle>0){top*=st.nosMult||1.2;acc*=1.7;c.nitro=Math.max(0,c.nitro-.3*dt);c.boosting=true;}
+  if(c.fx&&c.fx.turbo>0){top*=1.32;acc*=2.1;c.boosting=true;if(inp.throttle<=0&&vF<top*.8)vF+=acc*.6*dt;}
   if(st.launch&&vF<24)acc*=lerp(st.launch,1,Math.max(0,vF)/24);
   if(inp.throttle>0){if(vF<top)vF+=acc*inp.throttle*(1-Math.pow(Math.max(0,vF)/top,2))*dt;else vF-=(vF-top)*1.2*dt;}
   if(inp.brake>0){if(vF>.5)vF-=34*inp.brake*dt;else if(vF>-13)vF-=9*inp.brake*dt;}
@@ -4167,10 +4168,78 @@ function updateHeat(dt){const H=S.heat,p=player,v=Math.hypot(p.vx,p.vz);
  const evR=heli?115:92,need=6+H.level*1.2*(heli?1.35:1);
  if(near>evR){H.evade+=dt;if(H.evade>=need){endPursuit(true);return;}}else H.evade=Math.max(0,H.evade-dt*3);
  H.evNeed=need;
- if(near<10.5&&v<5&&!p.air){H.bust+=dt;if(H.bust>2.6){busted();return;}}else H.bust=Math.max(0,H.bust-dt*1.5);
+ if(near<10.5&&v<5&&!p.air&&!(p.fx&&p.fx.shield>0)){H.bust+=dt;if(H.bust>2.6){busted();return;}}else H.bust=Math.max(0,H.bust-dt*1.5);
  if(H.level>=3){H.rb-=dt;if(H.rb<=0){H.rb=15;spawnRoadblock();}}
  H.blocks.forEach(b=>{b.t-=dt;if(b.t<=0)b.meshes.forEach(m=>world.remove(m));});H.blocks=H.blocks.filter(b=>b.t>0);
  H.near=near;}
+
+/* ---------- BOOSTERS: glowing pickups along race routes and ahead of you during police chases ---------- */
+const BOOST_T={
+ turbo:{e:'⚡',n:'TURBO',c:0x05d9e8,d:4.5,s:'Huge speed burst!'},
+ nitro:{e:'🔋',n:'NITRO REFILL',c:0x3a7bff,d:0,s:'Nitro tank full'},
+ shield:{e:'🛡️',n:'SHIELD',c:0x39ff9f,d:8,s:'No damage · cops can’t bust you'},
+ ghost:{e:'👻',n:'GHOST',c:0xb967ff,d:5,s:'Drive right through traffic'},
+ fix:{e:'🔧',n:'REPAIR',c:0xffc23d,d:0,s:'+40% condition'},
+ smoke:{e:'💨',n:'SMOKE SCREEN',c:0xdddddd,d:6,s:'Cops behind you slow down'},
+ jammer:{e:'📡',n:'RADIO JAMMER',c:0xff2a6d,d:0,s:'Heat level drops'}};
+const BOOST_RACE=[['turbo',35],['nitro',22],['shield',15],['ghost',16],['fix',12]];
+const BOOST_CHASE=[['shield',24],['smoke',22],['jammer',14],['turbo',20],['ghost',12],['fix',8]];
+const BOOST={items:[],smoke:0,chaseT:0,seen:false,geo:null,tex:{},mats:{}};
+function boostPick(tbl){const tot=tbl.reduce((a,b)=>a+b[1],0);let r=Math.random()*tot;for(const[k,w]of tbl){r-=w;if(r<=0)return k;}return tbl[0][0];}
+function boostTex(k){if(BOOST.tex[k])return BOOST.tex[k];const t=canvasTex(128,128,(g)=>{g.clearRect(0,0,128,128);g.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(BOOST_T[k].e,64,70);});return BOOST.tex[k]=t;}
+function boostMesh(k){const T=BOOST_T[k];if(!BOOST.geo){BOOST.geo={ring:new THREE.TorusGeometry(1.15,.13,8,28),orb:new THREE.SphereGeometry(.78,18,12),beam:new THREE.CylinderGeometry(.9,.9,9,16,1,true)};Object.values(BOOST.geo).forEach(g=>SHARED_GEO.add(g));}
+ const m=BOOST.mats[k]||(BOOST.mats[k]={ring:new THREE.MeshBasicMaterial({color:T.c,toneMapped:false}),orb:new THREE.MeshBasicMaterial({color:T.c,transparent:true,opacity:.28,depthWrite:false,toneMapped:false}),
+  beam:new THREE.MeshBasicMaterial({color:T.c,map:softTex,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}),spr:new THREE.SpriteMaterial({map:boostTex(k),depthWrite:false})});
+ const g=new THREE.Group(),ring=new THREE.Mesh(BOOST.geo.ring,m.ring),orb=new THREE.Mesh(BOOST.geo.orb,m.orb),beam=new THREE.Mesh(BOOST.geo.beam,m.beam),spr=new THREE.Sprite(m.spr);
+ spr.scale.set(1.45,1.45,1);beam.position.y=3.2;g.add(ring,orb,beam,spr);g.scale.setScalar(1.3);g.userData={ring,spr};return g;}
+function boostAdd(k,x,z,src,respawn){const m=boostMesh(k);m.position.set(x,1.6,z);world.add(m);BOOST.items.push({k,x,z,m,src,respawn,off:0,ph:Math.random()*6});}
+function boostClear(src){BOOST.items=BOOST.items.filter(b=>{if(src&&b.src!==src)return true;if(b.m.parent)b.m.parent.remove(b.m);return false;});}
+function boostSpawnRace(R){const n=R.wps.length;if(R.type==='drag'){const a=R.wps[0],b=R.wps[1];boostAdd('turbo',lerp(a.x,b.x,.45),lerp(a.z,b.z,.45),'race',false);return;}
+ for(let i=0;i<n;i++){const a=R.wps[i],b=R.wps[(i+1)%n],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz);if(L<40)continue;const nx=-dz/L,nz=dx/L;const cnt=L>150?2:1;
+  for(let q=0;q<cnt;q++){const f=cnt===1?.5:(q?.7:.33),side=((i+q)%2?1:-1)*LANE*.6;boostAdd(boostPick(BOOST_RACE),a.x+dx*f+nx*side,a.z+dz*f+nz*side,'race',true);}}}
+function boostSpawnChase(){const p=player,fx=Math.sin(p.h),fz=Math.cos(p.h),alongX=Math.abs(fx)>Math.abs(fz);
+ for(let t=0;t<6;t++){const d=70+Math.random()*60;let x=p.x+fx*d,z=p.z+fz*d;if(alongX)z=nearestRoad(z).c+(Math.random()<.5?-1:1)*LANE*.5;else x=nearestRoad(x).c+(Math.random()<.5?-1:1)*LANE*.5;
+  if(Math.abs(x)>HALF-4||Math.abs(z)>HALF-4)continue;if(BOOST.items.some(b=>Math.hypot(b.x-x,b.z-z)<25))continue;boostAdd(boostPick(BOOST_CHASE),x,z,'chase',false);return true;}return false;}
+function boostApply(c,k){const T=BOOST_T[k];c.fx=c.fx||{};const me=c===player;
+ if(k==='nitro')c.nitro=1;else if(k==='fix')c.health=Math.min(100,(c.health||100)+40);
+ else if(k==='smoke'){if(me){BOOST.smoke=T.d;const H=S.heat;if(H.level>0)H.evade+=(H.evNeed||8)*.35;}}
+ else if(k==='jammer'){if(me){const H=S.heat;if(H.level>1){H.level--;H.meter=0;}H.evade+=(H.evNeed||8)*.25;const keep=COP_COUNT[H.level];while(H.cops.length>keep){const c2=H.cops.pop();world.remove(c2.mesh);}}}
+ else c.fx[k]=T.d;
+ if(me){toast(`${T.e} ${T.n}`,T.s,'#'+new THREE.Color(T.c).getHexString(),1.6);chime(true);noiseHit&&0;
+  if(!BOOST.seen&&!SAVE.seen.boost){BOOST.seen=true;SAVE.seen.boost=1;hint('🎁 <b>BOOSTERS!</b> Drive through the glowing rings: ⚡ turbo, 🔋 nitro, 🛡️ shield, 👻 ghost, 🔧 repair. In police chases look for 💨 smoke screens and 📡 jammers.',8);}}}
+function boostPre(){const p=player;p._hp0=p.health;for(const r of racers)r._hp0=r.health;}
+const isGhost=c=>!!(c&&c.fx&&c.fx.ghost>0);
+function boostUpdate(dt){const p=player;if(!p)return;
+ // spawn for races and chases, clear when they end
+ if(S.race&&!S.race._boost&&S.race.count<=0&&!S.race.online){S.race._boost=1;boostSpawnRace(S.race);}
+ if(!S.race&&BOOST.items.some(b=>b.src==='race'))boostClear('race');
+ if(S.heat.level>0){BOOST.chaseT-=dt;if(BOOST.chaseT<=0){BOOST.chaseT=7+Math.random()*4;if(BOOST.items.filter(b=>b.src==='chase'&&!b.off).length<4)boostSpawnChase();}}
+ else if(BOOST.items.some(b=>b.src==='chase')){boostClear('chase');BOOST.smoke=0;BOOST.chaseT=2;}
+ // AI racers drift toward boosters just ahead of them
+ for(const r of racers){if(r.ghost||r.done||!S.race||S.race.count>0)continue;const fx=Math.sin(r.h),fz=Math.cos(r.h);
+  for(const b of BOOST.items){if(b.off>0)continue;const dx=b.x-r.x,dz=b.z-r.z,fd=dx*fx+dz*fz,ld=dx*fz-dz*fx;if(fd>4&&fd<45&&Math.abs(ld)<8){const k=Math.min(Math.abs(ld),2.6)*Math.sign(ld)*dt*1.6;r.x+=fz*k;r.z-=fx*k;break;}}}
+ // pickups
+ const cars=[p,...racers.filter(r=>!r.ghost)];
+ for(const b of BOOST.items){if(b.off>0){b.off-=dt;if(b.off<=0)b.m.visible=true;continue;}
+  for(const c of cars){if(Math.abs(c.x-b.x)<3.8&&Math.abs(c.z-b.z)<3.8&&c.y<5){
+    const k=c===p?b.k:(['smoke','jammer'].includes(b.k)?'turbo':b.k);boostApply(c,k);
+    if(b.respawn){b.off=7;b.m.visible=false;}else{b.dead=true;world.remove(b.m);}break;}}
+  if(b.src==='chase'&&!b.dead&&Math.hypot(b.x-p.x,b.z-p.z)>260){b.dead=true;world.remove(b.m);}}
+ BOOST.items=BOOST.items.filter(b=>!b.dead);
+ // timers + effects
+ for(const c of cars){if(!c.fx)continue;for(const k in c.fx){c.fx[k]-=dt;if(c.fx[k]<=0)delete c.fx[k];}
+  if(c.fx.shield>0&&c._hp0!=null&&c.health<c._hp0)c.health=c._hp0;
+  const ud=c.mesh&&c.mesh.userData;if(ud&&ud.body){ud.body.visible=!(c.fx.ghost>0&&Math.floor(S.time*14)%2===0);
+   if(c.fx.shield>0){if(!ud.bubble){ud.bubble=new THREE.Mesh(new THREE.SphereGeometry(3.1,24,14),new THREE.MeshBasicMaterial({color:0x39ff9f,transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}));ud.bubble.scale.set(1,.62,1.25);ud.bubble.position.y=.9;c.mesh.add(ud.bubble);}ud.bubble.visible=true;ud.bubble.material.opacity=.1+.06*Math.sin(S.time*8)+(c.fx.shield<1.5?.08*Math.sin(S.time*30):0);}
+   else if(ud.bubble)ud.bubble.visible=false;}}
+ if(BOOST.smoke>0){BOOST.smoke-=dt;if(Math.random()<dt*30)spawnPart(p.x-Math.sin(p.h)*3,.8,p.z-Math.cos(p.h)*3,rnd(-2,2),rnd(.5,2),rnd(-2,2),0xcfcfcf,3.2,2.8,4,false,.55);}
+ // spin + bob
+ for(const b of BOOST.items){if(!b.m.visible)continue;b.ph+=dt;b.m.userData.ring.rotation.y=b.ph*2.4;b.m.userData.ring.rotation.x=Math.PI/2+Math.sin(b.ph*1.3)*.25;b.m.position.y=1.6+Math.sin(b.ph*2.2)*.25;}
+ // HUD chips
+ const el=$('boostHud');if(el){const fx=p.fx||{},ks=Object.keys(fx);if(BOOST.smoke>0)ks.push('smoke');
+  el.innerHTML=ks.map(k=>{const T=BOOST_T[k],left=k==='smoke'?BOOST.smoke:fx[k];return`<div class="bchip" style="border-color:#${new THREE.Color(T.c).getHexString()}"><span>${T.e}</span><b>${T.n}</b><i style="width:${clamp(left/T.d,0,1)*100}%;background:#${new THREE.Color(T.c).getHexString()}"></i></div>`;}).join('');}}
+(function(){const d=document.createElement('div');d.id='boostHud';document.getElementById('hud').appendChild(d);
+ const s=document.createElement('style');s.textContent='#boostHud{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);display:flex;gap:8px;z-index:12;pointer-events:none}.bchip{position:relative;display:flex;align-items:center;gap:6px;padding:5px 10px 7px;border:2px solid;border-radius:12px;background:rgba(8,8,20,.72);font:800 13px Orbitron,sans-serif;letter-spacing:1px;color:#fff;overflow:hidden}.bchip span{font-size:20px}.bchip i{position:absolute;left:0;bottom:0;height:3px}';document.head.appendChild(s);})();
 
 /* ---------- EVENTS ---------- */
 function progressOf(c){const R=S.race;if(!R)return 0;const n=R.wps.length,tg=R.wps[(c.prog+1)%n];return c.prog+(c.done?100:0)-Math.hypot(tg.x-c.x,tg.z-c.z)/1000;}
@@ -4353,7 +4422,7 @@ addEventListener('pointerup',e=>{if(drag&&!drag.moved&&S.photo){const s=document
 renderer.domElement.addEventListener('wheel',e=>{if(S.photo)photoOrbit.d=clamp(photoOrbit.d+e.deltaY*.01,5,40);},{passive:true});
 
 /* ---------- MAIN UPDATE ---------- */
-function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);
+function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);boostPre();
  const frozen=S.race&&S.race.count>0;const inp=frozen?{throttle:0,brake:1,steer:0}:readInput(dt);
  p.onLand=imp=>{const air=p.airT;if(imp>17){const dm=(imp-17)*1.6;p.health=Math.max(0,p.health-dm);noiseHit(.4,600);}
   if(air>.55){let bonus=Math.round(air*160);const z=ZONES.find(z=>Math.hypot(z.x-p.x,z.z-p.z)<z.r);if(z){bonus*=3;toast('BULLSEYE!',`Perfect landing +${fmt(bonus)}`,'#39ff9f',1.8);chime(true);}else feed(`🛫 Air ${air.toFixed(1)}s · +${fmt(bonus)}`);reward(bonus,Math.round(air*40),Math.round(air*6));}};
@@ -4361,7 +4430,7 @@ function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);
  for(let s=0;s<subs;s++){
   p.wallHit=0;stepCar(p,inp,h);
   for(const r of racers){if(r.ghost)continue;r.wallHit=0;const ri=racerInput(r,h);r.steer=ri.steer;stepCar(r,ri,h);const hw=collideWorld(r);if(hw>8)r.health=Math.max(30,r.health-hw*.4);}
-  for(const c of S.heat.cops){c.wallHit=0;stepCar(c,copInput(c,h),h);collideWorld(c);}
+  for(const c of S.heat.cops){c.wallHit=0;const ci=copInput(c,h);if(BOOST.smoke>0){ci.throttle*=.25;ci.brake=Math.max(ci.brake||0,.3);}stepCar(c,ci,h);collideWorld(c);}
   for(const t of traffic){if(t.crashed){stepCar(t,{throttle:0,brake:.6,steer:0},h);collideWorld(t);}else{
     // blocked check
     let blocked=false;const fx=Math.sin(t.h),fz=Math.cos(t.h);for(const o of[p,...racers,...S.heat.cops]){const dx=o.x-t.x,dz=o.z-t.z,fd=dx*fx+dz*fz,ld=dx*fz-dz*fx;if(fd>0&&fd<13+(t.len||0)/2&&Math.abs(ld)<(t.r<1.2?1.3:2.6)){blocked=true;break;}}
@@ -4370,8 +4439,8 @@ function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);
   if(hit>6){const dm=(hit-6)*1.05;p.health=Math.max(0,p.health-dm);noiseHit(hit/40);sparks(p);if(p.blockHit){heatUp(.12);p.blockHit=0;}}
   // car-car
   const dyn=[p,...racers.filter(r=>!r.ghost),...S.heat.cops];
-  for(let a=0;a<dyn.length;a++){for(let b=a+1;b<dyn.length;b++){const imp=collidePair(dyn[a],dyn[b]);if(imp>0&&(dyn[a]===p||dyn[b]===p)){const o=dyn[a]===p?dyn[b]:dyn[a];if(imp>6){p.health=Math.max(0,p.health-(imp-6)*(o.cop?.45:.8));noiseHit(imp/35);sparks(p);}if(o.cop&&imp>4){heatUp(.18);}}}
-   for(const t of traffic){if(!t.mesh.visible||t.ghost)continue;const imp=t.len?collideCapsule(dyn[a],t):collidePair(dyn[a],t);if(imp>0){if(!t.crashed&&imp>3&&t.kind!=='cart'&&!t.len){t.crashed=true;t.crashT=8;}if(dyn[a]===p&&imp>5){p.health=Math.max(0,p.health-(imp-5)*.8);noiseHit(imp/35);sparks(p);
+  for(let a=0;a<dyn.length;a++){for(let b=a+1;b<dyn.length;b++){if(isGhost(dyn[a])||isGhost(dyn[b]))continue;const imp=collidePair(dyn[a],dyn[b]);if(imp>0&&(dyn[a]===p||dyn[b]===p)){const o=dyn[a]===p?dyn[b]:dyn[a];if(imp>6){p.health=Math.max(0,p.health-(imp-6)*(o.cop?.45:.8));noiseHit(imp/35);sparks(p);}if(o.cop&&imp>4&&!(p.fx&&p.fx.shield>0)){heatUp(.18);}}}
+   for(const t of traffic){if(!t.mesh.visible||t.ghost||isGhost(dyn[a]))continue;const imp=t.len?collideCapsule(dyn[a],t):collidePair(dyn[a],t);if(imp>0){if(!t.crashed&&imp>3&&t.kind!=='cart'&&!t.len){t.crashed=true;t.crashT=8;}if(dyn[a]===p&&imp>5){p.health=Math.max(0,p.health-(imp-5)*.8);noiseHit(imp/35);sparks(p);
       if(t.patrol){startPursuit('You hit a police car!');}else if(S.heat.level>0)heatUp(.08);else if(imp>8){const pat=traffic.some(q=>q.patrol&&Math.hypot(q.x-p.x,q.z-p.z)<90);if(pat||Math.random()<.35)startPursuit('Civilian crash reported — police responding');}}}}}
  }
  traffic.forEach(t=>{if(t.crashed){t.crashT-=dt;if(t.crashT<=0)resetTraffic(t);}});
@@ -4390,7 +4459,7 @@ function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);
  // markers
  S.interact=null;if(!S.race&&!S.deliv&&!S.meet){for(const m of MARKERS){if(Math.hypot(m.x-p.x,m.z-p.z)<7&&sp<11){S.interact=m.ev;break;}}}
  const pr=$('prompt');if(S.meet){}else if(S.interact){const ev=S.interact;const lab={meet:'Join the Car Meet',race:'Start Street Race',drag:'Start Stoplight Race',deliv:'Start Job',garage:'Enter Garage'}[ev.type];const warn=S.heat.level>0&&ev.type!=='garage'?' <span style="color:var(--pink)">(lose the cops first)</span>':(ev.type==='race'||ev.type==='drag')&&p.health<45?` <span style="color:#ffc23d">(car at ${Math.round(p.health)}% — repair first?)</span>`:'';pr.innerHTML=`<b>${document.body.classList.contains('touchui')?'TAP E':'E'}</b> &nbsp;${lab}: ${ev.name}${warn}`;pr.classList.remove('hidden');}else pr.classList.add('hidden');
- updateRace(dt);updateDeliv(dt);updateHeat(dt);updatePeople(dt);updateRiders(dt);
+ updateRace(dt);updateDeliv(dt);updateHeat(dt);updatePeople(dt);updateRiders(dt);boostUpdate(dt);
 }
 function sparks(c){for(let i=0;i<6;i++)spawnPart(c.x+rnd(-1,1),c.y+.8,c.z+rnd(-1,1),rnd(-6,6),rnd(1,5),rnd(-6,6),0xffc040,.35,.35,0,true,1);}
 
