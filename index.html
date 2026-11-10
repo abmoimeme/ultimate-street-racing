@@ -2450,7 +2450,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <script>/* ---------- Firebase online layer (used when the game runs outside claude.ai, e.g. GitHub Pages) ----------
    Provides the same room / db / user calls the game already uses, backed by Firebase Realtime Database.
    Set FIREBASE_DB_URL to your database address to turn it on. */
-const FIREBASE_DB_URL='';
+const FIREBASE_DB_URL='https://ultimate-street-racing-default-rtdb.firebaseio.com';
 (function(){
  if(window.claude&&typeof window.claude.use==='function')return;
  if(!FIREBASE_DB_URL||!window.firebase)return;
