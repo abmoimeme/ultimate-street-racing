@@ -91,7 +91,7 @@ body.touchui #chip{display:none}
 @media (max-width:760px){.crWrap{flex-direction:column}.crLeft{flex:0 0 auto}#crCanvas{min-height:260px}}
 .net{font-size:11px;letter-spacing:1.5px;font-weight:700;margin-top:4px}.net.on{color:#39ff9f}.net.wait{color:#ffc23d}.net.off{color:#8a8a99}
 #invite{position:fixed;right:16px;top:230px;padding:14px 18px;z-index:16;pointer-events:auto;border-color:var(--pink);box-shadow:0 0 24px rgba(255,42,109,.35)}
-#chatBox{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);padding:8px;z-index:16;width:min(560px,92vw)}#chatIn{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--cyan);border-radius:8px;padding:10px 12px;color:#fff;font:600 16px Rajdhani,sans-serif;outline:none}
+#chatBox{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);padding:8px;z-index:16;width:min(560px,92vw)}#qGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}#qGrid button{background:rgba(255,255,255,.07);border:1px solid rgba(5,217,232,.5);border-radius:8px;color:#fff;font:700 15px Rajdhani,sans-serif;padding:8px 4px;cursor:pointer}#qGrid button:hover{background:rgba(5,217,232,.25)}#qGrid .em{font-size:22px;padding:4px}.qhead{font:800 14px Orbitron,sans-serif;letter-spacing:1px;color:var(--cyan)}.qhead .note{font:600 12px Rajdhani,sans-serif;color:#aab;letter-spacing:0;margin-left:6px}@media(max-width:600px){#qGrid{grid-template-columns:repeat(3,1fr)}}#chatIn{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--cyan);border-radius:8px;padding:10px 12px;color:#fff;font:600 16px Rajdhani,sans-serif;outline:none}
 /* Menus */
 .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,rgba(255,42,109,.25),transparent 55%),radial-gradient(ellipse at 80% 90%,rgba(5,217,232,.22),transparent 55%),rgba(5,4,14,.86);z-index:20;padding:20px;overflow:auto}
 .card{width:min(1040px,100%);padding:26px 30px}
@@ -194,7 +194,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="creator" class="screen hidden"><div class="crWrap panel"><div class="crLeft"><canvas id="crCanvas"></canvas><div class="note" style="text-align:center;margin-top:6px">Drag to rotate</div></div><div class="crRight"><h1 style="font-size:34px">YOUR DRIVER</h1><div class="sub" style="margin:4px 0 8px">Build your character: this is who you'll be at car meets.</div><div id="crPanel"></div></div></div></div>
 <div id="meetCard" class="panel hidden"></div>
 <div id="invite" class="panel hidden"></div>
-<div id="chatBox" class="panel hidden"><input id="chatIn" maxlength="60" placeholder="Say something… (Enter to send, Esc to close)" autocomplete="off"></div>
+<div id="chatBox" class="panel hidden"><div class="qhead">QUICK CHAT <span class="note">tap a message · keys 1–9 · Esc to close</span></div><div id="qGrid"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>if(window.THREE){
@@ -2449,36 +2449,35 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>/* ---------- Firebase online layer (used when the game runs outside claude.ai, e.g. GitHub Pages) ----------
    Provides the same room / db / user calls the game already uses, backed by Firebase Realtime Database.
-   Set FIREBASE_DB_URL to your database address to turn it on. */
-const FIREBASE_DB_URL='https://ultimate-street-racing-default-rtdb.firebaseio.com';
+   Online play needs a signed-in Player Pass; guests play offline. */
+const FIREBASE_CFG={"databaseURL": "https://ultimate-street-racing-default-rtdb.firebaseio.com"};
 (function(){
  if(window.claude&&typeof window.claude.use==='function')return;
- if(!FIREBASE_DB_URL||!window.firebase)return;
- let app,db;try{app=firebase.initializeApp({databaseURL:FIREBASE_DB_URL});db=firebase.database();}catch(e){console.warn('Firebase init failed',e);return;}
+ if(!FIREBASE_CFG.databaseURL||!window.firebase)return;
+ let db;try{firebase.initializeApp(FIREBASE_CFG);db=firebase.database();}catch(e){console.warn('Firebase init failed',e);return;}
+ window.FB_READY=true;window.FB_CFG=FIREBASE_CFG;
  const ROOT='usr';
- const uid=(()=>{let v=null;try{v=localStorage.getItem('usr_uid');}catch(e){}if(!v||!/^[a-z0-9]{12,24}$/.test(v)){v='';const a='abcdefghijklmnopqrstuvwxyz0123456789';for(let i=0;i<18;i++)v+=a[Math.random()*36|0];try{localStorage.setItem('usr_uid',v);}catch(e){}}return v;})();
- const peerId=uid.slice(0,8)+(Math.random()*1e9|0).toString(36);
+ const authUid=()=>(window.PASS&&PASS.user&&PASS.netKey)||null;
  let offset=0;db.ref('.info/serverTimeOffset').on('value',s=>{offset=s.val()||0;});
  const now=()=>Date.now()+offset;
- const safeKey=k=>String(k).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+ const safeKey=k=>String(k).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,64);
  const STALE=15000,MIN_GAP=150;
- function makeRoom(){const lobbyRef=db.ref(ROOT+'/lobby/'+peerId);let lobbyArmed=false;
+ function makeRoom(uid){const peerId=uid+'_'+(Math.random()*1e9|0).toString(36);const lobbyRef=db.ref(ROOT+'/lobby/'+peerId);let lobbyArmed=false;
   return{
-   onConnection(cb,onClose){db.ref('.info/connected').on('value',s=>{try{cb(!!s.val());}catch(e){}});},
+   onConnection(cb){db.ref('.info/connected').on('value',s=>{try{cb(!!s.val());}catch(e){}});},
    presence(obj){if(!lobbyArmed){lobbyArmed=true;lobbyRef.onDisconnect().remove();}return lobbyRef.set({p:obj,t:firebase.database.ServerValue.TIMESTAMP});},
    async join(name){const rref=db.ref(ROOT+'/rooms/'+safeKey(name)),me=rref.child(peerId);let snap={},peersCb=null,closeCb=null,last=0,pend=null,timer=null;
     await me.onDisconnect().remove();await me.set({p:null,t:firebase.database.ServerValue.TIMESTAMP});
-    const list=()=>{const out=[],t=now();for(const id in snap){const v=snap[id];if(!v)continue;if(id!==peerId&&t-(v.t||0)>STALE)continue;out.push({peer:id,presence:v.p===undefined?null:v.p,sameTab:id===peerId,kind:'viewer',guest:false,updatedAt:Math.min(Date.now(),(v.t||t)-offset)});}if(!snap[peerId])out.push({peer:peerId,presence:null,sameTab:true,kind:'viewer',guest:false,updatedAt:Date.now()});return out;};
+    const list=()=>{const out=[],t=now();for(const id in snap){const v=snap[id];if(!v)continue;if(id!==peerId&&t-(v.t||0)>STALE)continue;out.push({peer:id,presence:v.p===undefined?null:v.p,sameTab:id===peerId,kind:'viewer',guest:false,updatedAt:Math.min(Date.now(),(v.t||t)-offset)});}
+     if(!snap[peerId])out.push({peer:peerId,presence:null,sameTab:true,kind:'viewer',guest:false,updatedAt:Date.now()});return out;};
     const onVal=s=>{const prev=snap;snap=s.val()||{};const left=[];for(const id in prev)if(!snap[id])left.push({peer:id});if(peersCb)try{peersCb({peers:list(),left,joined:[]});}catch(e){}};
     rref.on('value',onVal,()=>{if(closeCb)closeCb();});
     const flush=()=>{timer=null;if(pend===null)return;last=Date.now();const p=pend;pend=null;me.set({p,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});};
-    // sweep peers that vanished without a clean disconnect
-    const sweep=setInterval(()=>{const t=now();for(const id in snap){if(id!==peerId&&snap[id]&&t-(snap[id].t||0)>STALE*4)rref.child(id).remove().catch(()=>{});}},20000);
     return{
      peers:list,
      onPeers(cb,onClose){peersCb=cb;closeCb=onClose;try{cb({peers:list(),left:[],joined:[]});}catch(e){}},
      presence(obj){pend=obj===undefined?null:JSON.parse(JSON.stringify(obj));const gap=Date.now()-last;if(gap>=MIN_GAP){if(timer){clearTimeout(timer);timer=null;}flush();}else if(!timer)timer=setTimeout(flush,MIN_GAP-gap);return Promise.resolve();},
-     async leave(){clearInterval(sweep);if(timer)clearTimeout(timer);rref.off('value',onVal);try{await me.onDisconnect().cancel();await me.remove();}catch(e){}}};}};}
+     async leave(){if(timer)clearTimeout(timer);rref.off('value',onVal);try{await me.onDisconnect().cancel();await me.remove();}catch(e){}}};}};}
  function makeDb(){const base=db.ref(ROOT);
   const docOf=path=>{const r=base.child(path.split('/').map(safeKey).join('/'));return{
    async get(){const s=await r.once('value');const v=s.val();return{exists:v!==null,data:()=>v};},
@@ -2488,8 +2487,8 @@ const FIREBASE_DB_URL='https://ultimate-street-racing-default-rtdb.firebaseio.co
     const s=await q.once('value');const rows=[];s.forEach(c=>{const v=c.val();if(v&&Number.isFinite(v[field]))rows.push(v);});rows.sort((a,b)=>dir==='desc'?b[field]-a[field]:a[field]-b[field]);
     return{docs:rows.map(v=>({data:()=>v}))};}});
   return{doc:docOf,collection:c=>query(c,null,'asc',25)};}
- const user={async id(){return uid;},async name(){return null;}};
- window.claude={use:async k=>k==='room'?makeRoom():k==='db'?makeDb():k==='user'?user:null,_firebase:true};
+ window.claude={_firebase:true,use:async k=>{const uid=authUid();if(!uid)return null;
+  if(k==='room')return makeRoom(uid);if(k==='db')return makeDb();if(k==='user')return{async id(){return uid;},async name(){return null;}};return null;}};
 })();
 </script>
 <script>
@@ -2596,7 +2595,7 @@ const sponsorStrip=(h=34,dark)=>`<div class="sponsors">${['jollof','pah','spark'
 let KEY='usr_save_tmp';let saveWarn=null,saveFailShown=false;
 function defSave(){return{v:1,cash:2500,xp:0,rep:0,city:'tokyo',current:null,cars:{},unlocks:{rainbow:false,glider:false},horn:'classic',treasures:{tokyo:[],dakar:[]},stats:{races:0,wins:0,escapes:0,busts:0},tut:0,seen:{},char:null,profile:null};}
 function carState(id){return{eng:0,tires:0,nos:0,color:'#'+CARS[id].color.toString(16).padStart(6,'0'),glow:'none',smoke:'#ffffff',decal:'none',health:100,busts:0,impounded:false};}
-function sanitize(s){if(!s||typeof s!=='object'||s.v!==1)throw new Error('bad save');const d=defSave();const num=(v,def)=>Number.isFinite(v)&&v>=0?v:def;
+function sanitize(s){if(!s||typeof s!=='object'||s.v!==1)throw new Error('bad save');const d=defSave();const num=(v,def)=>Number.isFinite(v)&&v>=0?v:def;if(Number.isFinite(s._upd))d._upd=s._upd;
  d.cash=num(s.cash,d.cash);d.xp=num(s.xp,0);d.rep=num(s.rep,0);d.city=CITY[s.city]?s.city:'tokyo';d.horn=HORNS[s.horn]?s.horn:'classic';
  if(s.unlocks){d.unlocks.rainbow=!!s.unlocks.rainbow;d.unlocks.glider=!!s.unlocks.glider;if(s.unlocks.rainbowOn===false)d.unlocks.rainbowOn=false;}
  if(s.cars&&typeof s.cars==='object')for(const k in s.cars){if(!CARS[k]||!s.cars[k])continue;const c=Object.assign(carState(k),s.cars[k]);
@@ -3403,9 +3402,9 @@ function bubble(text){const t=canvasTex(512,128,(g,W,H)=>{g.font='bold 34px sans
  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,depthTest:false,fog:false}));s.scale.set(5.2,1.3,1);s.renderOrder=11;return s;}
 function readRemote(pr){if(!pr||pr.v!==1||!Array.isArray(pr.p))return null;const lim=v=>clamp(fin(v),-HALF-60,HALF+60);
  const car=pr.car&&CARS[pr.car.i]?pr.car:{i:'r32'};const col=/^#[0-9a-f]{6}$/i.test(car.c)?car.c:'#dadade';
- return{n:cleanTxt(pr.n,18)||'Driver',cr:cleanTxt(pr.cr,22),lv:clamp(fin(pr.lv,1)|0,1,999),carId:car.i,col,glow:car.g in GLOWS?car.g:'none',decal:car.d in SPONSORS?car.d:'none',ch:pr.ch,m:cleanTxt(pr.m,8),
+ return{n:kidSafe(cleanTxt(pr.n,18))||'Driver',cr:kidSafe(cleanTxt(pr.cr,22)).replace(/^Driver$/,''),lv:clamp(fin(pr.lv,1)|0,1,999),carId:car.i,col,glow:car.g in GLOWS?car.g:'none',decal:car.d in SPONSORS?car.d:'none',ch:pr.ch,m:cleanTxt(pr.m,8),
   x:lim(pr.p[0]),y:clamp(fin(pr.p[1]),0,60),z:lim(pr.p[2]),h:fin(pr.p[3]),v:clamp(fin(pr.p[4]),0,120),av:Array.isArray(pr.av)?[lim(pr.av[0]),lim(pr.av[1]),fin(pr.av[2]),cleanTxt(pr.av[3],6)]:null,
-  say:pr.say&&typeof pr.say==='object'?{t:fin(pr.say.t),x:cleanTxt(pr.say.x,60)}:null,du:pr.du&&typeof pr.du==='object'?{to:cleanTxt(pr.du.to,64),st:cleanTxt(pr.du.st,6),t:fin(pr.du.t),fin:pr.du.fin==null?null:clamp(fin(pr.du.fin),0,600)}:null,id:cleanTxt(pr.id,80)};}
+  say:pr.say&&typeof pr.say==='object'&&Number.isInteger(pr.say.q)&&QUICK[pr.say.q]?{t:fin(pr.say.t),x:QUICK[pr.say.q]}:null,du:pr.du&&typeof pr.du==='object'?{to:cleanTxt(pr.du.to,64),st:cleanTxt(pr.du.st,6),t:fin(pr.du.t),fin:pr.du.fin==null?null:clamp(fin(pr.du.fin),0,600)}:null,id:cleanTxt(pr.id,80)};}
 function netUpdate(dt){netSend();if(!NET.city)return;const peers=NET.city.peers();const now=Date.now();
  for(const pe of peers){if(pe.sameTab||pe.kind!=='viewer')continue;const d=readRemote(pe.presence);if(!d){continue;}
   let r=NET.remotes.get(pe.peer);if(!r){r={peer:pe.peer,x:d.x,z:d.z,y:d.y,h:d.h,ax:0,az:0,ah:0};NET.remotes.set(pe.peer,r);}
@@ -3435,8 +3434,14 @@ function netUpdate(dt){netSend();if(!NET.city)return;const peers=NET.city.peers(
  if(NET.invite&&now-NET.invite.t>20000)closeInvite();}
 function remoteNear(x,z,rad){let best=null,bd=rad;for(const r of NET.remotes.values()){if(!r.av||!r.av.g.visible)continue;const d=Math.hypot(r.ax-x,r.az-z);if(d<bd){bd=d;best=r;}}return best;}
 // ---------- chat ----------
-function openChat(){if(!NET.city){feed('Chat works when you are online with other drivers');return;}const el=$('chatBox');el.classList.remove('hidden');const i=$('chatIn');i.value='';i.focus();releaseAll();}
-function sendChat(){const i=$('chatIn'),txt=cleanTxt(i.value.trim(),60);$('chatBox').classList.add('hidden');i.blur();if(!txt)return;NET.say={t:Date.now(),x:txt};feed(`💬 You: ${txt}`);}
+// kid-safe chat: only these preset messages and emojis can be sent or shown
+const QUICK=['👋 Hi!','🏁 Race me?','🔥 Nice drift!','😎 Cool car!','👍 Good game!','🚗 Follow me!','⏳ Wait for me!','🎉 Let\'s go!','🤝 Good race!','🏆 You win!','🙏 Thank you!','👋 Bye!','😂','😮','🔥','❤️','👏','🏎️','⚽','🇸🇳'];
+function openChat(){if(!NET.city){feed('Chat works when you are online with other drivers');return;}const el=$('chatBox');
+ $('qGrid').innerHTML=QUICK.map((t,i)=>`<button data-q="${i}" class="${t.length<=4?'em':''}">${i<9?`<span class="note" style="opacity:.6">${i+1} </span>`:''}${t}</button>`).join('');
+ $('qGrid').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>sendQuick(+b.dataset.q));el.classList.remove('hidden');releaseAll();}
+function closeChat(){$('chatBox').classList.add('hidden');}
+function sendQuick(i){closeChat();if(!(i>=0&&i<QUICK.length))return;NET.say={t:Date.now(),q:i};feed(`💬 You: ${QUICK[i]}`);}
+function sendChat(){closeChat();}
 // ---------- player duels ----------
 function challengeRemote(r){if(!NET.myPeer)return;NET.duelOut={to:r.peer,st:'ask',t:Date.now()};NET.duel={peer:r.peer,role:'host',name:r.d.n,st:'ask'};feed(`🚦 Challenge sent to ${r.d.n}…`);
  setTimeout(()=>{if(NET.duel&&NET.duel.st==='ask'&&NET.duel.role==='host'){feed(`${r.d.n} didn't answer`);NET.duel=null;NET.duelOut=null;}},20000);}
@@ -3470,13 +3475,17 @@ async function lbRead(){if(!NET.db)return null;const q=NET.db.collection('lb');c
  try{const top=await withT(q.orderBy('rep','desc').limit(10).get());const res={top:top.docs.map(d=>d.data())};
   for(const ev of EVENTS.filter(e=>e.type==='race'||e.type==='drag')){const f='t_'+S.city+'_'+ev.id;try{const s=await withT(q.orderBy(f,'asc').limit(5).get());res[ev.id]={name:ev.name,rows:s.docs.map(d=>d.data()).filter(x=>Number.isFinite(x[f])).map(x=>({n:x.n,cr:x.cr,t:x[f]}))};}catch(e){}}
   return res;}catch(e){return null;}}
+const BADW=/(f+u+c+k|sh[i1]t|b[i1]tch|cunt|d[i1]ck|pu?ss(y|ie)|n[i1]gg|fag|wh[o0]re|slut|bastard|asshole|\bass\b|porn|sex|nazi|hitler|merde|putain|connard|salope|encul|pute|batard|nique|cazzo|stronz|vaffan|puttan|coglion)/i;
+function kidSafe(s){s=String(s||'');const flat=s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e').replace(/4/g,'a').replace(/5/g,'s').replace(/7/g,'t');return(BADW.test(s)||BADW.test(flat))?'Driver':s;}
+function alertBox(m){const b=$('startBody');if(!b){toast(m,'','#ff2a6d',3);return;}let el=b.querySelector('.warnbox');if(!el){el=document.createElement('div');el.className='tutbox warnbox';el.style.cssText='border-color:#ff2a6d;background:rgba(255,42,109,.12);margin-bottom:10px';b.prepend(el);}el.textContent='⚠ '+m;}
+function noDigitsRun(s){return !/\d{5,}/.test(String(s||'').replace(/\s/g,''));}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function openOnlinePanel(){const peers=NET.city?NET.city.peers().filter(p=>!p.sameTab&&p.kind==='viewer'):[];
  const list=peers.map(p=>{const d=readRemote(p.presence);return d?`<div class="item"><div><b>${esc(d.n)}</b> <span class="note">LV ${d.lv}${d.cr?' · '+esc(d.cr):''}</span><div class="d">${CARS[d.carId].name} · ${({drive:'driving',meet:'at the car meet',race:'racing',duel:'in a duel',menu:'in menus'})[d.m]||'online'}</div></div>${p.guest?'<span class="pill">GUEST</span>':''}</div>`:'';}).join('')||`<div class="note" style="padding:10px 0">${NET.city?'Nobody else is in '+CITY[S.city].name+' right now. Share the game link and drive together.':'You are playing offline.'}</div>`;
- openModal(`<h1 style="font-size:34px">ONLINE</h1><div class="sub">${NET.city?'● Connected · '+CITY[S.city].name+' room':'● Offline · check your internet connection, then reopen the game'}</div><h3>DRIVERS IN ${CITY[S.city].name}</h3>${list}<h3>LEADERBOARDS</h3><div id="lbBox" class="note">${NET.db?'Loading…':'Leaderboards appear when you are online.'}</div><div class="actions"><button class="btn" data-act="close">BACK</button></div>`);
+ openModal(`<h1 style="font-size:34px">ONLINE</h1><div class="sub">${NET.city?'● Connected · '+CITY[S.city].name+' room':('● Offline · '+(window.PASS&&PASS.user?'check your internet connection, then reopen the game':'sign in with your Player Pass to race online'))}</div><h3>DRIVERS IN ${CITY[S.city].name}</h3>${list}<h3>LEADERBOARDS</h3><div id="lbBox" class="note">${NET.db?'Loading…':'Leaderboards appear when you are signed in and online.'}</div><div class="actions"><button class="btn" data-act="close">BACK</button></div>`);
  if(!NET.db)return;const lb=await lbRead();const box=$('lbBox');if(!box)return;if(!lb){box.textContent='Leaderboards can’t be reached right now.';return;}
- let h=`<table class="res"><tr><td><b>#</b></td><td><b>Driver</b></td><td><b>Crew</b></td><td><b>LV</b></td><td><b>REP</b></td></tr>${lb.top.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(cleanTxt(x.n,18))}</td><td>${esc(cleanTxt(x.cr,22))}</td><td>${fin(x.lv)|0}</td><td>${(fin(x.rep)|0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan=5>No drivers yet. Be the first!</td></tr>'}</table>`;
- for(const k in lb){if(k==='top')continue;const e=lb[k];h+=`<h3>FASTEST · ${esc(e.name).toUpperCase()}</h3>${e.rows.length?e.rows.map((x,i)=>`<div class="item"><div>${i+1}. <b>${esc(cleanTxt(x.n,18))}</b> <span class="note">${esc(cleanTxt(x.cr,22))}</span></div><b class="orb">${x.t.toFixed(2)}s</b></div>`).join(''):'<div class="note">No times yet</div>'}`;}
+ let h=`<table class="res"><tr><td><b>#</b></td><td><b>Driver</b></td><td><b>Crew</b></td><td><b>LV</b></td><td><b>REP</b></td></tr>${lb.top.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(kidSafe(cleanTxt(x.n,18)))}</td><td>${esc(kidSafe(cleanTxt(x.cr,22)).replace(/^Driver$/,''))}</td><td>${fin(x.lv)|0}</td><td>${(fin(x.rep)|0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan=5>No drivers yet. Be the first!</td></tr>'}</table>`;
+ for(const k in lb){if(k==='top')continue;const e=lb[k];h+=`<h3>FASTEST · ${esc(e.name).toUpperCase()}</h3>${e.rows.length?e.rows.map((x,i)=>`<div class="item"><div>${i+1}. <b>${esc(kidSafe(cleanTxt(x.n,18)))}</b> <span class="note">${esc(kidSafe(cleanTxt(x.cr,22)).replace(/^Driver$/,''))}</span></div><b class="orb">${x.t.toFixed(2)}s</b></div>`).join(''):'<div class="note">No times yet</div>'}`;}
  box.className='';box.innerHTML=h;}
 
 /* ---------- GFX v0.7: post-processing, sky, PBR surfaces, merged geometry, modern vehicles ---------- */
@@ -4296,7 +4305,7 @@ function pauseMenu(){openModal(`<h1>PAUSED</h1><div class="sub">${CITY[S.city].n
 
 /* ---------- INPUT ---------- */
 const K={};
-addEventListener('keydown',e=>{const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA')){if(tg.id==='chatIn'){if(e.key==='Enter'){e.preventDefault();sendChat();}else if(e.key==='Escape'){$('chatBox').classList.add('hidden');tg.blur();}}return;}if(S.state!=='play')return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(e.repeat){K[k]=true;return;}K[k]=true;
+addEventListener('keydown',e=>{const cb=$('chatBox');if(cb&&!cb.classList.contains('hidden')){if(e.key==='Escape'){closeChat();e.preventDefault();return;}const n=parseInt(e.key,10);if(n>=1&&n<=9){sendQuick(n-1);e.preventDefault();return;}}const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA')){if(tg.id==='chatIn'){if(e.key==='Enter'){e.preventDefault();sendChat();}else if(e.key==='Escape'){$('chatBox').classList.add('hidden');tg.blur();}}return;}if(S.state!=='play')return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(e.repeat){K[k]=true;return;}K[k]=true;
  if(k==='escape'){if(S.photo)togglePhoto();else if(!$('modal').classList.contains('hidden'))closeModal();else pauseMenu();return;}
  if(k==='t'&&!S.photo&&!S.paused){e.preventDefault();openChat();return;}
  if(k==='tab'){e.preventDefault();$('help').classList.toggle('hidden');return;}
@@ -4512,7 +4521,7 @@ function renderStart(){let h='';const prof=activeProfile();
  q('[data-del2]').forEach(e=>e.onclick=()=>{deleteProfile(e.dataset.del2);START.confirmDel=null;if(activeProfile())useProfile(PROF.active);else{START.step='new';SAVE=defSave();}renderStart();});
  const on=(id,f)=>{const el=$(id);if(el)el.onclick=f;};
  on('pfNew',()=>{START.step='new';renderStart();});on('pfBack',()=>{START.step='pick';renderStart();});
- on('pfGo',()=>{const n=$('pfName').value.trim()||'Driver',c=$('pfCrew').value.trim();newProfile(n,c);pickCity=SAVE.city;openCreator('new',()=>{START.step='car';renderStart();});});
+ on('pfGo',()=>{const n=$('pfName').value.trim()||'Driver',c=$('pfCrew').value.trim();if(kidSafe(n)!==n||kidSafe(c)!==c||!noDigitsRun(n+c)){alertBox('Please choose a different name. Keep it friendly, and never use your real full name or phone number.');return;}newProfile(n,c);pickCity=SAVE.city;openCreator('new',()=>{START.step='car';renderStart();});});
  on('pfChar',()=>openCreator('edit',()=>renderStart()));
  on('go',()=>{if(!SAVE.current&&START.step!=='car'){START.step='car';renderStart();return;}startGame();});}
 function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfile())newProfile('Driver','');const sk=$('skip');if(sk&&sk.checked)SAVE.tut=3;if(!SAVE.current){SAVE.current=pickCar;SAVE.cars[pickCar]=carState(pickCar);}
@@ -4526,6 +4535,79 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
 $('crPanel').addEventListener('click',creatorClick);$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
+</script>
+<script>/* ---------- PLAYER CODES: each kid gets one code (e.g. LION-1234) to sign in on any device ----------
+   The code is turned into two private keys on the device: one opens the player's cloud save, the other is
+   their online id. Only the 20 issued codes work (the list lives in the private database rules).
+   Nothing personal is collected. */
+(function(){
+ if(!window.FB_READY||!window.firebase)return;
+ const db=firebase.database(),S1='usr-save-7f3a',S2='usr-net-b91c',LK='usr_pass_v1';
+ const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const m=s.match(/^([A-Z]+)(\d{4})$/);return m?m[1]+'-'+m[2]:'';};
+ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);}
+ const tagErr=t=>{if(!t)return'Pick your driver name.';if(!/^[A-Za-z]/.test(t))return'Start your name with a letter.';if(t.length<2||t.length>14)return'Use 2 to 14 letters or numbers.';if(!/^[A-Za-z][A-Za-z0-9_ ]*$/.test(t))return'Only letters and numbers please.';
+  if(/\d{4,}/.test(t))return'Too many numbers in a row.';if(kidSafe(t)!==t)return'Please pick a friendlier name.';return'';};
+ const P={ready:true,user:null,tag:'',mode:'code',inCode:'',inTag:'',err:'',busy:false,guest:false,saveKey:null,netKey:null};
+ window.PASS=P;
+ try{const q=new URLSearchParams(location.search).get('code');if(q){P.inCode=normCode(q)||'';P.autoGo=!!P.inCode;history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
+ const ref=()=>db.ref('usr/players/'+P.saveKey);
+ const profId=k=>'u_'+k.slice(0,12);
+ function ensureProfile(tag){const id=profId(P.saveKey);let p=PROF.list.find(x=>x.id===id);
+  if(!p){p={id,key:'usr_save_v1_'+id,name:tag.slice(0,18),crew:''};PROF.list.push(p);saveProf();}else if(p.name!==tag){p.name=tag.slice(0,18);saveProf();}return p;}
+ let pushT=null,lastPush=0;
+ function pushNow(){pushT=null;if(!P.user||!P.tag)return;const p=activeProfile();if(!p||p.id!==profId(P.saveKey))return;
+  let raw=null;try{raw=localStorage.getItem(p.key);}catch(e){}if(!raw||raw.length>=400000)return;lastPush=Date.now();ref().set({tag:P.tag,save:raw,upd:lastPush}).catch(()=>{});}
+ function schedulePush(){if(!P.user)return;if(pushT)return;pushT=setTimeout(pushNow,Math.max(1500,8000-(Date.now()-lastPush)));}
+ const _save=save;save=function(){if(P.user&&SAVE)SAVE._upd=Date.now();const r=_save.apply(this,arguments);schedulePush();return r;};
+ addEventListener('visibilitychange',()=>{if(document.hidden&&pushT){clearTimeout(pushT);pushNow();}});
+ addEventListener('pagehide',()=>{if(pushT){clearTimeout(pushT);pushNow();}});
+ const withT=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),ms))]);
+ async function enter(code,silent){P.busy=true;P.err='';if(!silent)renderStart();
+  let v;try{P.saveKey=await sha(S1+code);P.netKey=await sha(S2+code);const s=await withT(ref().once('value'),12000);v=s.val();}
+  catch(e){P.busy=false;P.saveKey=P.netKey=null;const msg=String((e&&(e.code||e.message))||'');
+   P.err=/permission/i.test(msg)?'That code isn’t right. Check it with the grown-up who gave it to you.':'No internet right now. Check your connection, or play as a guest.';
+   if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}
+  P.user={uid:P.netKey};P.code=code;try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
+  P.busy=false;if(v&&v.tag){P.tag=v.tag;await openPlayer(v);}else{P.mode='name';renderStart();}}
+ async function openPlayer(v){const p=ensureProfile(P.tag);let how='new';
+  if(v&&typeof v.save==='string'&&v.save.length){let local=null;try{local=JSON.parse(localStorage.getItem(p.key)||'null');}catch(e){}const lu=local&&local._upd||0;
+   if(!local||(v.upd||0)>lu)localStorage.setItem(p.key,v.save);how='old';}
+  useProfile(p.id);SAVE.profile=Object.assign({},SAVE.profile||{},{name:P.tag,crew:(SAVE.profile&&SAVE.profile.crew)||''});
+  if(how==='new'){SAVE.char=SAVE.char||defChar();save();pushNow();}
+  pickCity=SAVE.city||pickCity;if(pickCity!==S.city)buildCity(pickCity);
+  P.mode='done';START.step='pick';if(!SAVE.current){openCreator('new',()=>{START.step='car';renderStart();});}renderStart();}
+ async function doEnter(){const c=normCode(P.inCode);if(!c){P.err='Type your player code, like LION-1234.';return renderStart();}await enter(c,false);}
+ async function doName(){const t=P.inTag.trim(),er=tagErr(t);if(er){P.err=er;return renderStart();}P.tag=t;await openPlayer(null);}
+ function renderPass(){let h='';const err=P.err?`<div class="tutbox" style="border-color:#ff2a6d;background:rgba(255,42,109,.12)">⚠ ${esc(P.err)}</div>`:'';
+  if(P.busy){h+='<div class="note" style="padding:24px 0">Checking your code…</div>';}
+  else if(P.mode==='name'){h+=`<h3>🎉 WELCOME, NEW DRIVER!</h3><div class="ppIntro">Pick your driver name. That’s the name other players see. <b>Don’t use your full real name.</b></div>
+   <div class="field" style="max-width:380px"><label>Driver name</label><input id="ppTag" maxlength="14" autocapitalize="words" spellcheck="false" value="${esc(P.inTag)}" placeholder="e.g. TurboLion"></div>${err}
+   <div class="actions"><button class="btn" id="ppName">DESIGN MY CHARACTER →</button></div>`;}
+  else{h+=`<h3>🎮 ENTER YOUR PLAYER CODE</h3><div class="ppIntro">Type the code from your player card, like <b>LION-1234</b>, or scan the card’s QR code. You only need it the first time on each phone or computer.</div>
+   <div class="ppCodeRow"><input id="ppCode" class="ppCode" maxlength="16" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(P.inCode)}" placeholder="LION-1234"><button class="btn" id="ppGo">PLAY ▶</button></div>${err}
+   <div class="actions" style="margin-top:14px"><button class="btn sm alt" id="ppGuest">No code? Play as guest</button><span class="note">Guests play on this device only, offline</span></div>`;}
+  $('startBody').innerHTML=h+`<h3>PRESENTED BY</h3>${sponsorStrip(34)}`;bind();}
+ function bind(){const on=(id,f)=>{const el=$(id);if(el)el.onclick=f;};
+  const ci=$('ppCode');if(ci){ci.oninput=()=>{P.inCode=ci.value;};ci.onkeydown=e=>{if(e.key==='Enter')doEnter();};if(!ci.value)ci.focus();}
+  const ti=$('ppTag');if(ti){ti.oninput=()=>{P.inTag=ti.value;};ti.onkeydown=e=>{if(e.key==='Enter')doName();};if(!ti.value)ti.focus();}
+  on('ppGo',doEnter);on('ppName',doName);
+  on('ppGuest',()=>{P.guest=true;P.mode='done';START.step=PROF.list.filter(p=>!p.id.startsWith('u_')).length?'pick':'new';renderStart();});}
+ const _rs=renderStart;
+ renderStart=function(){if(!P.guest&&(!P.user||!P.tag||P.busy||P.mode==='name')){if(P.mode==='done')P.mode='code';return renderPass();}
+  if(P.user){const all=PROF.list;PROF.list=all.filter(p=>p.id===profId(P.saveKey));_rs();PROF.list=all;
+   const b=$('startBody');b.querySelectorAll('#pfNew,[data-del],[data-del2]').forEach(e=>e.remove());b.querySelectorAll('h3').forEach(h=>{if(/CHOOSE YOUR PROFILE/i.test(h.textContent))h.textContent='YOUR DRIVER';});
+   const bar=document.createElement('div');bar.className='ppBar';bar.innerHTML=`🎮 Playing as <b>${esc(P.tag)}</b> <button class="btn sm alt" id="ppOut">Sign out</button>`;b.prepend(bar);
+   $('ppOut').onclick=()=>{if(pushT){clearTimeout(pushT);pushNow();}try{localStorage.removeItem(LK);}catch(e){}setTimeout(()=>location.reload(),300);};return;}
+  const all=PROF.list;PROF.list=all.filter(p=>!p.id.startsWith('u_'));if(START.step==='pick'&&!PROF.list.length)START.step='new';_rs();PROF.list=all;
+  const b=$('startBody'),bar=document.createElement('div');bar.className='ppBar';bar.innerHTML=`👤 Playing as a guest (offline) <button class="btn sm alt" id="ppIn">I have a player code</button>`;b.prepend(bar);$('ppIn').onclick=()=>{P.guest=false;P.mode='code';renderStart();};};
+ const css=document.createElement('style');css.textContent=`.ppIntro{font:600 16px Rajdhani,sans-serif;color:#dfe3ee;margin:6px 0 12px;max-width:620px;line-height:1.35}
+ .ppCodeRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.ppCode{font:900 30px Orbitron,sans-serif;letter-spacing:3px;text-transform:uppercase;width:min(340px,80vw);padding:12px 16px;border-radius:12px;background:rgba(5,217,232,.07);border:2px solid var(--cyan);color:#fff;outline:none}
+ .ppCodeRow .btn{font-size:20px;padding:16px 26px}.ppBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:600 15px Rajdhani,sans-serif;background:rgba(5,217,232,.08);border:1px solid rgba(5,217,232,.35);border-radius:10px;padding:8px 12px;margin-bottom:10px}`;
+ document.head.appendChild(css);
+ // remembered on this device? sign straight back in; otherwise show the code screen (or use the QR link's code)
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(LK)||'null');}catch(e){}
+ if(P.autoGo){P.autoGo=false;enter(P.inCode,false);}else if(saved&&saved.c)enter(saved.c,true);else renderStart();
+})();
 </script>
 </body>
 </html>
