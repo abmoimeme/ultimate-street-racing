@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.2 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.3 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -3470,7 +3470,8 @@ function netUpdate(dt){netSend();if(!NET.city)return;const peers=NET.city.peers(
   // car look (rebuild when it changes)
   const key=d.carId+d.col+d.glow+d.decal+(d.mo||'');if(r.carKey!==key){if(r.car)world.remove(r.car);r.car=d.mo?buildPlayerMoto(d.mo,MOTOS[d.mo].col,expandChar(d.ch)):buildCarMesh(CARS[d.carId],new THREE.Color(d.col),{glow:GLOWS[d.glow],decal:d.decal});world.add(r.car);r.carKey=key;}
   const chKey=JSON.stringify(d.ch);if(r.chKey!==chKey){if(r.av)world.remove(r.av.g);r.av=makeAvatar(expandChar(d.ch));world.add(r.av.g);r.chKey=chKey;}
-  if(r.tagName!==d.n+d.lv){if(r.tag)world.remove(r.tag);r.tag=nameTag(`${d.n} · LV ${d.lv}`,pe.guest?'#ffc23d':'#05d9e8');world.add(r.tag);r.tagName=d.n+d.lv;}
+  const su=!!(window.SUPER_NET&&String(pe.peer||'').startsWith(window.SUPER_NET+'_'));if(!su&&/ABMOIMEME/i.test(String(d.n).replace(/[^a-z]/gi,'')))d.n='Driver';
+  if(r.tagName!==d.n+d.lv){if(r.tag)world.remove(r.tag);r.tag=nameTag(su?`👑 ${d.n} · SUPER`:`${d.n} · LV ${d.lv}`,su?'#ffc23d':pe.guest?'#ffc23d':'#05d9e8');world.add(r.tag);r.tagName=d.n+d.lv;}
   // smooth toward the reported state, with a little extrapolation along heading
   const age=Math.min(.35,(now-pe.updatedAt)/1000),tx=d.x+Math.sin(d.h)*d.v*age,tz=d.z+Math.cos(d.h)*d.v*age,k=clamp(dt*10,0,1);
   if(Math.hypot(tx-r.x,tz-r.z)>40){r.x=tx;r.z=tz;}else{r.x=lerp(r.x,tx,k);r.z=lerp(r.z,tz,k);}r.y=lerp(r.y,d.y,k);r.h+=wrapA(d.h-r.h)*k;
@@ -4717,10 +4718,12 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 (function(){
  if(!window.FB_READY||!window.firebase)return;
  const db=firebase.database(),S1='usr-save-7f3a',S2='usr-net-b91c',LK='usr_pass_v1';
- const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const m=s.match(/^([A-Z]+)(\d{4})$/);return m?m[1]+'-'+m[2]:'';};
+ const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const a=s.match(/^ABMOIMEME([A-Z0-9]{4})([A-Z0-9]{4})([A-Z0-9]{4})$/);if(a)return'ABMOIMEME-'+a[1]+'-'+a[2]+'-'+a[3];const m=s.match(/^([A-Z]+)(\d{4})$/);return m?m[1]+'-'+m[2]:'';};
+ // the super user (AB). Only this online id is public; the secret sign-in code is kept by AB.
+ const SUPER_NET='200b30764f8b8a5e8b5590bc',SUPER_TAG='ABMOIMEME';window.SUPER_NET=SUPER_NET;
  async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);}
  const tagErr=t=>{if(!t)return'Pick your driver name.';if(!/^[A-Za-z]/.test(t))return'Start your name with a letter.';if(t.length<2||t.length>14)return'Use 2 to 14 letters or numbers.';if(!/^[A-Za-z][A-Za-z0-9_ ]*$/.test(t))return'Only letters and numbers please.';
-  if(/\d{4,}/.test(t))return'Too many numbers in a row.';if(kidSafe(t)!==t)return'Please pick a friendlier name.';return'';};
+  if(/\d{4,}/.test(t))return'Too many numbers in a row.';if(kidSafe(t)!==t)return'Please pick a friendlier name.';if(!P.super&&t.replace(/[^a-z]/gi,'').toUpperCase().includes(SUPER_TAG))return'That name is taken. Pick another one!';return'';};
  const P={ready:true,user:null,tag:'',mode:'code',inCode:'',inTag:'',err:'',busy:false,guest:false,saveKey:null,netKey:null};
  window.PASS=P;
  try{const q=new URLSearchParams(location.search).get('code');if(q){P.inCode=normCode(q)||'';P.autoGo=!!P.inCode;history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
@@ -4732,7 +4735,7 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
  function pushNow(){pushT=null;if(!P.user||!P.tag)return;const p=activeProfile();if(!p||p.id!==profId(P.saveKey))return;
   let raw=null;try{raw=localStorage.getItem(p.key);}catch(e){}if(!raw||raw.length>=400000)return;lastPush=Date.now();ref().set({tag:P.tag,save:raw,upd:lastPush}).catch(()=>{});}
  function schedulePush(){if(!P.user)return;if(pushT)return;pushT=setTimeout(pushNow,Math.max(1500,8000-(Date.now()-lastPush)));}
- const _save=save;save=function(){if(P.user&&SAVE)SAVE._upd=Date.now();const r=_save.apply(this,arguments);schedulePush();return r;};
+ const _save=save;save=function(){if(P.user&&SAVE)SAVE._upd=Date.now();if(P.super&&SAVE&&SAVE.cars)grantAll();const r=_save.apply(this,arguments);schedulePush();return r;};
  addEventListener('visibilitychange',()=>{if(document.hidden&&pushT){clearTimeout(pushT);pushNow();}});
  addEventListener('pagehide',()=>{if(pushT){clearTimeout(pushT);pushNow();}});
  const withT=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),ms))]);
@@ -4741,15 +4744,21 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
   catch(e){P.busy=false;P.saveKey=P.netKey=null;const msg=String((e&&(e.code||e.message))||'');
    P.err=/permission/i.test(msg)?'That code isn’t right. Check it with the grown-up who gave it to you.':'No internet right now. Check your connection, or play as a guest.';
    if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}
-  P.user={uid:P.netKey};P.code=code;try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
-  P.busy=false;if(v&&v.tag){P.tag=v.tag;await openPlayer(v);}else{P.mode='name';renderStart();}}
+  P.user={uid:P.netKey};P.code=code;P.super=P.netKey===SUPER_NET;try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
+  P.busy=false;if(P.super){P.tag=SUPER_TAG;await openPlayer(v);}else if(v&&v.tag){P.tag=v.tag;await openPlayer(v);}else{P.mode='name';renderStart();}}
  async function openPlayer(v){const p=ensureProfile(P.tag);let how='new';
   if(v&&typeof v.save==='string'&&v.save.length){let local=null;try{local=JSON.parse(localStorage.getItem(p.key)||'null');}catch(e){}const lu=local&&local._upd||0;
    if(!local||(v.upd||0)>lu)localStorage.setItem(p.key,v.save);how='old';}
   useProfile(p.id);SAVE.profile=Object.assign({},SAVE.profile||{},{name:P.tag,crew:(SAVE.profile&&SAVE.profile.crew)||''});
-  if(how==='new'){SAVE.char=SAVE.char||defChar();save();pushNow();}
+  if(P.super)grantAll();
+  if(how==='new'||P.super){SAVE.char=SAVE.char||defChar();save();pushNow();}
   pickCity=SAVE.city||pickCity;if(pickCity!==S.city)buildCity(pickCity);
   P.mode='done';START.step='pick';if(!SAVE.current){openCreator('new',()=>{START.step='car';renderStart();});}renderStart();}
+ // super user: every car owned and fully tuned, all bikes, all secret codes found, plenty of cash
+ function grantAll(){SAVE.cash=Math.max(SAVE.cash||0,999999);
+  for(const k in CARS){const c=SAVE.cars[k]||carState(k);c.eng=3;c.tires=3;c.nos=2;c.impounded=false;c.busts=0;SAVE.cars[k]=c;}
+  SAVE.unlocks.rainbow=true;SAVE.unlocks.glider=true;const f=cheatFound();Object.keys(CHEATS).forEach(k=>{if(!f.includes(k))f.push(k);});SAVE.cheats.creator=true;
+  SAVE.super=true;}
  async function doEnter(){const c=normCode(P.inCode);if(!c){P.err='Type your player code, like LION-1234.';return renderStart();}await enter(c,false);}
  async function doName(){const t=P.inTag.trim(),er=tagErr(t);if(er){P.err=er;return renderStart();}P.tag=t;await openPlayer(null);}
  function renderPass(){let h='';const err=P.err?`<div class="tutbox" style="border-color:#ff2a6d;background:rgba(255,42,109,.12)">⚠ ${esc(P.err)}</div>`:'';
@@ -4758,7 +4767,7 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
    <div class="field" style="max-width:380px"><label>Driver name</label><input id="ppTag" maxlength="14" autocapitalize="words" spellcheck="false" value="${esc(P.inTag)}" placeholder="e.g. TurboLion"></div>${err}
    <div class="actions"><button class="btn" id="ppName">DESIGN MY CHARACTER →</button></div>`;}
   else{h+=`<h3>🎮 ENTER YOUR PLAYER CODE</h3><div class="ppIntro">Type the code from your player card, like <b>LION-1234</b>, or scan the card’s QR code. You only need it the first time on each phone or computer.</div>
-   <div class="ppCodeRow"><input id="ppCode" class="ppCode" maxlength="16" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(P.inCode)}" placeholder="LION-1234"><button class="btn" id="ppGo">PLAY ▶</button></div>${err}
+   <div class="ppCodeRow"><input id="ppCode" class="ppCode" maxlength="26" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(P.inCode)}" placeholder="LION-1234"><button class="btn" id="ppGo">PLAY ▶</button></div>${err}
    <div class="actions" style="margin-top:14px"><button class="btn sm alt" id="ppGuest">No code? Play as guest</button><span class="note">Guests play on this device only, offline</span></div>`;}
   $('startBody').innerHTML=h+`<h3>PRESENTED BY</h3>${sponsorStrip(34)}`;bind();}
  function bind(){const on=(id,f)=>{const el=$(id);if(el)el.onclick=f;};
@@ -4770,13 +4779,13 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
  renderStart=function(){if(!P.guest&&(!P.user||!P.tag||P.busy||P.mode==='name')){if(P.mode==='done')P.mode='code';return renderPass();}
   if(P.user){const all=PROF.list;PROF.list=all.filter(p=>p.id===profId(P.saveKey));_rs();PROF.list=all;
    const b=$('startBody');b.querySelectorAll('#pfNew,[data-del],[data-del2]').forEach(e=>e.remove());b.querySelectorAll('h3').forEach(h=>{if(/CHOOSE YOUR PROFILE/i.test(h.textContent))h.textContent='YOUR DRIVER';});
-   const bar=document.createElement('div');bar.className='ppBar';bar.innerHTML=`🎮 Playing as <b>${esc(P.tag)}</b> <button class="btn sm alt" id="ppOut">Sign out</button>`;b.prepend(bar);
+   const bar=document.createElement('div');bar.className='ppBar';bar.innerHTML=`${P.super?'👑':'🎮'} Playing as <b>${esc(P.tag)}</b>${P.super?' <span class="ppSU">SUPER USER · everything unlocked</span>':''} <button class="btn sm alt" id="ppOut">Sign out</button>`;b.prepend(bar);
    $('ppOut').onclick=()=>{if(pushT){clearTimeout(pushT);pushNow();}try{localStorage.removeItem(LK);}catch(e){}setTimeout(()=>location.reload(),300);};return;}
   const all=PROF.list;PROF.list=all.filter(p=>!p.id.startsWith('u_'));if(START.step==='pick'&&!PROF.list.length)START.step='new';_rs();PROF.list=all;
   const b=$('startBody'),bar=document.createElement('div');bar.className='ppBar';bar.innerHTML=`👤 Playing as a guest (offline) <button class="btn sm alt" id="ppIn">I have a player code</button>`;b.prepend(bar);$('ppIn').onclick=()=>{P.guest=false;P.mode='code';renderStart();};};
  const css=document.createElement('style');css.textContent=`.ppIntro{font:600 16px Rajdhani,sans-serif;color:#dfe3ee;margin:6px 0 12px;max-width:620px;line-height:1.35}
  .ppCodeRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.ppCode{font:900 30px Orbitron,sans-serif;letter-spacing:3px;text-transform:uppercase;width:min(340px,80vw);padding:12px 16px;border-radius:12px;background:rgba(5,217,232,.07);border:2px solid var(--cyan);color:#fff;outline:none}
- .ppCodeRow .btn{font-size:20px;padding:16px 26px}.ppBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:600 15px Rajdhani,sans-serif;background:rgba(5,217,232,.08);border:1px solid rgba(5,217,232,.35);border-radius:10px;padding:8px 12px;margin-bottom:10px}`;
+ .ppCodeRow .btn{font-size:20px;padding:16px 26px}.ppSU{font:800 12px Orbitron,sans-serif;letter-spacing:1px;color:#1a1200;background:linear-gradient(90deg,#ffd75e,#ffb800);border-radius:6px;padding:3px 8px}.ppBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:600 15px Rajdhani,sans-serif;background:rgba(5,217,232,.08);border:1px solid rgba(5,217,232,.35);border-radius:10px;padding:8px 12px;margin-bottom:10px}`;
  document.head.appendChild(css);
  // remembered on this device? sign straight back in; otherwise show the code screen (or use the QR link's code)
  let saved=null;try{saved=JSON.parse(localStorage.getItem(LK)||'null');}catch(e){}
