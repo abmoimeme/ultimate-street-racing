@@ -31,6 +31,10 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - **🛋️ The Lounge:** the Teranga Lounge (Dakar) and Neon Lounge (Tokyo) are chill zones with no racing. There's a stage, benches, a DJ booth and a showcase that spins your own car. Walk up to players to see their player card.
 - **😀 Emotes:** wave, sabar dance, clap, flex, cheer, laugh, sit and pose (keys 1–8, or tap 😀).
 - **👕 New looks:** mohawk, ponytail, headphones, bucket hat, helmet, gold crown, backpack, Lions scarf and hero cape.
+- **💛 Best friends & 👻 appear offline:** pin up to 5 best friends at the top of your list, or switch on Appear Offline to play privately (nobody sees you in Friends or can Join you).
+- **🔁 Rejoin:** if the game crashes, the Wi-Fi drops or the page reloads, tap REJOIN to go right back where you were.
+- **🎨 Fit and color:** give hats their own color and adjust their height and tilt. Six free starter outfits help new players look sharp right away.
+- **↩️ Sell back:** changed your mind about a car? Sell it back in the garage for 60% of the price.
 - **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
 - **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
@@ -58,7 +62,7 @@ Your rivals can grab boosters too, so race for them!
 - **Guests** can play on one device without a code, but online play needs a player code.
 
 ## Safe online play
-- Online chat only uses friendly quick messages and emojis (like "🔥 Nice drift!" or "🏁 Race me?"). Nobody can type free text to other players.
+- Online chat only uses friendly quick messages and emojis (like "🔥 Nice drift!", "🏁 Race me?" or "👋 Nanga def!"). Nobody can type free text to other players.
 - Other players only ever see your gamer tag, level, car, look and the badge you choose to show.
 - Items can't be traded and nothing is ever bought with real money.
 

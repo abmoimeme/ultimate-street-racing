@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.4 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.5 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -2642,7 +2642,7 @@ const _san=sanitize;
 sanitize=function(s){const d=_san(s);
  if(s.badges&&typeof s.badges==='object')for(const k in s.badges)if(BADGE_BY[k]&&Number.isFinite(s.badges[k]))d.badges[k]=s.badges[k];
  d.feat=BADGE_BY[s.feat]&&d.badges[s.feat]?s.feat:null;
- if(Array.isArray(s.friends))d.friends=s.friends.filter(f=>f&&typeof f.id==='string').slice(0,40).map(f=>({id:f.id.replace(/[^\w-]/g,'').slice(0,80),n:String(f.n||'').replace(/[^\w \-.']/g,'').slice(0,18)||'Driver'}));
+ if(Array.isArray(s.friends))d.friends=s.friends.filter(f=>f&&typeof f.id==='string').slice(0,40).map(f=>({id:f.id.replace(/[^\w-]/g,'').slice(0,80),n:String(f.n||'').replace(/[^\w \-.']/g,'').slice(0,18)||'Driver',best:!!f.best}));d.ghost=!!s.ghost;
  if(s.daily&&typeof s.daily==='object'){const D=s.daily;d.daily={last:/^\d{4}-\d\d-\d\d$/.test(D.last)?D.last:'',streak:Number.isFinite(D.streak)?Math.max(0,Math.min(9999,D.streak|0)):0,best:Number.isFinite(D.best)?Math.max(0,Math.min(9999,D.best|0)):0};}
  return d;};
 let SAVE=loadSave();
@@ -3275,8 +3275,8 @@ function makeAvatar(ch){ch=cleanChar(ch);const g=new THREE.Group(),skin=plainMat
   if(hair==='bun'){const b=new THREE.Mesh(AG.bun,hm);b.position.set(0,.12,-.07);head.add(b);}
   if(hair==='locs'||hair==='braids'){const n2=hair==='locs'?12:2;for(let k=0;k<n2;k++){const a=hair==='locs'?Math.PI*.15+k/(n2-1)*Math.PI*.7:Math.PI*.4+k*Math.PI*.2;const l=new THREE.Mesh(AG.loc,hm);l.position.set(Math.cos(a)*.11,.02,-Math.sin(a)*.11);l.scale.y=hair==='braids'?1.4:1;head.add(l);}}}
  if(hw==='kufi'){const k=new THREE.Mesh(PG.kufi,plainMat(ch.topCol==='#111114'?'#f6f4ef':ch.topCol));k.position.y=.08;head.add(k);}
- if(hw==='cap'){const c=new THREE.Mesh(AG.beanie,plainMat(ch.topCol));c.scale.set(1,.7,1);c.position.y=.02;head.add(c);const br=new THREE.Mesh(AG.brim,plainMat(ch.topCol));br.position.set(0,.07,.13);head.add(br);}
- if(hw==='beanie'){const c=new THREE.Mesh(AG.beanie,plainMat(ch.topCol));c.position.y=.02;c.scale.set(1.02,1.1,1.02);head.add(c);}
+ if(hw==='cap'){const c=new THREE.Mesh(AG.beanie,plainMat(ch.topCol));c.scale.set(1.08,.8,1.08);c.position.y=.065;head.add(c);const br=new THREE.Mesh(AG.brim,plainMat(ch.topCol));br.position.set(0,.085,.14);br.rotation.x=.12;head.add(br);}
+ if(hw==='beanie'){const c=new THREE.Mesh(AG.beanie,plainMat(ch.topCol));c.position.y=.05;c.scale.set(1.06,1.1,1.06);head.add(c);}
  if(hw==='musoor'){const w=new THREE.Mesh(PG.wrap,wax);w.position.set(0,.14,-.02);w.rotation.x=-.25;w.scale.set(1,1.4,1.1);head.add(w);const k=new THREE.Mesh(PG.knot,wax);k.position.set(0,.28,.03);head.add(k);}
  if(ch.chain){const c=new THREE.Mesh(AG.chain,pm('gold',()=>stdM('#d4a52a',{metalness:.9,roughness:.25})));c.position.set(0,1.38,.1);c.rotation.x=1.35;g.add(c);}
  return{g,legs,arms,head,body};}
@@ -3747,6 +3747,80 @@ netUpdate=function(dt){_nu(dt);
 // ---------- chat ----------
 // kid-safe chat: only these preset messages and emojis can be sent or shown
 const QUICK=['👋 Hi!','🏁 Race me?','🔥 Nice drift!','😎 Cool car!','👍 Good game!','🚗 Follow me!','⏳ Wait for me!','🎉 Let\'s go!','🤝 Good race!','🏆 You win!','🙏 Thank you!','👋 Bye!','😂','😮','🔥','❤️','👏','🏎️','⚽','🇸🇳'];
+/* ---------- v1.5 quick wins: best friends, appear offline, rejoin, more quick chat, hat colors + fit, starter outfits, car sell-back ---------- */
+QUICK.push('👋 Nanga def!','😄 Salut !','🙇 Konnichiwa!','🙏 Jërëjëf!','🙏 Merci !','🎮 GG!','🔁 Rematch?','🏁 1 more lap!','🛋️ Meet at the Lounge','⏳ Be right back','📍 Over here!','🤩 Watch this!','😂 Ha ha!','❤️ Teranga!','🚓 Cops behind me!','🛵 Let\'s ride bikes!');
+// ---- hats: own color, height and tilt ----
+const _defChar15=defChar;defChar=function(){return Object.assign(_defChar15(),{hatCol:'',hatY:0,hatT:0});};
+const _clean15=cleanChar;cleanChar=function(c){const d=_clean15(c);if(d.hatCol&&!/^#[0-9a-f]{6}$/i.test(d.hatCol))d.hatCol='';d.hatY=clamp(Math.round(fin(d.hatY)),-4,4);d.hatT=clamp(Math.round(fin(d.hatT)),-4,4);return d;};
+const _cc15=compactChar;compactChar=function(c){const a=_cc15(c);a[16]=c.hatCol||'';a[17]=c.hatY|0;a[18]=c.hatT|0;return a;};
+const _ec15=expandChar;expandChar=function(a){const o=_ec15(a);if(Array.isArray(a)){if(/^#[0-9a-f]{6}$/i.test(a[16]||''))o.hatCol=a[16];o.hatY=clamp(Math.round(fin(a[17])),-4,4);o.hatT=clamp(Math.round(fin(a[18])),-4,4);}return o;};
+const HAT_GEO=new Set([PG.kufi,AG.beanie,AG.brim,PG.wrap,PG.knot,SG.band,SG.cup,SG.bucket,SG.brimB,SG.helm,SG.visor,SG.crown,SG.spike]);
+const _mk15=makeAvatar;
+makeAvatar=function(ch){const c=cleanChar(ch),a=_mk15(c);if(c.head==='none')return a;const hd=a.head,top=plainMat(c.topCol),hat=new THREE.Group();
+ for(const m of[...hd.children])if(m.geometry&&HAT_GEO.has(m.geometry)){if(c.hatCol&&c.head!=='musoor'&&c.head!=='crown'){if(m.material===top)m.material=plainMat(c.hatCol);else if(c.head==='helmet'&&m.geometry===SG.helm)m.material=stdM(c.hatCol,{roughness:.25,metalness:.2});}hd.remove(m);hat.add(m);}
+ hat.position.y=c.hatY*.012;hat.rotation.x=c.hatT*.07;hd.add(hat);a.hat=hat;return a;};
+const OUTFITS=[
+ ['Dakar Fresh',{top:'waxshirt',wax:2,bottom:'thiaya',botCol:'#f6f4ef',head:'kufi',hatCol:'#f6f4ef',shoes:'#6b4a2b',acc:'none'}],
+ ['Tokyo Street',{top:'hoodie',topCol:'#111114',bottom:'joggers',botCol:'#111114',head:'cap',hatCol:'#ff2a6d',shoes:'#05d9e8',acc:'backpack',accCol:'#ff2a6d'}],
+ ['Lions Fan',{top:'jersey',bottom:'shorts',botCol:'#1b7a3e',head:'none',shoes:'#ffd000',acc:'scarf'}],
+ ['Race Pro',{top:'jacket',topCol:'#ff2a6d',bottom:'joggers',botCol:'#111114',head:'helmet',hatCol:'#f6f4ef',shoes:'#f6f4ef',acc:'none'}],
+ ['Chill Vibes',{top:'tshirt',topCol:'#ffd000',bottom:'jeans',botCol:'#24357f',head:'bucket',hatCol:'#f6f4ef',shoes:'#f6f4ef',acc:'none'}],
+ ['Grand Boubou',{top:'boubou',topCol:'#f6f4ef',bottom:'thiaya',botCol:'#f6f4ef',head:'kufi',hatCol:'#f6f4ef',shoes:'#6b4a2b',acc:'none'}]];
+const _rc15=renderCreator;
+renderCreator=function(){_rc15();const c=CR.ch,P=$('crPanel'),sc=P.querySelector('.crScroll');if(!sc)return;
+ if(CR.tab==='body')sc.insertAdjacentHTML('afterbegin',`<h3>STARTER OUTFITS · ALL FREE</h3><div class="chips">${OUTFITS.map((o,i)=>`<button class="chip" data-out="${i}">${o[0]}</button>`).join('')}</div>`);
+ if(CR.tab==='hair'&&c.head!=='none'){const col=c.head!=='musoor'&&c.head!=='crown';
+  sc.insertAdjacentHTML('beforeend',`${col?`<h3>HEADWEAR COLOR</h3><div class="sw"><i class="${!c.hatCol?'on':''}" data-k="hatCol" data-v="" title="Match my top" style="background:linear-gradient(135deg,${c.topCol} 50%,#ffffff22 50%)"></i>${CLOTH_COLS.map(x=>`<i style="background:${x}" class="${c.hatCol===x?'on':''}" data-k="hatCol" data-v="${x}"></i>`).join('')}</div>`:''}
+  <h3>HEADWEAR FIT</h3><div class="chips"><button class="chip" data-fit="hatY" data-d="-1">⬇ Lower</button><button class="chip" data-fit="hatY" data-d="1">⬆ Higher</button><button class="chip" data-fit="hatT" data-d="-1">↶ Tilt back</button><button class="chip" data-fit="hatT" data-d="1">↷ Tilt forward</button><button class="chip" data-fit="reset">Reset</button></div><div class="note">Height ${c.hatY>0?'+':''}${c.hatY} · tilt ${c.hatT>0?'+':''}${c.hatT}. Tip: tap ZOOM FACE to check the fit.</div>`);}};
+const _crc15=creatorClick;
+creatorClick=function(e){const c=CR&&CR.ch;const o=e.target.closest('[data-out]'),f=e.target.closest('[data-fit]');
+ if(o&&c){Object.assign(c,OUTFITS[+o.dataset.out][1]);if(c.body==='f'&&c.top==='boubou')c.bottom='thiaya';rebuildAvatarPreview();renderCreator();return;}
+ if(f&&c){if(f.dataset.fit==='reset'){c.hatY=0;c.hatT=0;}else c[f.dataset.fit]=clamp((c[f.dataset.fit]|0)+(+f.dataset.d),-4,4);rebuildAvatarPreview();renderCreator();return;}
+ _crc15(e);};
+// ---- best friends + appear offline ----
+const _lobby15=lobbyList;lobbyList=async function(){return(await _lobby15()).filter(e=>!e.d.hid);};
+const _rr15=readRemote;readRemote=function(pr){const d=_rr15(pr);if(d)d.hid=pr.hid===1;return d;};
+const _mp15=myPresence;myPresence=function(){const o=_mp15();if(SAVE.ghost){o.hid=1;o.id=null;}return o;};
+const _of15=openFriends;
+openFriends=async function(){ensureSoc();SAVE.friends.sort((a,b)=>(b.best?1:0)-(a.best?1:0));await _of15();const card=$('modalCard');if(!card||$('modal').classList.contains('hidden'))return;
+ card.querySelectorAll('[data-soc="unfriend"]').forEach(b=>{const f=SAVE.friends.find(x=>x.id===b.dataset.v);if(!f)return;b.insertAdjacentHTML('beforebegin',`<button class="btn ${f.best?'':'alt'} sm" data-soc="best" data-v="${esc(f.id)}" title="Best friend">${f.best?'💛 BEST':'🤍 BEST'}</button> `);
+  if(f.best){const nm=b.closest('.item').querySelector('b');if(nm)nm.insertAdjacentHTML('beforeend',' <span class="pill" style="color:#ffc23d">BEST FRIEND</span>');}});
+ const sub=card.querySelector('.sub');if(sub)sub.insertAdjacentHTML('afterend',`<div class="tutbox" style="display:flex;align-items:center;gap:10px;margin:8px 0">${SAVE.ghost?'👻 <b>Appear offline is ON.</b> Nobody sees you in their Friends list or can Join you.':'👀 Friends can see where you are and Join you.'}<span style="flex:1"></span><button class="btn sm ${SAVE.ghost?'pink':'alt'}" data-soc="ghost">${SAVE.ghost?'GO VISIBLE':'👻 APPEAR OFFLINE'}</button></div>
+  <div class="note" style="margin-bottom:6px">💛 Pin up to 5 best friends to keep them at the top.</div>`);};
+// ---- rejoin after a crash, dropped Wi-Fi or reload ----
+const lastKey=()=>'usr_last_'+(typeof KEY==='string'?KEY:'x');
+let lastSaveT=0;
+function saveLast(){if(!player||S.state!=='play'||S.race)return;const m=S.meet&&S.meet.free?S.meet:null;
+ const o={t:Date.now(),city:S.city,x:+player.x.toFixed(1),z:+player.z.toFixed(1),h:+player.h.toFixed(2),foot:m?[+m.x.toFixed(1),+m.z.toFixed(1),+m.h.toFixed(2)]:null,lg:m&&inLounge(m.x,m.z)?1:0};try{localStorage.setItem(lastKey(),JSON.stringify(o));}catch(e){}}
+function readLast(){try{const o=JSON.parse(localStorage.getItem(lastKey())||'null');if(o&&CITY[o.city]&&Number.isFinite(o.x)&&Number.isFinite(o.z)&&Date.now()-o.t<45*60e3)return o;}catch(e){}return null;}
+function offerRejoin(){const o=readLast();if(!o)return;const near=o.city===S.city&&Math.hypot(o.x-player.x,o.z-player.z)<25&&!o.foot;if(near)return;
+ let el=$('rejoin');if(!el){el=document.createElement('div');el.id='rejoin';el.className='panel';el.style.cssText='position:absolute;left:50%;top:74px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:10px 14px;pointer-events:auto;z-index:8';$('hud').appendChild(el);
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-rj]');if(!b)return;el.remove();if(b.dataset.rj==='go')doRejoin(readLast());});}
+ el.innerHTML=`🔁 <span>Pick up where you left off in <b>${CITY[o.city].name}</b>${o.lg?' (the Lounge)':''}?</span><button class="btn sm" data-rj="go">REJOIN</button><button class="btn alt sm" data-rj="no">NO THANKS</button>`;setTimeout(()=>{const e=$('rejoin');if(e)e.remove();},20000);}
+function doRejoin(o){if(!o||S.race||S.deliv||S.heat.level>0)return;if(S.paused)closeModal();if(S.meet&&!S.meet.free)leaveMeet();if(S.meet&&S.meet.free)leaveMeet();
+ if(o.city!==S.city)travel(o.city);if(o.lg){enterLounge(true);if(o.foot&&S.meet){S.meet.x=o.foot[0];S.meet.z=o.foot[1];S.meet.h=o.foot[2];}toast('🔁 REJOINED','Back in the Lounge','#39ff9f',1.6);return;}
+ placeOnRoad(player,o.x,o.z,o.h);if(o.foot){footExitVehicle();if(S.meet){S.meet.x=o.foot[0];S.meet.z=o.foot[1];S.meet.h=o.foot[2];}}toast('🔁 REJOINED','Back where you were','#39ff9f',1.6);}
+let netWasOn=null;
+const _nu15=netUpdate;netUpdate=function(dt){_nu15(dt);
+ if(S.state==='play'&&SAVE&&SAVE.current){if(S.rejoinFor!==SAVE&&(S.time||0)>.5){S.rejoinFor=SAVE;offerRejoin();lastSaveT=Date.now()+12000;}
+  if(S.rejoinFor===SAVE&&Date.now()-lastSaveT>3000){lastSaveT=Date.now();saveLast();}
+  // a dropped connection that comes back: tell the player they're back with everyone
+  const on=!!(NET.connected&&NET.city);if(netWasOn===false&&on)toast('🔁 RECONNECTED','You are back online with everyone','#39ff9f',1.8);if(netWasOn===true&&!on&&NET.room)feed('📶 Connection lost · reconnecting…');netWasOn=on;}};
+addEventListener('pagehide',()=>{try{saveLast();}catch(e){}});
+// ---- sell back a car you regret buying (60%) ----
+const SELL_PCT=.6;
+const _rg15=renderGarage;
+renderGarage=function(){_rg15();const card=$('modalCard');if(!card)return;
+ card.querySelectorAll('[data-act="switch"]').forEach(b=>{const k=b.dataset.v,c=CARS[k];if(!c||!c.price||(window.PASS&&PASS.super))return;const own=SAVE.cars[k];if(!own||own.impounded)return;
+  const conf=S.sellConfirm===k;b.insertAdjacentHTML('afterend',` <button class="btn sm ${conf?'pink':'alt'}" data-act="sellcar" data-v="${k}">${conf?'TAP AGAIN TO SELL':'SELL '+fmt(Math.round(c.price*SELL_PCT))}</button>`);});};
+const _ha15=handleAct;
+handleAct=function(act,v,el){if(act==='sellcar'){const c=CARS[v],own=SAVE.cars[v];if(!c||!own||v===SAVE.current||own.impounded){S.sellConfirm=null;renderGarage();return;}
+  if(S.sellConfirm!==v){S.sellConfirm=v;renderGarage();return;}S.sellConfirm=null;const back=Math.round(c.price*SELL_PCT);delete SAVE.cars[v];SAVE.cash+=back;save();feed(`↩️ Sold ${c.name} back for ${fmt(back)}`);chime(true);renderGarage();return;}
+ if(act!=='sellcar')S.sellConfirm=null;return _ha15(act,v,el);};
+$('modal').addEventListener('click',e=>{const b=e.target.closest('[data-soc]');if(!b)return;const a=b.dataset.soc,v=b.dataset.v;
+ if(a==='best'){const f=SAVE.friends.find(x=>x.id===v);if(!f)return;if(!f.best&&SAVE.friends.filter(x=>x.best).length>=5){toast('5 best friends max','Unpin one first','#ffc23d',1.8);return;}f.best=!f.best;save();openFriends();}
+ if(a==='ghost'){SAVE.ghost=!SAVE.ghost;save();toast(SAVE.ghost?'👻 APPEAR OFFLINE':'👀 VISIBLE',SAVE.ghost?'Friends can’t see or Join you':'Friends can see and Join you again','#05d9e8',1.8);openFriends();}},true);
+(function(){const st=document.createElement('style');st.textContent='#qGrid{max-height:52vh;overflow:auto}';document.head.appendChild(st);})();
 function openChat(){if(!NET.city){feed('Chat works when you are online with other drivers');return;}const el=$('chatBox');
  $('qGrid').innerHTML=QUICK.map((t,i)=>`<button data-q="${i}" class="${t.length<=4?'em':''}">${i<9?`<span class="note" style="opacity:.6">${i+1} </span>`:''}${t}</button>`).join('');
  $('qGrid').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>sendQuick(+b.dataset.q));el.classList.remove('hidden');releaseAll();}
