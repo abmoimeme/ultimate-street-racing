@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.0 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.1 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -2595,7 +2595,7 @@ const sponsorStrip=(h=34,dark)=>`<div class="sponsors">${['jollof','pah','spark'
 let KEY='usr_save_tmp';let saveWarn=null,saveFailShown=false;
 function defSave(){return{v:1,cash:2500,xp:0,rep:0,city:'tokyo',current:null,cars:{},unlocks:{rainbow:false,glider:false},horn:'classic',treasures:{tokyo:[],dakar:[]},stats:{races:0,wins:0,escapes:0,busts:0},tut:0,seen:{},char:null,profile:null};}
 function carState(id){return{eng:0,tires:0,nos:0,color:'#'+CARS[id].color.toString(16).padStart(6,'0'),glow:'none',smoke:'#ffffff',decal:'none',health:100,busts:0,impounded:false};}
-function sanitize(s){if(!s||typeof s!=='object'||s.v!==1)throw new Error('bad save');const d=defSave();const num=(v,def)=>Number.isFinite(v)&&v>=0?v:def;if(Number.isFinite(s._upd))d._upd=s._upd;
+function sanitize(s){if(!s||typeof s!=='object'||s.v!==1)throw new Error('bad save');const d=defSave();const num=(v,def)=>Number.isFinite(v)&&v>=0?v:def;if(Number.isFinite(s._upd))d._upd=s._upd;if(s.cheats&&Array.isArray(s.cheats.found))d.cheats={found:s.cheats.found.filter(k=>typeof k==='string'&&/^[A-Z]{3,10}$/.test(k)).slice(0,20),cashDay:String(s.cheats.cashDay||'').slice(0,30),creator:!!s.cheats.creator};
  d.cash=num(s.cash,d.cash);d.xp=num(s.xp,0);d.rep=num(s.rep,0);d.city=CITY[s.city]?s.city:'tokyo';d.horn=HORNS[s.horn]?s.horn:'classic';
  if(s.unlocks){d.unlocks.rainbow=!!s.unlocks.rainbow;d.unlocks.glider=!!s.unlocks.glider;if(s.unlocks.rainbowOn===false)d.unlocks.rainbowOn=false;}
  if(s.cars&&typeof s.cars==='object')for(const k in s.cars){if(!CARS[k]||!s.cars[k])continue;const c=Object.assign(carState(k),s.cars[k]);
@@ -4084,7 +4084,7 @@ function stepCar(c,inp,dt){
  c.vx=fx*vF+rx*vL;c.vz=fz*vF+rz*vL;c.vF=vF;c.vL=vL;
  c.x+=c.vx*dt;c.z+=c.vz*dt;
  const gh=groundH(c);
- if(c.air){c.vy-=(inp.glide?7:25)*dt;c.y+=c.vy*dt;c.airT+=dt;if(c.y<=gh){c.y=gh;c.air=false;const imp=-c.vy;c.vy=0;if(c.onLand)c.onLand(imp);}}
+ if(c.air){c.vy-=(inp.glide?7:25)*(c.isPlayer&&typeof CHEAT!=='undefined'&&CHEAT.moon>0?.32:1)*dt;c.y+=c.vy*dt;c.airT+=dt;if(c.y<=gh){c.y=gh;c.air=false;const imp=-c.vy;c.vy=0;if(c.onLand)c.onLand(imp);}}
  else{const prev=c.y;if(gh>=prev-.25){c.climb=(gh-prev)/dt;c.y=gh;}else{c.air=true;c.vy=Math.max(0,c.climb)*1.05;c.airT=0;}
   for(const t of TRAMPS){if(Math.hypot(c.x-t.x,c.z-t.z)<t.r){c.air=true;c.vy=19;c.airT=0;c.y=.4;if(c.isPlayer){noiseHit(.2,2000);feed('🤸 Trampoline!');}}}}
  // bounds
@@ -4241,6 +4241,50 @@ function boostUpdate(dt){const p=player;if(!p)return;
 (function(){const d=document.createElement('div');d.id='boostHud';document.getElementById('hud').appendChild(d);
  const s=document.createElement('style');s.textContent='#boostHud{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);display:flex;gap:8px;z-index:12;pointer-events:none}.bchip{position:relative;display:flex;align-items:center;gap:6px;padding:5px 10px 7px;border:2px solid;border-radius:12px;background:rgba(8,8,20,.72);font:800 13px Orbitron,sans-serif;letter-spacing:1px;color:#fff;overflow:hidden}.bchip span{font-size:20px}.bchip i{position:absolute;left:0;bottom:0;height:3px}';document.head.appendChild(s);})();
 
+/* ---------- SECRET CODES (cheats): typed in the pause menu. Never in online duels, and race times set with a fun cheat on don't go to the leaderboards ---------- */
+const CHEATS={
+ TERANGA:{e:'💰',n:'Teranga cash',d:'+$10,000 (once a day)'},
+ RAINBOW:{e:'🌈',n:'Rainbow trail',d:'Your nitro leaves a rainbow'},
+ WINGS:{e:'🪂',n:'Glider wings',d:'Hold Space in the air to glide'},
+ MOONJUMP:{e:'🌙',n:'Moon jump',d:'Low gravity for 60 seconds'},
+ TINYCARS:{e:'🧸',n:'Tiny cars',d:'Traffic turns toy-sized for 60 seconds'},
+ DISCO:{e:'🪩',n:'Disco city',d:'Party lights and dancing people for 45 seconds'},
+ MUHAMMAD:{e:'👑',n:'Creator edition',d:'A special car look, made in honor of the game’s creator'}};
+const CHEAT={moon:0,tiny:0,disco:0,used:false,hemi0:null};
+function cheatFound(){SAVE.cheats=SAVE.cheats||{found:[]};return SAVE.cheats.found;}
+function cheatOnline(){return !!(S.race&&S.race.online)||!!(NET&&NET.duel);}
+function applyCheat(raw){const k=String(raw||'').toUpperCase().replace(/[^A-Z]/g,'');const C=CHEATS[k];
+ if(!C)return{ok:false,msg:'Hmm… that’s not a secret code. Keep looking! 🔍'};
+ if(cheatOnline())return{ok:false,msg:'Secret codes are switched off during online duels. Keep it fair! 🤝'};
+ const f=cheatFound();const first=!f.includes(k);if(first)f.push(k);const cs=SAVE.cars[SAVE.current];
+ if(k==='TERANGA'){const day=new Date().toDateString();if(SAVE.cheats.cashDay===day){save();return{ok:true,k,msg:'You already used Teranga cash today. Come back tomorrow! 🌅'};}SAVE.cheats.cashDay=day;SAVE.cash+=10000;}
+ else if(k==='RAINBOW'){SAVE.unlocks.rainbow=true;SAVE.unlocks.rainbowOn=true;}
+ else if(k==='WINGS'){SAVE.unlocks.glider=true;}
+ else if(k==='MOONJUMP'){CHEAT.moon=60;CHEAT.used=true;}
+ else if(k==='TINYCARS'){CHEAT.tiny=60;}
+ else if(k==='DISCO'){CHEAT.disco=45;}
+ else if(k==='MUHAMMAD'){SAVE.cheats.creator=true;if(cs){cs.color='#ffc23d';cs.glow='gold';cs.decal=cs.decal&&cs.decal!=='none'?cs.decal:'jollof';}SAVE.unlocks.rainbow=true;SAVE.unlocks.rainbowOn=true;if(player)createPlayer();}
+ if(S.race)S.race.cheated=S.race.cheated||CHEAT.used;save();
+ return{ok:true,k,first,msg:`${C.e} ${C.n.toUpperCase()}! ${C.d}`};}
+function cheatMenu(msg,ok){const f=cheatFound();const list=Object.entries(CHEATS).map(([k,c])=>f.includes(k)?`<div class="item"><div><b>${c.e} ${k}</b><div class="d">${c.n} · ${c.d}</div></div><button class="btn sm alt" data-act="cheatuse" data-v="${k}">USE</button></div>`:`<div class="item" style="opacity:.55"><div><b>🔒 ??????</b><div class="d">Secret not found yet</div></div></div>`).join('');
+ openModal(`<h1>🔑 SECRET CODES</h1><div class="sub">${f.length}/${Object.keys(CHEATS).length} found · Type a code and press ENTER</div>
+  <div class="ppCodeRow" style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0"><input id="cheatIn" maxlength="14" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="TYPE A CODE" style="font:900 24px Orbitron,sans-serif;letter-spacing:3px;text-transform:uppercase;width:min(320px,70vw);padding:10px 14px;border-radius:12px;background:rgba(5,217,232,.07);border:2px solid var(--cyan);color:#fff;outline:none"><button class="btn" data-act="cheatgo">ENTER</button></div>
+  ${msg?`<div class="tutbox" style="border-color:${ok?'#39ff9f':'#ff2a6d'};background:${ok?'rgba(57,255,159,.1)':'rgba(255,42,109,.1)'}">${esc(msg)}</div>`:''}
+  <h3>YOUR SECRETS</h3>${list}<div class="note" style="margin-top:8px">Hint: think about Dakar, the sky, wings, colors… and who dreamed up this game. 😉</div>
+  <div class="actions"><button class="btn alt" data-act="cheatback">BACK</button></div>`);
+ const i=$('cheatIn');if(i){i.focus();i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const r=applyCheat(i.value);if(r.ok)chime(true);cheatMenu(r.msg,r.ok);}e.stopPropagation();};}}
+function cheatUpdate(dt){
+ if(CHEAT.moon>0){CHEAT.moon-=dt;if(CHEAT.moon<=0)feed('🌙 Moon jump wore off');}
+ const tinyOn=CHEAT.tiny>0;if(tinyOn){CHEAT.tiny-=dt;}
+ for(const t of traffic){if(t._ghost0===undefined)t._ghost0=!!t.ghost;const want=tinyOn&&!t.len&&!t.patrol?.42:1;if(t._tiny!==want){t._tiny=want;t.mesh.scale.setScalar(want);t.ghost=want<1?true:!!t._ghost0;}}
+ if(tinyOn&&CHEAT.tiny<=0)feed('🧸 Traffic is back to normal size');
+ if(CHEAT.disco>0){CHEAT.disco-=dt;if(!CHEAT.hemi0)CHEAT.hemi0={c:hemi.color.clone(),i:hemi.intensity};hemi.color.setHSL((S.time*.6)%1,1,.6);hemi.intensity=CHEAT.hemi0.i*1.6+.25;
+  for(const q of PEOPLE){if(q._d0===undefined)q._d0=!!q.dance;q.dance=true;}
+  if(Math.random()<dt*20&&player)spawnPart(player.x+rnd(-14,14),rnd(4,10),player.z+rnd(-14,14),rnd(-2,2),rnd(1,3),rnd(-2,2),new THREE.Color().setHSL(Math.random(),1,.6),.6,1.2,-1,true,.9);
+  if(CHEAT.disco<=0){hemi.color.copy(CHEAT.hemi0.c);hemi.intensity=CHEAT.hemi0.i;CHEAT.hemi0=null;for(const q of PEOPLE){if(q._d0!==undefined){q.dance=q._d0;delete q._d0;}}feed('🪩 The party is over… for now');}}
+ const el=$('boostHud');if(el){const add=[];if(CHEAT.moon>0)add.push(['🌙','MOON JUMP',CHEAT.moon/60,'#b967ff']);if(CHEAT.tiny>0)add.push(['🧸','TINY CARS',CHEAT.tiny/60,'#ffc23d']);if(CHEAT.disco>0)add.push(['🪩','DISCO',CHEAT.disco/45,'#ff2a6d']);
+  if(add.length)el.innerHTML+=add.map(([e,n,f,c])=>`<div class="bchip" style="border-color:${c}"><span>${e}</span><b>${n}</b><i style="width:${clamp(f,0,1)*100}%;background:${c}"></i></div>`).join('');}}
+
 /* ---------- EVENTS ---------- */
 function progressOf(c){const R=S.race;if(!R)return 0;const n=R.wps.length,tg=R.wps[(c.prog+1)%n];return c.prog+(c.done?100:0)-Math.hypot(tg.x-c.x,tg.z-c.z)/1000;}
 function clearNear(x,z,r){traffic.forEach(t=>{if(Math.hypot(t.x-x,t.z-z)<r)resetTraffic(t);});}
@@ -4261,7 +4305,7 @@ function startRace(ev){if(S.heat.level>0){toast('LOSE THE COPS FIRST','','#ff8a0
  feed(ev.type==='race'?`🏁 ${ev.name} · ${laps} lap${laps>1?'s':''} vs ${n} rival${n>1?'s':''}`:`🚦 Stoplight duel vs ${racers[0].name}`);
  if(!SAVE.seen.raceHint){SAVE.seen.raceHint=1;hint('<b>SHIFT</b> nitro &nbsp;·&nbsp; <b>SPACE</b> handbrake to drift corners &nbsp;·&nbsp; follow the <b style="color:var(--gold)">yellow beacon</b> & turn arrows',9);}}
 function abortRace(why){racers.forEach(r=>world.remove(r.mesh));racers=[];S.race=null;S.mode='free';beacon.visible=false;S.objExtra='';$('count').classList.add('hidden');if(why)feed('Race ended: '+why);}
-function finishRace(){const R=S.race;if(R.online){R.finish=[...new Set(R.finish)].sort((a,b)=>a.ft-b.ft);endOnlineDuel();}if(player.done&&Number.isFinite(player.ft))lbWrite({['t_'+S.city+'_'+(R.online?'drag':R.ev.id)]:+player.ft.toFixed(2)});const pos=R.finish.indexOf(player)+1;const tot=racers.length+1;const isRace=R.type==='race';
+function finishRace(){const R=S.race;if(R.online){R.finish=[...new Set(R.finish)].sort((a,b)=>a.ft-b.ft);endOnlineDuel();}if(player.done&&Number.isFinite(player.ft)&&!R.cheated)lbWrite({['t_'+S.city+'_'+(R.online?'drag':R.ev.id)]:+player.ft.toFixed(2)});const pos=R.finish.indexOf(player)+1;const tot=racers.length+1;const isRace=R.type==='race';
  const tbl=!isRace?[[1500,150,40],[150,40,0]]:R.ev.id==='intro'?[[3000,300,60],[2000,200,30]]:[[4000,400,100],[2000,250,50],[1000,150,20],[300,80,0]];const wasTut=R.ev.id==='intro'&&SAVE.tut===1;if(wasTut)SAVE.tut=2;const [cash,xp,rep]=tbl[pos-1];
  const order=[...R.finish];[player,...racers].filter(c=>!order.includes(c)).sort((a,b)=>progressOf(b)-progressOf(a)).forEach(c=>order.push(c));
  SAVE.stats.races++;if(pos===1)SAVE.stats.wins++;
@@ -4359,6 +4403,7 @@ function handleAct(act,v){const id=SAVE.current,cs=SAVE.cars[id];
  if(act==='toggle'){SAVE.unlocks.rainbowOn=SAVE.unlocks.rainbowOn===false;}
  if(act==='horn'){SAVE.horn=v;horn();}
  if(act==='travel'){closeModal();travel(S.city==='tokyo'?'dakar':'tokyo');return;}
+ if(act==='cheat'){cheatMenu();return;}if(act==='cheatback'){pauseMenu();return;}if(act==='cheatgo'){const i=$('cheatIn');const r=applyCheat(i?i.value:'');if(r.ok)chime(true);cheatMenu(r.msg,r.ok);return;}if(act==='cheatuse'){const r=applyCheat(v);if(r.ok)chime(true);cheatMenu(r.msg,r.ok);return;}
  if(act==='gfx'){const i=GFX_LEVELS.indexOf(GFXQ);setQuality(GFX_LEVELS[(i+1)%GFX_LEVELS.length]);pauseMenu();toast('GRAPHICS: '+GFX_NAMES[GFXQ],'','#05d9e8',1.2);return;}
  if(act==='resume'){closeModal();return;}
  if(act==='reset'){$('modalCard').querySelector('#rst').innerHTML=`<span style="margin-right:10px">Erase all progress?</span><button class="btn sm pink" data-act="reset2">YES, RESET</button>`;return;}
@@ -4366,7 +4411,7 @@ function handleAct(act,v){const id=SAVE.current,cs=SAVE.cars[id];
  save();if(!$('modal').classList.contains('hidden')&&$('modalCard').querySelector('.tabs'))renderGarage();}
 function travel(key){abortRace();S.deliv=null;S.gps=null;endPursuit(false);clearRemotes();toast(CITY[key].name,CITY[key].sub,'#05d9e8',2.4);buildCity(key);const keep=player;player=null;createPlayer();netJoinCity(key);}
 function pauseMenu(){openModal(`<h1>PAUSED</h1><div class="sub">${CITY[S.city].name} · Level ${levelOf(SAVE.xp)} · ${SAVE.stats.wins} wins / ${SAVE.stats.races} races · ${SAVE.stats.escapes} escapes · ${SAVE.stats.busts} busts</div>
- <div class="actions" style="margin-top:0">${S.meet?'<button class="btn pink" data-act="leavemeet">LEAVE MEET</button>':''}<button class="btn alt sm" data-act="editchar">👕 EDIT CHARACTER</button><button class="btn alt sm" data-act="switchprof">👤 SWITCH PROFILE</button><button class="btn sm" data-act="online">🌐 ONLINE & LEADERBOARDS</button><button class="btn alt sm" data-act="gfx">🎨 GRAPHICS: ${GFX_NAMES[GFXQ]}</button></div>
+ <div class="actions" style="margin-top:0">${S.meet?'<button class="btn pink" data-act="leavemeet">LEAVE MEET</button>':''}<button class="btn alt sm" data-act="editchar">👕 EDIT CHARACTER</button><button class="btn alt sm" data-act="switchprof">👤 SWITCH PROFILE</button><button class="btn sm" data-act="online">🌐 ONLINE & LEADERBOARDS</button><button class="btn alt sm" data-act="gfx">🎨 GRAPHICS: ${GFX_NAMES[GFXQ]}</button><button class="btn alt sm" data-act="cheat">🔑 SECRET CODES</button></div>
  ${SAVE.tut<3?'<div class="tutbox">You are in the intro. <button class="btn sm alt" data-act="skiptut" style="margin-left:8px">SKIP INTRO</button></div>':''}
  <h3>STREET RULES</h3><div class="rules"> <div><b>🔧 Damage</b>Crashes lower your top speed until you repair here ($25 per 1%). At 0% your car is towed to the garage for a $1,000 fee.</div> <div><b>🚓 Busted</b>If you stop next to a cop for about 3 seconds you are busted: you lose 10% of your cash (min $500) and 60 REP.</div> <div><b>🚫 Impound</b>3 busts in the same car and it gets impounded. Release it here for $5,000, or drive another car you own.</div> <div><b>🔥 Heat</b>Higher heat brings faster units, roadblocks and a helicopter. Escape by breaking line of sight until the green bar fills.</div> <div><b>💸 Low on cash?</b>Pizza Rush and Parts Run pay $1–3k a job, and the crew will patch your car to 60% for free when you are broke.</div></div>
  <h3>GAME POLICIES (ONLINE)</h3><div class="note" style="opacity:.85;line-height:1.6">No bullying: 1 day – 1 week ban, permanent for repeat offenses · No exploiting: 5 weeks – permanent · Marketplace bots: 1–5 day ban · Game-breaking mods online: permanent ban · Unverified mods: mod-usage ban · Mods allowed offline / private servers only.</div>
@@ -4459,7 +4504,7 @@ function update(dt){S.time+=dt;const p=player;if(S.meet)updateMeet(dt);boostPre(
  // markers
  S.interact=null;if(!S.race&&!S.deliv&&!S.meet){for(const m of MARKERS){if(Math.hypot(m.x-p.x,m.z-p.z)<7&&sp<11){S.interact=m.ev;break;}}}
  const pr=$('prompt');if(S.meet){}else if(S.interact){const ev=S.interact;const lab={meet:'Join the Car Meet',race:'Start Street Race',drag:'Start Stoplight Race',deliv:'Start Job',garage:'Enter Garage'}[ev.type];const warn=S.heat.level>0&&ev.type!=='garage'?' <span style="color:var(--pink)">(lose the cops first)</span>':(ev.type==='race'||ev.type==='drag')&&p.health<45?` <span style="color:#ffc23d">(car at ${Math.round(p.health)}% — repair first?)</span>`:'';pr.innerHTML=`<b>${document.body.classList.contains('touchui')?'TAP E':'E'}</b> &nbsp;${lab}: ${ev.name}${warn}`;pr.classList.remove('hidden');}else pr.classList.add('hidden');
- updateRace(dt);updateDeliv(dt);updateHeat(dt);updatePeople(dt);updateRiders(dt);boostUpdate(dt);
+ updateRace(dt);updateDeliv(dt);updateHeat(dt);updatePeople(dt);updateRiders(dt);boostUpdate(dt);cheatUpdate(dt);if(S.race&&CHEAT.moon>0)S.race.cheated=true;
 }
 function sparks(c){for(let i=0;i<6;i++)spawnPart(c.x+rnd(-1,1),c.y+.8,c.z+rnd(-1,1),rnd(-6,6),rnd(1,5),rnd(-6,6),0xffc040,.35,.35,0,true,1);}
 
