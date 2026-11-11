@@ -14,10 +14,17 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 | Space | Handbrake / drift |
 | Shift | Nitro |
 | E | Interact (events, garage, car meet) |
+| F | Get out and walk / get in a vehicle |
 | C | Change camera |
 | R | Reset car onto the road |
 | T | Quick chat (online), then 1–9 to send |
 | P / Esc | Pause menu (graphics quality is here) |
+
+## Walk and switch rides
+- Stop and press **F** (or tap 🚪 on phones) to get out and walk anywhere in the city. Your car stays parked where you left it.
+- Look for **🛵 RIDE** stands on the sidewalks to hop on a free sport bike, Tiak-Tiak scooter, Jakarta moto or bicycle. Press **F** next to one to ride it.
+- Walk back to your car anytime and press **F** to drive it again. Riding into the garage brings your car to you.
+- Walk up to other online players to wave (1–4), send quick chat (T) or challenge them to a race (E).
 
 ## Boosters
 Drive through the glowing rings during races and police chases:
