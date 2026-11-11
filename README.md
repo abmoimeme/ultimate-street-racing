@@ -38,6 +38,12 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
 - **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
+## Course Builder (🛠️)
+- Build your own race right on your phone. Tap to place a start line, up to 12 checkpoints, cones, ramps, boost pads and barriers. Drag to move around, pinch or ± to zoom, and use Undo if you make a mistake.
+- Name it by picking two words (like "Baobab Jumps"), choose 1–3 laps, then test-drive it.
+- Publish it so every player can race it. Courses can be sorted by top rated, newest, friends or city, and each shows its record time. Rate courses you finish with 1–5 stars.
+- Finishing another player's course pays $250 (once per course per day). There are new badges for publishing a course, finishing 5 courses and getting a 5-star rating.
+
 ## Avatar Studio (👕 Wardrobe)
 - **Age, height and build:** child, teen, adult or elder, plus taller/shorter and slim, regular or broad.
 - **Skin:** 19 skin tones from deep to light, including warm, cool and olive undertones. Skin details include freckles, vitiligo or a birthmark.
