@@ -175,7 +175,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
   <div id="help" class="panel hidden">
     <b>W/S</b> or <b>↑/↓</b> drive · <b>A/D</b> steer · <b>Space</b> handbrake / glide<br>
     <b>Shift</b> nitro · <b>E</b> interact · <b>C</b> camera · <b>H</b> horn · <b>R</b> reset car<br>
-    <b>Y</b> weather · <b>P</b> photo mode · <b>1-4</b> emotes · <b>T</b> chat · <b>M</b> mute · <b>Esc</b> pause · <b>Tab</b> hide
+    <b>Y</b> weather · <b>P</b> photo mode · <b>1-8</b> emotes · <b>T</b> chat · <b>M</b> mute · <b>Esc</b> pause · <b>Tab</b> hide
   </div>
 </div>
 <div id="touch" class="hidden"></div>
@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.3 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.4 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -2464,6 +2464,7 @@ const FIREBASE_CFG={"databaseURL": "https://ultimate-street-racing-default-rtdb.
  const STALE=15000,MIN_GAP=150;
  function makeRoom(uid){const peerId=uid+'_'+(Math.random()*1e9|0).toString(36);const lobbyRef=db.ref(ROOT+'/lobby/'+peerId);let lobbyArmed=false;
   return{
+   peek(name){return db.ref(ROOT+'/rooms/'+safeKey(name)).once('value').then(sn=>{const v=sn.val()||{},t=now(),out=[];for(const id in v){const x=v[id];if(!x||t-(x.t||0)>STALE)continue;out.push({peer:id,presence:x.p===undefined?null:x.p});}return out;});},
    onConnection(cb){db.ref('.info/connected').on('value',s=>{try{cb(!!s.val());}catch(e){}});},
    presence(obj){if(!lobbyArmed){lobbyArmed=true;lobbyRef.onDisconnect().remove();}return lobbyRef.set({p:obj,t:firebase.database.ServerValue.TIMESTAMP});},
    async join(name){const rref=db.ref(ROOT+'/rooms/'+safeKey(name)),me=rref.child(peerId);let snap={},peersCb=null,closeCb=null,last=0,pend=null,timer=null;
@@ -2609,6 +2610,41 @@ function sanitize(s){if(!s||typeof s!=='object'||s.v!==1)throw new Error('bad sa
 function loadSave(){let raw;try{raw=localStorage.getItem(KEY);}catch(e){saveWarn='This browser is blocking storage, so progress will not be saved after you close the page.';return defSave();}
  if(!raw)return defSave();
  try{return sanitize(JSON.parse(raw));}catch(e){try{localStorage.setItem(KEY+'_backup_'+Date.now(),raw);}catch(_){}saveWarn='Your saved progress was damaged, so a fresh save was started (the old one was backed up).';return defSave();}}
+/* ---------- SOCIAL save data (v1.4): badges, friends, daily streak ---------- */
+const BADGES=[
+ ['race1','🏁','First Race','Finish a race',s=>s.stats.races>=1],
+ ['win1','🥇','Winner','Win a race',s=>s.stats.wins>=1],
+ ['win10','🏆','Champion','Win 10 races',s=>s.stats.wins>=10],
+ ['escape1','🚨','Getaway','Escape from the police',s=>s.stats.escapes>=1],
+ ['escape10','🕶️','Ghost Driver','Escape the police 10 times',s=>s.stats.escapes>=10],
+ ['coin5','🪙','Treasure Hunter','Find 5 hidden coins',s=>coins(s)>=5],
+ ['coin20','💎','Treasure Master','Find 20 hidden coins',s=>coins(s)>=20],
+ ['secret1','🔑','Secret Finder','Discover a secret code',s=>!!(s.cheats&&s.cheats.found.length)],
+ ['secretAll','🧩','Code Breaker','Discover every secret code',s=>!!(s.cheats&&s.cheats.found.length>=Object.keys(CHEATS).length)],
+ ['travel','✈️','World Traveler','Drive in both Tokyo and Dakar',s=>!!(s.seen.v_tokyo&&s.seen.v_dakar)],
+ ['walk','🚶','Explorer','Get out of your ride and explore on foot',s=>!!s.seen.walk],
+ ['moto','🛵','Two Wheels','Ride a motorcycle, scooter or bike',s=>!!s.seen.moto],
+ ['lounge','🛋️','Lounge Regular','Hang out in the Lounge',s=>!!s.seen.lounge],
+ ['sabar','💃','Sabar Star','Do the sabar dance in the Lounge',s=>!!s.seen.sabarL],
+ ['friend1','🤝','Friendly','Add your first friend',s=>s.friends.length>=1],
+ ['friend5','👥','Squad','Add 5 friends',s=>s.friends.length>=5],
+ ['join','🚀','Drop-In','Join a friend with one tap',s=>!!s.seen.joined],
+ ['party','🎉','Party Time','Be in the Lounge with 2 other players',s=>!!s.seen.party],
+ ['streak3','🔥','On Fire','Log in 3 days in a row',s=>s.daily.best>=3],
+ ['week','📅','Week Warrior','Log in 7 days in a row',s=>s.daily.best>=7],
+ ['lv10','⭐','Rising Star','Reach level 10',s=>levelOf(s.xp)>=10],
+ ['garage5','🚗','Car Collector','Own 5 cars',s=>Object.keys(s.cars).length>=5],
+ ['badges8','🏅','Badge Hunter','Earn 8 other badges',s=>Object.keys(s.badges).filter(k=>k!=='badges8').length>=8]];
+const BADGE_BY=Object.fromEntries(BADGES.map(b=>[b[0],{icon:b[1],name:b[2],how:b[3]}]));
+function coins(s){return(s.treasures.tokyo||[]).length+(s.treasures.dakar||[]).length;}
+const _defSave=defSave;defSave=function(){return Object.assign(_defSave(),{badges:{},feat:null,friends:[],daily:{last:'',streak:0,best:0}});};
+const _san=sanitize;
+sanitize=function(s){const d=_san(s);
+ if(s.badges&&typeof s.badges==='object')for(const k in s.badges)if(BADGE_BY[k]&&Number.isFinite(s.badges[k]))d.badges[k]=s.badges[k];
+ d.feat=BADGE_BY[s.feat]&&d.badges[s.feat]?s.feat:null;
+ if(Array.isArray(s.friends))d.friends=s.friends.filter(f=>f&&typeof f.id==='string').slice(0,40).map(f=>({id:f.id.replace(/[^\w-]/g,'').slice(0,80),n:String(f.n||'').replace(/[^\w \-.']/g,'').slice(0,18)||'Driver'}));
+ if(s.daily&&typeof s.daily==='object'){const D=s.daily;d.daily={last:/^\d{4}-\d\d-\d\d$/.test(D.last)?D.last:'',streak:Number.isFinite(D.streak)?Math.max(0,Math.min(9999,D.streak|0)):0,best:Number.isFinite(D.best)?Math.max(0,Math.min(9999,D.best|0)):0};}
+ return d;};
 let SAVE=loadSave();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));return true;}catch(e){if(!saveFailShown){saveFailShown=true;const m='⚠ Progress could not be saved in this browser (storage full or blocked).';if(typeof S!=='undefined'&&S.state==='play')feed(m);else saveWarn=m;}return false;}}
 const levelOf=xp=>Math.min(999,1+Math.floor(Math.pow(xp/120,1/1.5)));
@@ -3234,7 +3270,7 @@ function makeAvatar(ch){ch=cleanChar(ch);const g=new THREE.Group(),skin=plainMat
  if(ch.beard&&!fem){const bd=new THREE.Mesh(AG.beard,plainMat(ch.hairCol));bd.scale.set(1.02,1.05,1.06);head.add(bd);}
  if(ch.glasses){const s=new THREE.Mesh(AG.shades,plainMat('#0b0b0f'));s.position.set(0,.025,.118);head.add(s);}
  const hm=plainMat(ch.hairCol),hair=ch.hair,hw=ch.head;
- if(hair!=='bald'&&hw!=='musoor'&&hw!=='beanie'){const cap=new THREE.Mesh(PG.hair,hm);cap.position.y=.012;cap.scale.set(1.04,hair==='fade'?.75:1,1.04);head.add(cap);
+ if(hair!=='bald'&&hw!=='musoor'&&hw!=='beanie'&&hw!=='helmet'){const cap=new THREE.Mesh(PG.hair,hm);cap.position.y=.012;cap.scale.set(1.04,(hair==='fade'||hair==='mohawk')?.75:1,1.04);head.add(cap);
   if(hair==='afro'){const a=new THREE.Mesh(AG.afro,hm);a.position.set(0,.07,-.02);head.add(a);}
   if(hair==='bun'){const b=new THREE.Mesh(AG.bun,hm);b.position.set(0,.12,-.07);head.add(b);}
   if(hair==='locs'||hair==='braids'){const n2=hair==='locs'?12:2;for(let k=0;k<n2;k++){const a=hair==='locs'?Math.PI*.15+k/(n2-1)*Math.PI*.7:Math.PI*.4+k*Math.PI*.2;const l=new THREE.Mesh(AG.loc,hm);l.position.set(Math.cos(a)*.11,.02,-Math.sin(a)*.11);l.scale.y=hair==='braids'?1.4:1;head.add(l);}}}
@@ -3344,7 +3380,7 @@ function leaveMeet(){if(!S.meet)return;if(S.meet.free){footEnter(footTargets()&&
 function meetTarget(){const m=S.meet,fx=Math.sin(m.h),fz=Math.cos(m.h);let best=null,bs=1e9;const ps=MEET.slots[MEET.playerSlot];
  for(const c of[...MEET.cars,{x:ps.x,z:ps.z,mine:true}]){const dx=c.x-m.x,dz=c.z-m.z,d=Math.hypot(dx,dz);if(d>5.6)continue;const face=(dx*fx+dz*fz)/(d||1);const sc=d-face*2.2;if(sc<bs){bs=sc;best=c;}}
  return best&&best.mine?'mine':best;}
-function meetInteract(){const rr=remoteNear(S.meet.x,S.meet.z,2.8);if(rr&&!NET.duel){challengeRemote(rr);return;}if(S.meet.free){footEnter(footTargets());return;}const t=meetTarget();if(!t)return;if(t==='mine'){leaveMeet();return;}openMeetCard(t);}
+function meetInteract(){const rr=remoteNear(S.meet.x,S.meet.z,2.8);if(rr&&inLounge(S.meet.x,S.meet.z)){openCard(rr);return;}if(rr&&!NET.duel){challengeRemote(rr);return;}if(S.meet.free){footEnter(footTargets());return;}const t=meetTarget();if(!t)return;if(t==='mine'){leaveMeet();return;}openMeetCard(t);}
 function openMeetCard(c){const el=$('meetCard');S.meet.card=c;el.classList.remove('hidden');
  el.innerHTML=`<div class="mcTop"><span class="mcDot" style="background:${c.col}"></span><div><div class="mcName">${c.name}'s ${c.def.name}</div><div class="mcCrew">${c.crew} · ${c.rep.toLocaleString()} REP</div></div></div>
  <div class="mcMods">${c.mods.map(m=>`<span>${m}</span>`).join('')}<span>Top ${Math.round(c.def.top*3.6)} km/h</span></div>
@@ -3386,7 +3422,7 @@ function footExitVehicle(){const why=canLeave();if(why!=='ok'){if(why)toast(why,
  const p=player;p.parked=true;p.vx=p.vz=0;const sx=Math.cos(p.h),sz=-Math.sin(p.h),off=p.moto?1.1:1.9;
  const av=makeAvatar(SAVE.char);world.add(av.g);S.meet={free:true,av,x:p.x-sx*off,z:p.z-sz*off,h:p.h+Math.PI/2,t:0,emote:null,emoteT:0,card:null};
  camPos.set(S.meet.x-Math.sin(S.meet.h)*4,2.4,S.meet.z-Math.cos(S.meet.h)*4);$('dash').classList.add('hidden');
- if(!SAVE.seen.foot){SAVE.seen.foot=1;save();hint('🚶 <b>ON FOOT!</b> W/S walk · A D turn · SHIFT jog · <b>F</b> get in a vehicle · look for <b>🛵 RIDE</b> stands to hop on motorcycles, scooters and bikes · walk up to online players to chat or race · 1–4 emotes',10);}}
+ if(!SAVE.seen.foot){SAVE.seen.foot=1;save();hint('🚶 <b>ON FOOT!</b> W/S walk · A D turn · SHIFT jog · <b>F</b> get in a vehicle · look for <b>🛵 RIDE</b> stands to hop on motorcycles, scooters and bikes · walk up to online players to chat or race · 1–8 emotes',10);}}
 function footTargets(){const m=S.meet,out=[];out.push({type:player.moto?'moto':'car',kind:player.moto||SAVE.current,x:player.x,z:player.z,cur:true});for(const q of PARKED)out.push(q);
  let best=null,bd=3.4;for(const q of out){const d=Math.hypot(q.x-m.x,q.z-m.z);if(d<bd){bd=d;best=q;}}return best;}
 function vehName(q){return q.type==='car'?CARS[q.kind].name:MOTOS[q.kind].name;}
@@ -3417,7 +3453,7 @@ function updateFoot(dt){const m=S.meet,a=m.av;m.t+=dt;const fwd=(K['w']||K['arro
  const onWalk=Math.abs(((m.x+HALF)%BLOCK+BLOCK)%BLOCK-BLOCK/2)<BLOCK/2-ROAD/2&&Math.abs(((m.z+HALF)%BLOCK+BLOCK)%BLOCK-BLOCK/2)<BLOCK/2-ROAD/2;
  const mode=m.emoteT>0?m.emote:fwd?(run?'run':'walk'):'idle';animAvatar(a,mode,m.t,dt);a.g.position.set(m.x,(onWalk?.22:0)+.02+(a.bob||0),m.z);a.g.rotation.y=m.h;
  const rn=remoteNear(m.x,m.z,2.8),tg=footTargets(),pr=$('prompt');
- if(rn){pr.innerHTML=`<b>E</b> &nbsp;Challenge ${esc(rn.d.n)} to a stoplight duel &nbsp;·&nbsp; <b>T</b> quick chat`;pr.classList.remove('hidden');}
+ if(rn){pr.innerHTML=inLounge(m.x,m.z)?`<b>E</b> &nbsp;See ${esc(rn.d.n)}'s player card &nbsp;·&nbsp; <b>T</b> quick chat`:`<b>E</b> &nbsp;Challenge ${esc(rn.d.n)} to a stoplight duel &nbsp;·&nbsp; <b>T</b> quick chat`;pr.classList.remove('hidden');}
  else if(tg){pr.innerHTML=`<b>F</b> &nbsp;${tg.cur?'Get back on':'Ride'} the ${vehName(tg)}${tg.rental?' &nbsp;<span style="color:#39ff9f">FREE</span>':''}`;pr.classList.remove('hidden');}
  else pr.classList.add('hidden');}
 
@@ -3471,7 +3507,7 @@ function netUpdate(dt){netSend();if(!NET.city)return;const peers=NET.city.peers(
   const key=d.carId+d.col+d.glow+d.decal+(d.mo||'');if(r.carKey!==key){if(r.car)world.remove(r.car);r.car=d.mo?buildPlayerMoto(d.mo,MOTOS[d.mo].col,expandChar(d.ch)):buildCarMesh(CARS[d.carId],new THREE.Color(d.col),{glow:GLOWS[d.glow],decal:d.decal});world.add(r.car);r.carKey=key;}
   const chKey=JSON.stringify(d.ch);if(r.chKey!==chKey){if(r.av)world.remove(r.av.g);r.av=makeAvatar(expandChar(d.ch));world.add(r.av.g);r.chKey=chKey;}
   const su=!!(window.SUPER_NET&&String(pe.peer||'').startsWith(window.SUPER_NET+'_'));if(!su&&/ABMOIMEME/i.test(String(d.n).replace(/[^a-z]/gi,'')))d.n='Driver';
-  if(r.tagName!==d.n+d.lv){if(r.tag)world.remove(r.tag);r.tag=nameTag(su?`👑 ${d.n} · SUPER`:`${d.n} · LV ${d.lv}`,su?'#ffc23d':pe.guest?'#ffc23d':'#05d9e8');world.add(r.tag);r.tagName=d.n+d.lv;}
+  if(r.tagName!==d.n+d.lv+d.bd){if(r.tag)world.remove(r.tag);r.tag=nameTag(su?`👑 ${d.n} · SUPER`:`${d.bd&&BADGE_BY[d.bd]?BADGE_BY[d.bd].icon+' ':''}${d.n} · LV ${d.lv}`,su?'#ffc23d':pe.guest?'#ffc23d':'#05d9e8');world.add(r.tag);r.tagName=d.n+d.lv+d.bd;}
   // smooth toward the reported state, with a little extrapolation along heading
   const age=Math.min(.35,(now-pe.updatedAt)/1000),tx=d.x+Math.sin(d.h)*d.v*age,tz=d.z+Math.cos(d.h)*d.v*age,k=clamp(dt*10,0,1);
   if(Math.hypot(tx-r.x,tz-r.z)>40){r.x=tx;r.z=tz;}else{r.x=lerp(r.x,tx,k);r.z=lerp(r.z,tz,k);}r.y=lerp(r.y,d.y,k);r.h+=wrapA(d.h-r.h)*k;
@@ -3492,6 +3528,222 @@ function netUpdate(dt){netSend();if(!NET.city)return;const peers=NET.city.peers(
  if(NET.say&&now-NET.say.t>8000)NET.say=null;
  if(NET.invite&&now-NET.invite.t>20000)closeInvite();}
 function remoteNear(x,z,rad){let best=null,bd=rad;for(const r of NET.remotes.values()){if(!r.av||!r.av.g.visible)continue;const d=Math.hypot(r.ax-x,r.az-z);if(d<bd){bd=d;best=r;}}return best;}
+/* ---------- SOCIAL (v1.4): friends + one-tap Join, the Lounge hangout, 8 emotes, more looks, daily streak, badges ---------- */
+CITY.tokyo.lounge={cell:[2,5],name:'Neon Lounge'};CITY.dakar.lounge={cell:[1,2],name:'Teranga Lounge'};
+const LNG={};
+// ---- emotes ----
+const EMOTES=[['wave','👋','Wave'],['sabar','💃','Sabar'],['clap','👏','Clap'],['flex','💪','Flex'],['cheer','🙌','Cheer'],['laugh','😂','Laugh'],['sit','🪑','Sit'],['dab','😎','Pose']];
+const EMO_ICON=Object.fromEntries(EMOTES.map(e=>[e[0],e[1]]));
+meetEmote=function(k){const m=S.meet;if(!m||!EMOTES[k])return;const e=EMOTES[k][0];
+ if(e==='sit'){if(!m.free){toast('Sit on a bench in the Lounge','','#ffc23d',1.4);return;}const st=nearSeat(m.x,m.z);if(st){m.x=st.x;m.z=st.z;m.h=st.h;m.seat=st;}}
+ m.emote=e;m.emoteT=e==='sabar'?6:e==='sit'?900:2.6;popEmoji(m.av,EMOTES[k][1]);if(e==='sabar'&&inLounge(m.x,m.z))flag('sabarL');};
+const _anim=animAvatar;
+animAvatar=function(a,mode,t,dt){const L=a.legs,A=a.arms;if(a.head&&mode!=='laugh'&&mode!=='dab')a.head.rotation.x=lerp(a.head.rotation.x,0,.2);
+ if(mode==='cheer'){const j=Math.abs(Math.sin(t*6));A[0].rotation.set(0,0,2.7+Math.sin(t*12)*.2);A[1].rotation.set(0,0,-2.7-Math.sin(t*12)*.2);L.forEach(l=>l.rotation.x=-j*.35);a.bob=j*.25;return;}
+ if(mode==='laugh'){A[0].rotation.set(-.7,0,.35);A[1].rotation.set(-.7,0,-.35);L.forEach(l=>l.rotation.x=0);if(a.head)a.head.rotation.x=-.3+Math.sin(t*16)*.1;a.bob=Math.abs(Math.sin(t*16))*.03;return;}
+ if(mode==='sit'){L.forEach(l=>l.rotation.x=-1.45);A[0].rotation.set(-.55,0,.12);A[1].rotation.set(-.55,0,-.12);a.bob=-.42;return;}
+ if(mode==='dab'){A[1].rotation.set(0,0,-2.35);A[0].rotation.set(-1.45,0,-1.05);if(a.head)a.head.rotation.x=.35;L.forEach(l=>l.rotation.x=0);a.bob=0;return;}
+ _anim(a,mode,t,dt);};
+const POPS=[];
+function popEmoji(av,ch){if(!av||!av.g)return;const t=canvasTex(128,128,(g,W,H)=>{g.font='92px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ch,W/2,H/2+6);});
+ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,depthTest:false,fog:false}));s.scale.set(.8,.8,1);s.position.set(0,2.35,0);s.renderOrder=12;av.g.add(s);POPS.push({s,av,t:2.2});}
+// ---- more looks ----
+Object.assign(OPT.hair,{mohawk:'Mohawk',pony:'Ponytail'});
+Object.assign(OPT.head,{phones:'Headphones',bucket:'Bucket hat',helmet:'Helmet',crown:'Gold crown'});
+OPT.acc={none:'None',backpack:'Backpack',scarf:'Lions scarf',cape:'Hero cape'};
+const COS_LOCK={'head.phones':['streak3','Log in 3 days in a row to unlock'],'head.crown':['week','Keep a 7-day login streak to unlock'],'acc.cape':['badges8','Earn 8 badges to unlock']};
+function cosOK(k,v){const L=COS_LOCK[k+'.'+v];return !L||!!(SAVE&&SAVE.badges&&SAVE.badges[L[0]])||!!(window.PASS&&PASS.super);}
+const _defChar=defChar;defChar=function(){return Object.assign(_defChar(),{acc:'none',accCol:'#ff2a6d'});};
+const _cleanChar=cleanChar;cleanChar=function(c){const d=_cleanChar(c);if(!(d.acc in OPT.acc))d.acc='none';if(!/^#[0-9a-f]{6}$/i.test(d.accCol))d.accCol='#ff2a6d';return d;};
+const _cc=compactChar;compactChar=function(c){return[..._cc(c),c.acc||'none',c.accCol||'#ff2a6d'];};
+const _ec=expandChar;expandChar=function(a){const o=_ec(a);if(Array.isArray(a)){if(typeof a[14]==='string'&&OPT.acc[a[14]])o.acc=a[14];if(/^#[0-9a-f]{6}$/i.test(a[15]||''))o.accCol=a[15];}return o;};
+const SG={band:new THREE.TorusGeometry(.142,.013,6,18,Math.PI),cup:new THREE.CylinderGeometry(.05,.05,.04,14),bucket:new THREE.CylinderGeometry(.118,.132,.11,16),brimB:new THREE.CylinderGeometry(.162,.178,.022,20),
+ helm:new THREE.SphereGeometry(.168,18,12,0,Math.PI*2,0,Math.PI*.6),visor:new THREE.BoxGeometry(.2,.045,.03),crown:new THREE.CylinderGeometry(.115,.105,.07,10,1,true),spike:new THREE.ConeGeometry(.025,.06,6),
+ mohawk:new THREE.BoxGeometry(.045,.1,.24),pack:new THREE.BoxGeometry(.3,.34,.15),scarf:new THREE.TorusGeometry(.12,.04,8,18),tail:new THREE.BoxGeometry(.07,.28,.03),cape:new THREE.PlaneGeometry(.52,1.02)};
+const _mk=makeAvatar;
+makeAvatar=function(ch){const c=cleanChar(ch),a=_mk(c),hd=a.head,g=a.g,gold=pm('gold',()=>stdM('#d4a52a',{metalness:.9,roughness:.25}));
+ if(c.hair==='mohawk'&&c.head!=='helmet'){const m=new THREE.Mesh(SG.mohawk,plainMat(c.hairCol));m.position.set(0,.15,-.01);hd.add(m);}
+ if(c.hair==='pony'&&c.head!=='helmet'){const l=new THREE.Mesh(AG.loc,plainMat(c.hairCol));l.position.set(0,.0,-.15);l.rotation.x=.55;l.scale.set(1.5,1.3,1.5);hd.add(l);}
+ if(c.head==='phones'){const b=new THREE.Mesh(SG.band,plainMat('#15151a'));b.position.y=.02;hd.add(b);for(const s of[-1,1]){const cu=new THREE.Mesh(SG.cup,plainMat(c.topCol));cu.rotation.z=Math.PI/2;cu.position.set(s*.142,.0,0);hd.add(cu);}}
+ if(c.head==='bucket'){const m=plainMat(c.topCol);const b=new THREE.Mesh(SG.bucket,m);b.position.y=.1;hd.add(b);const br=new THREE.Mesh(SG.brimB,m);br.position.y=.055;hd.add(br);}
+ if(c.head==='helmet'){const h=new THREE.Mesh(SG.helm,stdM(c.topCol,{roughness:.25,metalness:.2}));h.position.y=-.005;hd.add(h);const v=new THREE.Mesh(SG.visor,plainMat('#101018'));v.position.set(0,.085,.14);v.rotation.x=-.35;hd.add(v);}
+ if(c.head==='crown'){const cr=new THREE.Mesh(SG.crown,gold);cr.position.y=.17;hd.add(cr);for(let k=0;k<5;k++){const a2=k/5*Math.PI*2;const sp=new THREE.Mesh(SG.spike,gold);sp.position.set(Math.cos(a2)*.105,.235,Math.sin(a2)*.105);hd.add(sp);}}
+ if(c.acc==='backpack'){const p=new THREE.Mesh(SG.pack,plainMat(c.accCol));p.position.set(0,1.2,-.21);g.add(p);}
+ if(c.acc==='scarf'){const s=new THREE.Mesh(SG.scarf,plainMat('#1b7a3e'));s.rotation.x=Math.PI/2;s.position.set(0,1.47,0);g.add(s);const t=new THREE.Mesh(SG.tail,plainMat('#ffd000'));t.position.set(.07,1.3,.13);g.add(t);const t2=new THREE.Mesh(SG.tail,plainMat('#d21f2b'));t2.position.set(-.02,1.27,.135);t2.scale.y=.8;g.add(t2);}
+ if(c.acc==='cape'){const cp=new THREE.Mesh(SG.cape,new THREE.MeshStandardMaterial({color:c.accCol,side:THREE.DoubleSide,roughness:.7}));cp.position.set(0,.98,-.19);cp.rotation.x=.1;g.add(cp);a.cape=cp;}
+ return a;};
+const _rc=renderCreator;
+renderCreator=function(){_rc();const c=CR.ch,P=$('crPanel');
+ if(CR.tab==='body'){const sc=P.querySelector('.crScroll');if(sc)sc.insertAdjacentHTML('beforeend',`<h3>ACCESSORIES</h3><div class="chips">${Object.entries(OPT.acc).map(([k,v])=>`<button class="chip ${c.acc===k?'on':''}" data-k="acc" data-v="${k}">${v}</button>`).join('')}</div>${c.acc!=='none'&&c.acc!=='scarf'?`<h3>ACCESSORY COLOR</h3><div class="sw">${CLOTH_COLS.map(col=>`<i style="background:${col}" class="${c.accCol===col?'on':''}" data-k="accCol" data-v="${col}"></i>`).join('')}</div>`:''}`);}
+ P.querySelectorAll('.chip[data-k]').forEach(b=>{if(!cosOK(b.dataset.k,b.dataset.v)){b.classList.add('lock');b.textContent+=' 🔒';b.title=COS_LOCK[b.dataset.k+'.'+b.dataset.v][1];}});};
+const _crc=creatorClick;
+creatorClick=function(e){const t=e.target.closest('[data-k]');if(t&&t.classList.contains('lock')){const L=COS_LOCK[t.dataset.k+'.'+t.dataset.v];toast('🔒 LOCKED',L?L[1]:'','#ffc23d',2.2);return;}
+ _crc(e);if(CR&&CR.ch){let fix=false;for(const k of['head','acc'])if(!cosOK(k,CR.ch[k])){CR.ch[k]='none';fix=true;}if(fix){rebuildAvatarPreview();renderCreator();}}};
+// ---- save data ----
+function ensureSoc(){if(!SAVE)return;if(!SAVE.badges)SAVE.badges={};if(!Array.isArray(SAVE.friends))SAVE.friends=[];if(!SAVE.daily)SAVE.daily={last:'',streak:0,best:0};if(!SAVE.seen)SAVE.seen={};}
+function flag(k){ensureSoc();if(!SAVE.seen[k]){SAVE.seen[k]=1;save();}}
+function checkBadges(){ensureSoc();let got=0;for(const[id,icon,name,how,fn]of BADGES){if(SAVE.badges[id])continue;let ok=false;try{ok=fn(SAVE);}catch(e){}if(ok){SAVE.badges[id]=Date.now();got++;SAVE.cash+=250;
+   toast(`${icon} BADGE UNLOCKED`,`${name} · +$250`,'#ffc23d',2.6);feed(`🏅 New badge: ${icon} ${name}`);chime(true);if(!SAVE.feat)SAVE.feat=id;}}
+ if(got)save();}
+// ---- daily streak ----
+const DAILY=[[500,'$500'],[750,'$750'],[1000,'$1,000 + 🎧 Headphones'],[1250,'$1,250'],[1500,'$1,500 + 150 REP'],[2000,'$2,000'],[5000,'$5,000 + 👑 Gold crown']];
+const dayStr=off=>{const d=new Date(Date.now()+(off||0)*864e5);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+function dailyCheck(){ensureSoc();const D=SAVE.daily,t=dayStr(0);if(D.last===t)return false;D.streak=D.last===dayStr(-1)?D.streak+1:1;D.last=t;D.best=Math.max(D.best,D.streak);
+ const i=(D.streak-1)%7;SAVE.cash+=DAILY[i][0];if(i===4)SAVE.rep+=150;save();showDaily(true);return true;}
+function showDaily(fresh){ensureSoc();const D=SAVE.daily,i=D.streak?(D.streak-1)%7:-1;
+ const tiles=DAILY.map((r,k)=>`<div class="dly ${k<i?'got':k===i?'now':''}"><b>DAY ${k+1}</b><span>${k===6?'👑':k===2?'🎧':'💰'}</span><small>${r[1]}</small>${k<i?'<em>✓</em>':''}</div>`).join('');
+ openModal(`<h1 style="font-size:32px">${fresh?'DAILY REWARD!':'DAILY STREAK'}</h1><div class="sub">🔥 ${D.streak||0}-day streak · best ${D.best||0} ${(D.best||0)===1?'day':'days'}</div>
+ <div class="dlyRow">${tiles}</div>${fresh?`<div class="tutbox" style="margin-top:12px">You got <b>${DAILY[i][1]}</b> for day ${i+1}! Come back tomorrow for day ${(i+1)%7+1}. Miss a day and the streak starts again.</div>`:`<div class="note" style="margin-top:12px">Play once a day to keep your streak going. Day 3 unlocks headphones and day 7 unlocks the gold crown for your character.</div>`}
+ <div class="actions"><button class="btn" data-act="close">${fresh?'AWESOME!':'BACK'}</button></div>`);}
+// ---- badges wall ----
+function openBadges(){ensureSoc();const n=Object.keys(SAVE.badges).length;
+ const tiles=BADGES.map(([id,icon,name,how])=>{const on=!!SAVE.badges[id];return`<div class="bdg ${on?'on':''} ${SAVE.feat===id?'feat':''}" ${on?`data-soc="feat" data-v="${id}"`:''}><span>${on?icon:'🔒'}</span><b>${name}</b><small>${how}</small>${SAVE.feat===id?'<em>ON MY NAME</em>':''}</div>`;}).join('');
+ openModal(`<h1 style="font-size:32px">BADGES</h1><div class="sub">🏅 ${n} of ${BADGES.length} earned · every badge pays $250</div><div class="note" style="margin-bottom:10px">Tap a badge you earned to show it next to your name for everyone to see.</div><div class="bdgGrid">${tiles}</div><div class="actions"><button class="btn" data-act="close">BACK</button></div>`);}
+// ---- the Lounge ----
+function inLounge(x,z){const L=LNG[S.city];return!!L&&x>L.x0&&x<L.x1&&z>L.z0&&z<L.z1;}
+function nearSeat(x,z){const L=LNG[S.city];if(!L)return null;let b=null,bd=2.6;for(const s of L.seats){const d=Math.hypot(s.x-x,s.z-z);if(d<bd){bd=d;b=s;}}return b;}
+function buildLounge(cx,cz,ci,cj,sz,key,night){const dk=key==='dakar',h=sz/2-.6,L={cx,cz,x0:cx-h,x1:cx+h,z0:cz-h,z1:cz+h,seats:[],fx:[],name:CITY[key].lounge.name};LNG[key]=L;
+ const ft=canvasTex(512,512,(g,W)=>{const n=8,s=W/n;for(let i=0;i<n;i++)for(let j=0;j<n;j++){g.fillStyle=dk?((i+j)%2?'#e9d3a8':'#d9b77e'):((i+j)%2?'#1c1830':'#14111f');g.fillRect(i*s,j*s,s,s);}
+  g.strokeStyle=dk?'#b5562b':'#05d9e8';g.lineWidth=6;g.strokeRect(10,10,W-20,W-20);g.strokeStyle=dk?'#1b7a3e':'#ff2a6d';g.lineWidth=4;g.strokeRect(26,26,W-52,W-52);});
+ const fl=new THREE.Mesh(new THREE.PlaneGeometry(sz-1,sz-1),new THREE.MeshStandardMaterial({map:ft,roughness:.8}));fl.rotation.x=-Math.PI/2;fl.position.set(cx,.235,cz);fl.receiveShadow=true;world.add(fl);
+ // round stage in the middle
+ const SR=Math.max(5,sz*.08),st=new THREE.Mesh(new THREE.CylinderGeometry(SR,SR+.2,.22,40),plainMat(dk?'#b5562b':'#2a2244'));st.position.set(cx,.33,cz);st.receiveShadow=true;world.add(st);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(SR+.05,.08,6,60),new THREE.MeshBasicMaterial({color:dk?0xffd000:0xff2a6d}));ring.rotation.x=Math.PI/2;ring.position.set(cx,.45,cz);world.add(ring);L.fx.push(ring);
+ // DJ booth on the far side
+ const bz=L.z0+4,booth=bx(world,plainMat('#18161f'),5,1.2,1.6,cx,.84,bz);BCELL[ci][cj].push({x0:cx-2.5,x1:cx+2.5,z0:bz-.8,z1:bz+.8});
+ for(const s of[-1,1]){bx(world,plainMat('#0e0d12'),1.3,2.2,1.2,cx+s*3.8,1.34,bz);BCELL[ci][cj].push({x0:cx+s*3.8-.65,x1:cx+s*3.8+.65,z0:bz-.6,z1:bz+.6});
+  for(const y of[.9,1.8]){const sp=new THREE.Mesh(new THREE.CircleGeometry(.38,18),plainMat('#2c2b33'));sp.position.set(cx+s*3.8,y,bz+.61);world.add(sp);}}
+ for(let k=0;k<5;k++){const bar=new THREE.Mesh(GEO.box,new THREE.MeshBasicMaterial({color:0xffffff}));bar.scale.set(.7,.18,.05);bar.position.set(cx-1.8+k*.9,1.25,bz+.82);world.add(bar);L.fx.push(bar);}
+ // sign above the booth
+ const sg=canvasTex(1024,256,(g,W,H)=>{g.fillStyle=dk?'#1b1408':'#0b0916';g.fillRect(0,0,W,H);g.strokeStyle=dk?'#ffd000':'#05d9e8';g.lineWidth=10;g.strokeRect(8,8,W-16,H-16);
+  g.font='bold 96px Orbitron, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=dk?'#ffd000':'#ff2a6d';g.fillText(L.name.toUpperCase(),W/2,H*.42);g.font='bold 40px sans-serif';g.fillStyle='#ffffff';g.fillText('CHILL ZONE · NO RACING · BE KIND',W/2,H*.78);});
+ const sm=new THREE.Mesh(new THREE.PlaneGeometry(12,3),new THREE.MeshStandardMaterial({map:sg,emissive:0xffffff,emissiveMap:sg,emissiveIntensity:night?.9:.25}));sm.position.set(cx,4.6,bz-.2);world.add(sm);
+ for(const s of[-1,1])bx(world,plainMat('#333'),.18,4,.18,cx+s*5.6,2.2,bz-.3);
+ // benches around the stage, facing the middle
+ const wood=plainMat(dk?'#8a5a2b':'#3a3550'),metal=plainMat('#2b2b30');
+ for(let k=0;k<8;k++){const a=k/8*Math.PI*2+Math.PI/8,R=SR+5,x=cx+Math.sin(a)*R,z=cz+Math.cos(a)*R;if(z<L.z0+6.5)continue;const ry=a+Math.PI;
+  const g=new THREE.Group();g.position.set(x,.24,z);g.rotation.y=ry;world.add(g);
+  const seat=new THREE.Mesh(GEO.box,wood);seat.scale.set(3,.1,.7);seat.position.y=.45;g.add(seat);const back=new THREE.Mesh(GEO.box,wood);back.scale.set(3,.6,.1);back.position.set(0,.85,-.38);g.add(back);
+  for(const s of[-1.3,1.3]){const l=new THREE.Mesh(GEO.box,metal);l.scale.set(.1,.45,.6);l.position.set(s,.22,0);g.add(l);}
+  for(const o of[-.75,.75]){L.seats.push({x:x+Math.cos(ry)*o,z:z-Math.sin(ry)*o,h:ry});}}
+ // shade umbrellas with tables, string lights along the edges, a painted wall
+ const canC=dk?['#d21f2b','#ffd000','#1b7a3e','#ff7a00']:['#ff2a6d','#05d9e8','#7a3cff','#ffd000'];
+ [[-.3,-.12],[.3,-.12],[-.3,.22],[.3,.22],[-.12,.36],[.12,.36]].forEach(([fx,fz],k)=>{const x=cx+fx*sz,z=cz+fz*sz;if(Math.hypot(x-(L.x1-6),z-(cz-4))<6)return;
+  bx(world,plainMat('#ddd'),.1,2.6,.1,x,1.5,z);const cn=new THREE.Mesh(new THREE.ConeGeometry(1.9,.7,10),plainMat(canC[k%4]));cn.position.set(x,2.95,z);world.add(cn);
+  const tb=new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,.08,16),plainMat('#f6f4ef'));tb.position.set(x,1.0,z);world.add(tb);BCELL[ci][cj].push({x0:x-.7,x1:x+.7,z0:z-.7,z1:z+.7});
+  for(const a of[0,2.1,4.2]){const st2=new THREE.Mesh(new THREE.CylinderGeometry(.22,.2,.5,10),plainMat(canC[(k+1)%4]));st2.position.set(x+Math.sin(a)*1.25,.49,z+Math.cos(a)*1.25);world.add(st2);}});
+ const bulbG=new THREE.SphereGeometry(.11,6,5);for(const[ax,az,bx2,bz2]of[[L.x0+2,L.z0+2,L.x1-2,L.z0+2],[L.x0+2,L.z1-2,L.x1-2,L.z1-2],[L.x0+2,L.z0+2,L.x0+2,L.z1-2],[L.x1-2,L.z0+2,L.x1-2,L.z1-2]]){
+  const n=Math.floor(Math.hypot(bx2-ax,bz2-az)/2.2);for(let k=0;k<=n;k++){const t=k/n,y=4.3-Math.sin((t*n%4)/4*Math.PI)*.5;const b2=new THREE.Mesh(bulbG,new THREE.MeshBasicMaterial({color:new THREE.Color(canC[k%4])}));b2.position.set(ax+(bx2-ax)*t,y,az+(bz2-az)*t);world.add(b2);}}
+ const mw=canvasTex(1024,256,(g,W,H)=>{g.fillStyle=dk?'#f3e3c2':'#120f22';g.fillRect(0,0,W,H);for(let k=0;k<14;k++){g.fillStyle=canC[k%4];g.globalAlpha=.85;g.beginPath();g.arc(40+k*75,H/2+Math.sin(k)*60,30+(k%3)*18,0,Math.PI*2);g.fill();}
+  g.globalAlpha=1;g.font='bold 70px Orbitron, sans-serif';g.textAlign='center';g.fillStyle=dk?'#1b1408':'#ffffff';g.fillText(dk?'TERANGA · DAKAR':'NEON · TOKYO',W/2,H/2+24);});
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(.4,3.2,sz*.45),[new THREE.MeshStandardMaterial({map:mw}),new THREE.MeshStandardMaterial({map:mw}),plainMat('#777'),plainMat('#777'),plainMat('#777'),plainMat('#777')]);
+ wall.position.set(L.x0+1.2,1.84,cz+sz*.08);world.add(wall);BCELL[ci][cj].push({x0:L.x0+1,x1:L.x0+1.4,z0:cz+sz*.08-sz*.225,z1:cz+sz*.08+sz*.225});
+ // lamps + planters in the corners
+ for(const[sx,sz2]of[[-1,-1],[1,-1],[-1,1],[1,1]]){const x=cx+sx*(h-2.2),z=cz+sz2*(h-2.2);bx(world,plainMat('#2b2b30'),.16,4.2,.16,x,2.3,z);
+  const lp=new THREE.Mesh(new THREE.SphereGeometry(.35,12,10),new THREE.MeshBasicMaterial({color:night?0xffd9a0:0xfff3dc}));lp.position.set(x,4.5,z);world.add(lp);
+  const pot=new THREE.Mesh(new THREE.CylinderGeometry(.7,.55,.7,14),plainMat(dk?'#b5562b':'#444')),bush=new THREE.Mesh(new THREE.SphereGeometry(.85,12,10),plainMat('#2f7d3a'));pot.position.set(x+sx*-1.6,.59,z);bush.position.set(x+sx*-1.6,1.3,z);world.add(pot);world.add(bush);}
+ // showcase turntable (your own ride, spinning)
+ const tx=L.x1-6,tz=cz-4,tt=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.3,.3,40),plainMat('#1b1830'));tt.position.set(tx,.38,tz);world.add(tt);
+ const tr=new THREE.Mesh(new THREE.TorusGeometry(3.25,.06,6,60),new THREE.MeshBasicMaterial({color:0x05d9e8}));tr.rotation.x=Math.PI/2;tr.position.set(tx,.5,tz);world.add(tr);
+ const lab=nameTag('⭐ SHOWCASE · YOUR RIDE','#ffc23d');lab.position.set(tx,3.6,tz);world.add(lab);BCELL[ci][cj].push({x0:tx-3.3,x1:tx+3.3,z0:tz-3.3,z1:tz+3.3});
+ L.show={x:tx,z:tz,mesh:null,key:''};
+ // where cars park and where you walk in
+ L.ent={x:cx,z:roadC(cj+1)};L.spawn={x:cx,z:L.z1-3};}
+function enterLounge(tele){const L=LNG[S.city];if(!L||!player)return;
+ if(S.race){toast('Finish the race first','','#ff8a00',1.6);return;}if(S.deliv){toast('Finish your delivery first','','#ff8a00',1.6);return;}if(S.heat.level>0){toast('Lose the cops first!','','#ff8a00',1.6);return;}
+ if(S.paused)closeModal();
+ if(S.meet&&!S.meet.free)leaveMeet();
+ if(!S.meet){placeOnRoad(player,L.ent.x+(Math.random()-.5)*10,L.ent.z+LANE*.5,Math.PI/2);footExitVehicle();if(!S.meet)return;}
+ S.meet.x=L.spawn.x+(Math.random()-.5)*4;S.meet.z=L.spawn.z;S.meet.h=Math.PI;S.meet.emoteT=0;camPos.set(S.meet.x,2.6,S.meet.z+4.5);flag('lounge');
+ hint(`🛋️ <b>${L.name.toUpperCase()}</b> · a chill zone with no racing. Tap 😀 or press <b>1–8</b> for emotes · 🪑 sit on a bench · walk up to players to see their card and add friends · <b>F</b> by your car to drive again`,10);}
+// ---- friends + one-tap Join ----
+async function lobbyList(){const out=[],seen=new Set();
+ const add=(city,peer,pr)=>{const d=readRemote(pr);if(!d||!d.id||d.id===NET.me||seen.has(d.id))return;seen.add(d.id);out.push({city,peer,d});};
+ if(NET.city)for(const p of NET.city.peers())if(!p.sameTab)add(S.city,p.peer,p.presence);
+ if(NET.room&&typeof NET.room.peek==='function')for(const c of Object.keys(CITY))if(c!==S.city){try{for(const p of await NET.room.peek('usr-'+c))add(c,p.peer,p.presence);}catch(e){}}
+ return out;}
+const isFriend=id=>!!(SAVE.friends||[]).find(f=>f.id===id);
+const MODE_TXT={drive:'driving',meet:'at the car meet',race:'racing',duel:'in a duel',menu:'in menus',foot:'on foot'};
+function where(e){return`${CITY[e.city].name} · ${e.d.lg?'🛋️ in the Lounge':MODE_TXT[e.d.m]||'online'}`;}
+let SOC_LIST=[];
+async function openFriends(){ensureSoc();S.socCard=null;openModal(`<h1 style="font-size:32px">FRIENDS</h1><div class="sub">Loading who is online…</div>`);SOC_LIST=await lobbyList();if($('modal').classList.contains('hidden'))return;
+ const on=new Map(SOC_LIST.map(e=>[e.d.id,e]));
+ const fr=SAVE.friends.map(f=>{const e=on.get(f.id);return`<div class="item"><div><b>${e?'🟢':'⚪'} ${esc(e?e.d.n:f.n)}</b>${e&&e.d.bd?' '+BADGE_BY[e.d.bd].icon:''}<div class="d">${e?where(e):'offline'}</div></div><div>${e?`<button class="btn sm" data-soc="join" data-v="${esc(f.id)}">🚀 JOIN</button>`:''} <button class="btn alt sm" data-soc="unfriend" data-v="${esc(f.id)}">✕</button></div></div>`;}).join('')||'<div class="note" style="padding:8px 0">No friends yet. Add players from the list below, or walk up to them in the Lounge.</div>';
+ const others=SOC_LIST.filter(e=>!isFriend(e.d.id)).map(e=>`<div class="item"><div><b>${esc(e.d.n)}</b>${e.d.bd?' '+BADGE_BY[e.d.bd].icon:''} <span class="note">LV ${e.d.lv}</span><div class="d">${where(e)}</div></div><div><button class="btn alt sm" data-soc="addf" data-v="${esc(e.d.id)}" data-n="${esc(e.d.n)}">⭐ ADD FRIEND</button> <button class="btn sm" data-soc="join" data-v="${esc(e.d.id)}">🚀 JOIN</button></div></div>`).join('')||`<div class="note" style="padding:8px 0">${NET.city?'Nobody else is online right now.':'You are playing offline. Friends and Join work when you play online.'}</div>`;
+ $('modalCard').innerHTML=`<h1 style="font-size:32px">FRIENDS</h1><div class="sub">${NET.city?'● Online':'● Offline'} · tap 🚀 JOIN to jump straight to a player</div><h3>MY FRIENDS (${SAVE.friends.length})</h3>${fr}<h3>PLAYERS ONLINE NOW</h3>${others}<div class="actions"><button class="btn alt" data-soc="lounge">🛋️ GO TO THE LOUNGE</button><button class="btn" data-act="close">BACK</button></div>`;}
+function addFriend(id,n){ensureSoc();if(!id||isFriend(id))return;if(SAVE.friends.length>=40){toast('Friend list is full','','#ff8a00',1.6);return;}SAVE.friends.push({id,n:kidSafe(cleanTxt(n,18))||'Driver'});save();feed(`⭐ ${n} is now your friend`);chime(true);}
+function joinPlayer(id){const e=SOC_LIST.find(x=>x.d.id===id);if(!e)return;if(S.race||S.deliv||S.heat.level>0){toast(S.race?'Finish the race first':S.deliv?'Finish your delivery first':'Lose the cops first!','','#ff8a00',1.6);return;}
+ closeModal();if(S.meet&&!S.meet.free)leaveMeet();if(e.city!==S.city){travel(e.city);}NET.pendingJoin={id,t:Date.now(),n:e.d.n};toast('🚀 JOINING',e.d.n,'#05d9e8',1.6);}
+function doJoin(r){const d=r.d;NET.pendingJoin=null;flag('joined');
+ if(d.av&&(d.m==='foot'||d.m==='meet')){if(!S.meet){placeOnRoad(player,d.x-Math.sin(d.h)*7,d.z-Math.cos(d.h)*7,d.h);footExitVehicle();}
+  if(S.meet&&S.meet.free){const[ax,az,ah]=d.av;S.meet.x=ax+Math.sin(ah)*1.8;S.meet.z=az+Math.cos(ah)*1.8;S.meet.h=ah+Math.PI;S.meet.emoteT=0;camPos.set(S.meet.x,2.6,S.meet.z);}}
+ else{if(S.meet&&S.meet.free)leaveMeet();placeOnRoad(player,d.x-Math.sin(d.h)*11,d.z-Math.cos(d.h)*11,d.h);}
+ toast('🚀 YOU JOINED',d.n,'#39ff9f',2);}
+function openCard(r){S.socCard=r;const d=r.d,fr=isFriend(d.id),b=d.bd&&BADGE_BY[d.bd];
+ openModal(`<h1 style="font-size:32px">${b?b.icon+' ':''}${esc(d.n)}</h1><div class="sub">LV ${d.lv}${d.cr?' · '+esc(d.cr):''}</div>
+ <div class="cardRow"><div><b>🏅 ${d.bc}</b><small>badges</small></div><div><b>🔥 ${d.sk}</b><small>day streak</small></div><div><b>🚗</b><small>${esc(d.mo?MOTOS[d.mo].name:CARS[d.carId].name)}</small></div></div>
+ ${b?`<div class="note" style="margin:10px 0">Showing off: <b>${b.icon} ${b.name}</b> · ${b.how}</div>`:''}
+ <div class="actions">${d.id?(fr?'<span class="pill">⭐ FRIENDS</span>':`<button class="btn" data-soc="addf" data-v="${esc(d.id)}" data-n="${esc(d.n)}">⭐ ADD FRIEND</button>`):''}<button class="btn alt sm" data-soc="wave">👋 WAVE</button><button class="btn alt" data-act="close">BACK</button></div>`);}
+// ---- dock + emote wheel ----
+(function(){const css=document.createElement('style');css.textContent=`
+#socDock{position:absolute;right:14px;top:214px;display:flex;flex-direction:column;gap:8px;pointer-events:auto;z-index:6}
+#socDock button{width:46px;height:46px;border-radius:14px;border:1px solid var(--line,#ffffff22);background:rgba(5,4,14,.78);color:#fff;font-size:22px;cursor:pointer;position:relative}
+#socDock button:hover{background:rgba(255,42,109,.35)}#socDock .dot{position:absolute;top:3px;right:3px;width:10px;height:10px;border-radius:50%;background:#ff2a6d}
+#emoWheel{position:absolute;right:70px;top:214px;display:grid;grid-template-columns:repeat(4,58px);gap:6px;padding:8px;border-radius:16px;background:rgba(5,4,14,.88);border:1px solid #ffffff22;pointer-events:auto;z-index:7}
+#emoWheel button{height:58px;border-radius:12px;border:0;background:#1b1830;color:#fff;font-size:26px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}#emoWheel button small{font-size:9px;letter-spacing:1px;opacity:.8}
+#socPrompt{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);padding:10px 16px;font-size:14px}
+.dlyRow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}.dly{position:relative;background:#141225;border:1px solid #ffffff1a;border-radius:12px;padding:10px 4px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.dly span{font-size:26px}.dly small{font-size:10px;opacity:.8}.dly.got{opacity:.55}.dly.now{border-color:#ffc23d;box-shadow:0 0 18px #ffc23d66;background:#2a2210}.dly em{position:absolute;top:4px;right:6px;color:#39ff9f;font-style:normal;font-weight:800}
+.bdgGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:52vh;overflow:auto}.bdg{background:#141225;border:1px solid #ffffff14;border-radius:12px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:3px;opacity:.5}
+.bdg span{font-size:30px}.bdg small{font-size:10px;opacity:.75}.bdg.on{opacity:1;cursor:pointer;border-color:#ffc23d55}.bdg.feat{border-color:#ffc23d;box-shadow:0 0 14px #ffc23d55}.bdg em{font-style:normal;font-size:9px;letter-spacing:1px;color:#ffc23d;font-weight:800}
+.cardRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.cardRow div{background:#141225;border-radius:12px;padding:10px;text-align:center;display:flex;flex-direction:column}.cardRow b{font-size:20px}.cardRow small{opacity:.75;font-size:11px}
+.chip.lock{opacity:.5}
+@media (max-width:760px){#socDock{top:200px;right:8px;gap:6px}#socDock button{width:40px;height:40px;font-size:19px}#emoWheel{right:56px;top:200px;grid-template-columns:repeat(4,50px)}#emoWheel button{height:50px}.dlyRow{grid-template-columns:repeat(4,1fr)}}`;document.head.appendChild(css);
+ const hud=$('hud'),dk=document.createElement('div');dk.id='socDock';dk.innerHTML=`<button data-soc="friends" title="Friends">👥</button><button data-soc="lounge" title="Go to the Lounge">🛋️</button><button data-soc="emo" title="Emotes">😀</button><button data-soc="badges" title="Badges">🏅</button><button data-soc="daily" title="Daily streak">📅</button>`;hud.appendChild(dk);
+ const w=document.createElement('div');w.id='emoWheel';w.className='hidden';w.innerHTML=EMOTES.map((e,i)=>`<button data-soc="em" data-v="${i}">${e[1]}<small>${i+1} ${e[2].toUpperCase()}</small></button>`).join('');hud.appendChild(w);
+ const p=document.createElement('div');p.id='socPrompt';p.className='panel hidden';hud.appendChild(p);
+ const click=e=>{const b=e.target.closest('[data-soc]');if(!b)return;e.stopPropagation();const a=b.dataset.soc,v=b.dataset.v;if(S.state!=='play'&&a!=='feat')return;
+  if(a!=='em'&&a!=='emo')$('emoWheel').classList.add('hidden');
+  if(a==='friends')openFriends();else if(a==='lounge')enterLounge(true);else if(a==='badges')openBadges();else if(a==='daily')showDaily(false);
+  else if(a==='emo'){if(!S.meet){toast('Get out of your ride first','Tap 🚪 or press F, then use emotes','#ffc23d',2);return;}$('emoWheel').classList.toggle('hidden');}
+  else if(a==='em'){meetEmote(+v);$('emoWheel').classList.add('hidden');}
+  else if(a==='feat'){SAVE.feat=v;save();openBadges();}
+  else if(a==='addf'){addFriend(v,b.dataset.n);if(S.socCard)openCard(S.socCard);else openFriends();}
+  else if(a==='unfriend'){SAVE.friends=SAVE.friends.filter(f=>f.id!==v);save();openFriends();}
+  else if(a==='join')joinPlayer(v);
+  else if(a==='wave'){closeModal();meetEmote(0);}};
+ dk.addEventListener('click',click);w.addEventListener('click',click);$('modal').addEventListener('click',click,true);})();
+// ---- presence: share badge, streak and Lounge status; read them safely ----
+const _mp=myPresence;myPresence=function(){const o=_mp();ensureSoc();o.bd=SAVE.feat&&SAVE.badges[SAVE.feat]?SAVE.feat:null;o.bc=Object.keys(SAVE.badges).length;o.sk=SAVE.daily.streak|0;o.lg=S.meet&&S.meet.free&&inLounge(S.meet.x,S.meet.z)?1:0;return o;};
+const _rr=readRemote;readRemote=function(pr){const d=_rr(pr);if(d){d.bd=BADGE_BY[pr.bd]?pr.bd:null;d.bc=clamp(fin(pr.bc)|0,0,99);d.sk=clamp(fin(pr.sk)|0,0,9999);d.lg=pr.lg===1;}return d;};
+const _interact=interact;interact=function(){if(S.socNear&&!S.meet&&!S.paused){enterLounge(false);return;}_interact();};
+// ---- per-frame ----
+let socT=0,socDockOn=null;
+const _nu=netUpdate;
+netUpdate=function(dt){_nu(dt);
+ // emoji pops (yours and other players')
+ for(const r of NET.remotes.values()){const em=r.d&&r.d.av&&r.d.av[3];if(em!==r.lastEm){r.lastEm=em;if(EMO_ICON[em]&&em!=='walk'&&r.av&&r.av.g.visible)popEmoji(r.av,EMO_ICON[em]);}}
+ for(let i=POPS.length-1;i>=0;i--){const p=POPS[i];p.t-=dt;p.s.position.y=2.35+(2.2-p.t)*.35;p.s.material.opacity=Math.min(1,p.t*2);if(p.t<=0||!p.av.g.parent){p.av.g.remove(p.s);POPS.splice(i,1);}}
+ if(S.meet&&S.meet.emote==='sit'&&S.meet.emoteT>0&&S.meet.seat){S.meet.x=S.meet.seat.x;S.meet.z=S.meet.seat.z;}
+ // one-tap Join: once the friend's presence shows up in this city, drop in next to them
+ if(NET.pendingJoin){const J=NET.pendingJoin;if(Date.now()-J.t>15000){feed(`Couldn't reach ${J.n} — they may have moved on`);NET.pendingJoin=null;}else for(const r of NET.remotes.values())if(r.d&&r.d.id===J.id&&player&&!S.paused){doJoin(r);break;}}
+ // Lounge: lights, showcase, entrance prompt
+ const L=LNG[S.city];
+ if(L){const tt=S.time||0;L.fx.forEach((m,k)=>{if(m.material&&m.material.color)m.material.color.setHSL(((tt*.12)+k*.17)%1,.9,.55);if(k>0)m.scale.y=.08+Math.abs(Math.sin(tt*4+k*1.3))*.32;});
+  const cs=SAVE&&SAVE.current&&SAVE.cars[SAVE.current];const key=cs?SAVE.current+cs.color+cs.glow+cs.decal:'';
+  if(key!==L.show.key){if(L.show.mesh)world.remove(L.show.mesh);L.show.mesh=null;L.show.key=key;if(cs){L.show.mesh=buildCarMesh(CARS[SAVE.current],new THREE.Color(cs.color),{glow:GLOWS[cs.glow],decal:cs.decal});L.show.mesh.position.set(L.show.x,.55,L.show.z);world.add(L.show.mesh);}}
+  if(L.show.mesh)L.show.mesh.rotation.y+=dt*.5;
+  const near=!S.meet&&player&&!S.race&&!S.paused&&Math.hypot(player.x-L.ent.x,player.z-L.ent.z)<18&&Math.hypot(player.vx,player.vz)<14;S.socNear=near;
+  const sp=$('socPrompt');sp.classList.toggle('hidden',!near||!!S.interact);if(near)sp.innerHTML=`<b>E</b> &nbsp;Hang out in the ${L.name} 🛋️`;}
+ else{S.socNear=false;$('socPrompt').classList.add('hidden');}
+ const dockOn=S.state==='play'&&!S.paused&&!S.race;if(dockOn!==socDockOn){socDockOn=dockOn;$('socDock').classList.toggle('hidden',!dockOn);if(!dockOn)$('emoWheel').classList.add('hidden');}
+ if(!S.meet&&!$('emoWheel').classList.contains('hidden'))$('emoWheel').classList.add('hidden');
+ // daily reward once per profile per day, badges every so often
+ if(S.state==='play'&&!S.paused&&SAVE&&SAVE.current&&SAVE.tut>=3&&S.socDailyFor!==SAVE&&(S.time||0)>1.5){S.socDailyFor=SAVE;dailyCheck();}
+ socT+=dt;if(socT>1.2&&S.state==='play'&&SAVE&&SAVE.current){socT=0;ensureSoc();
+  if(S.city)flag('v_'+S.city);if(S.meet&&S.meet.free)flag('walk');if(player&&player.moto)flag('moto');
+  if(S.meet&&S.meet.free&&inLounge(S.meet.x,S.meet.z)){flag('lounge');let n=0;for(const r of NET.remotes.values())if(r.d&&r.d.lg)n++;if(n>=2)flag('party');}
+  checkBadges();}};
 // ---------- chat ----------
 // kid-safe chat: only these preset messages and emojis can be sent or shown
 const QUICK=['👋 Hi!','🏁 Race me?','🔥 Nice drift!','😎 Cool car!','👍 Good game!','🚗 Follow me!','⏳ Wait for me!','🎉 Let\'s go!','🤝 Good race!','🏆 You win!','🙏 Thank you!','👋 Bye!','😂','😮','🔥','❤️','👏','🏎️','⚽','🇸🇳'];
@@ -3994,6 +4246,7 @@ function buildCity(key){
   const sw=new THREE.Mesh(GEO.box,pavM);sw.scale.set(sz,.22,sz);sw.position.set(cx,.11,cz);sw.receiveShadow=true;world.add(sw);STATIC.push(sw);
   for(const[sx,sz2]of[[0,1],[0,-1],[1,0],[-1,0]]){const c=new THREE.Mesh(GEO.box,curbM);c.scale.set(sx?.32:sz+.02,.25,sx?sz+.02:.32);c.position.set(cx+sx*(sz/2-.16),.125,cz+sz2*(sz/2-.16));c.receiveShadow=true;world.add(c);STATIC.push(c);}
   if(C.meet&&i===C.meet.cell[0]&&j===C.meet.cell[1]){buildMeetLot(cx,cz,i,j,sz,key,night);continue;}
+  if(C.lounge&&i===C.lounge.cell[0]&&j===C.lounge.cell[1]){buildLounge(cx,cz,i,j,sz,key,night);continue;}
   if(key==='tokyo'&&i===C.landmark[0]&&j===C.landmark[1]){// landmark tower
     addBuilding(cx,cz,26,26,40,i,j,0);const tm=new THREE.MeshStandardMaterial({color:0xff5a1f,emissive:0xff3010,emissiveIntensity:.7});
     [[18,40,70],[11,110,50],[6,160,40],[2.5,200,40]].forEach(([w,y,h])=>{const t=new THREE.Mesh(GEO.box,tm);t.scale.set(w,h,w);t.position.set(cx,y-h/2+20,cz);world.add(t);});
@@ -4488,7 +4741,7 @@ addEventListener('keydown',e=>{const cb=$('chatBox');if(cb&&!cb.classList.contai
  if(k==='y'){S.weather=S.weather==='clear'?'rain':'clear';rain.visible=S.weather==='rain';feed(S.weather==='rain'?'🌧 Rain rolling in — less grip!':'☀️ Skies clearing');}
  if(k==='r'){const rx=nearestRoad(player.x),rz=nearestRoad(player.z);const ax=Math.abs(player.x-rx.c)<Math.abs(player.z-rz.c);placeOnRoad(player,ax?rx.c:player.x,ax?player.z:rz.c,ax?(Math.cos(player.h)>=0?0:Math.PI):(Math.sin(player.h)>=0?Math.PI/2:-Math.PI/2));}
  if(k==='e')interact();
- if('1234'.includes(k)&&S.meet)meetEmote(+k-1);
+ if('12345678'.includes(k)&&S.meet)meetEmote(+k-1);
  if(k==='f')footToggle();
  if('1234'.includes(k))emote(['👍','🔥','😎','🏁'][+k-1]);});
 addEventListener('keyup',e=>{K[e.key.toLowerCase()]=false;});
@@ -4648,7 +4901,7 @@ function hud(dt){if(S.state!=='play'||!player)return;const p=player,sp=Math.hypo
  const H=S.heat;$('heat').classList.toggle('hidden',H.level===0);
  if(H.level>0){$('pips').innerHTML=Array.from({length:8},(_,i)=>`<span class="${i<H.level?'on':''}"></span>`).join('');$('heatTitle').textContent=H.level>=8?'HEAT 8 · MAXIMUM':'HEAT LEVEL '+H.level;$('heatTitle').style.color=H.level>=6?'#ff2040':'#ff8a00';$('heatDesc').textContent=HEAT_DESC[H.level];
   $('meterBar').firstElementChild.style.width=H.meter*100+'%';$('evBar').firstElementChild.style.width=clamp(H.evade/(H.evNeed||10),0,1)*100+'%';$('bustBar').classList.toggle('hidden',H.bust<=.05);$('bustBar').firstElementChild.style.width=clamp(H.bust/2.6,0,1)*100+'%';}
- const tE=$('tbE');if(tE)tE.classList.toggle('hidden',!S.interact);
+ const tE=$('tbE');if(tE)tE.classList.toggle('hidden',!(S.interact||S.socNear||S.meet));
  if(S.hintT>0){S.hintT-=dt;if(S.hintT<=0)$('hint').classList.add('hidden');}
  toastT-=dt;if(toastT<=0)$('toast').style.opacity=Math.max(0,+$('toast').style.opacity-dt*3);
  // map
@@ -4707,7 +4960,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(SAVE.tut===0){toast(CITY[S.city].name,'Welcome, driver. Your crew is waiting at the garage.','#05d9e8',3.2);setTimeout(()=>hint(touch?'Hold <b>GAS</b> to drive · <b>◀ ▶</b> steer · <b>BRAKE</b> to stop · follow the arrow at the top':'<b>W</b> / <b>↑</b> drive &nbsp;·&nbsp; <b>A D</b> steer &nbsp;·&nbsp; <b>S</b> brake &nbsp;·&nbsp; follow the arrow at the top',12),1200);}
  else toast(CITY[S.city].name,CITY[S.city].sub,'#05d9e8',2.4);
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
-$('crPanel').addEventListener('click',creatorClick);$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
+$('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 </script>

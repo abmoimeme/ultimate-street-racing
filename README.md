@@ -24,7 +24,15 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - Stop and press **F** (or tap 🚪 on phones) to get out and walk anywhere in the city. Your car stays parked where you left it.
 - Look for **🛵 RIDE** stands on the sidewalks to hop on a free sport bike, Tiak-Tiak scooter, Jakarta moto or bicycle. Press **F** next to one to ride it.
 - Walk back to your car anytime and press **F** to drive it again. Riding into the garage brings your car to you.
-- Walk up to other online players to wave (1–4), send quick chat (T) or challenge them to a race (E).
+- Walk up to other online players to use emotes (1–8), send quick chat (T) or challenge them to a race (E).
+
+## Friends, the Lounge and rewards
+- **👥 Friends:** see who is online and where (Tokyo or Dakar, driving, on foot or in the Lounge). Tap **⭐ ADD FRIEND**, then **🚀 JOIN** to jump straight next to them.
+- **🛋️ The Lounge:** the Teranga Lounge (Dakar) and Neon Lounge (Tokyo) are chill zones with no racing. There's a stage, benches, a DJ booth and a showcase that spins your own car. Walk up to players to see their player card.
+- **😀 Emotes:** wave, sabar dance, clap, flex, cheer, laugh, sit and pose (keys 1–8, or tap 😀).
+- **👕 New looks:** mohawk, ponytail, headphones, bucket hat, helmet, gold crown, backpack, Lions scarf and hero cape.
+- **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
+- **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
 ## Boosters
 Drive through the glowing rings during races and police chases:
@@ -51,7 +59,8 @@ Your rivals can grab boosters too, so race for them!
 
 ## Safe online play
 - Online chat only uses friendly quick messages and emojis (like "🔥 Nice drift!" or "🏁 Race me?"). Nobody can type free text to other players.
-- Other players only ever see your gamer tag, level and car.
+- Other players only ever see your gamer tag, level, car, look and the badge you choose to show.
+- Items can't be traded and nothing is ever bought with real money.
 
 ## For testers
 - Online play and leaderboards connect automatically after you sign in. Other testers in the same city appear on your map.
