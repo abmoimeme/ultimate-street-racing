@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.5 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.6 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -2645,6 +2645,46 @@ sanitize=function(s){const d=_san(s);
  if(Array.isArray(s.friends))d.friends=s.friends.filter(f=>f&&typeof f.id==='string').slice(0,40).map(f=>({id:f.id.replace(/[^\w-]/g,'').slice(0,80),n:String(f.n||'').replace(/[^\w \-.']/g,'').slice(0,18)||'Driver',best:!!f.best}));d.ghost=!!s.ghost;
  if(s.daily&&typeof s.daily==='object'){const D=s.daily;d.daily={last:/^\d{4}-\d\d-\d\d$/.test(D.last)?D.last:'',streak:Number.isFinite(D.streak)?Math.max(0,Math.min(9999,D.streak|0)):0,best:Number.isFinite(D.best)?Math.max(0,Math.min(9999,D.best|0)):0};}
  return d;};
+/* ---------- PHASE 2 data (v1.6): pets, mystery crates, titles, Teranga Fest event ---------- */
+const PETS={
+ puppy:{n:'Puppy',e:'🐶',r:0,t:'quad',c:'#c98a4b',c2:'#f1d8b8',ear:'flop',tail:'short'},
+ kitten:{n:'Kitten',e:'🐱',r:0,t:'quad',c:'#8a8a8f',c2:'#e8e8ea',ear:'point',tail:'long'},
+ chick:{n:'Chick',e:'🐤',r:0,t:'bird',c:'#ffd23f',c2:'#ff9f1c'},
+ bunny:{n:'Bunny',e:'🐰',r:0,t:'quad',c:'#f2efe9',c2:'#ffb3c1',ear:'long',tail:'puff'},
+ fennec:{n:'Fennec Fox',e:'🦊',r:1,t:'quad',c:'#e6b980',c2:'#fff3e0',ear:'big',tail:'fluffy'},
+ turtle:{n:'Turtle',e:'🐢',r:1,t:'turtle',c:'#6aa84f',c2:'#6b4a2b'},
+ parrot:{n:'Parrot',e:'🦜',r:1,t:'bird',c:'#2fbf71',c2:'#d21f2b'},
+ lion:{n:'Lion Cub',e:'🦁',r:2,t:'quad',c:'#d9a441',c2:'#8a4b1f',ear:'round',tail:'tuft',mane:1},
+ panda:{n:'Panda',e:'🐼',r:2,t:'quad',c:'#f6f4ef',c2:'#111114',ear:'round',tail:'short',patch:1},
+ glion:{n:'Golden Lion',e:'🦁',r:3,t:'quad',c:'#ffc23d',c2:'#ff8a00',ear:'round',tail:'tuft',mane:1,glow:1},
+ firebird:{n:'Fire Bird',e:'🔥',r:3,t:'bird',c:'#ff5e1f',c2:'#ffd000',glow:1}};
+const RAR=[['Common','#cfd3da'],['Rare','#05d9e8'],['Epic','#b967ff'],['Legendary','#ffc23d']];
+const EGG_ODDS={n:[60,30,9,1],f:[0,60,33,7]};
+const ITEMS={
+ t_rookie:{n:'Street Rookie',r:0,kind:'title'},t_cruiser:{n:'Corniche Cruiser',r:0,kind:'title'},t_neon:{n:'Neon Rider',r:0,kind:'title'},t_drift:{n:'Drift Kid',r:0,kind:'title'},t_teranga:{n:'Teranga Spirit',r:0,kind:'title'},t_shibuya:{n:'Shibuya Star',r:0,kind:'title'},
+ p_pearl:{n:'Pearl White paint',r:1,kind:'paint',v:'#f4f1ea'},p_midnight:{n:'Midnight Purple paint',r:1,kind:'paint',v:'#2b0a3d'},p_lime:{n:'Electric Lime paint',r:1,kind:'paint',v:'#c6ff00'},p_ocean:{n:'Ocean Blue paint',r:1,kind:'paint',v:'#0077b6'},
+ g_white:{n:'Ice White underglow',r:1,kind:'glow',v:'#ffffff'},g_orange:{n:'Sunset Orange underglow',r:1,kind:'glow',v:'#ff7a00'},
+ p_rose:{n:'Rose Gold paint',r:2,kind:'paint',v:'#e8a5a0'},p_sunset:{n:'Sunset Red paint',r:2,kind:'paint',v:'#ff5e3a'},g_teal:{n:'Aqua Neon underglow',r:2,kind:'glow',v:'#00ffd0'},t_ace:{n:'Street Ace',r:2,kind:'title'},egg:{n:'Pet egg',r:2,kind:'egg'},
+ p_gold:{n:'Solid Gold paint',r:3,kind:'paint',v:'#d4a52a'},t_legend:{n:'Legend of the Streets',r:3,kind:'title'},fegg:{n:'Golden egg',r:3,kind:'fegg'},
+ // Teranga Fest prizes (never in crates)
+ c_gkufi:{n:'Golden Kufi',r:3,kind:'cos',ev:1},c_lantern:{n:'Lantern Pack',r:3,kind:'cos',ev:1},t_baobab:{n:'Baobab Seeker',r:2,kind:'title',ev:1},t_lantern:{n:'Lantern Keeper',r:2,kind:'title',ev:1},t_fest:{n:'Fest Legend 2026',r:3,kind:'title',ev:1},g_fest:{n:'Festival underglow',r:3,kind:'glow',v:'#ff9f1c',ev:1}};
+for(const k in ITEMS)if(ITEMS[k].kind==='glow')GLOWS[k]=ITEMS[k].v;
+BADGES.push(
+ ['pet1','🥚','Pet Parent','Hatch your first pet',s=>!!(s.inv&&s.inv.pets.length>=1)],
+ ['pet5','🐾','Pet Pack','Collect 5 different pets',s=>!!(s.inv&&s.inv.pets.length>=5)],
+ ['crate1','🎁','Crate Opener','Open a mystery crate',s=>!!(s.inv&&s.inv.crates>=1)],
+ ['legend','🌟','Legendary!','Find a legendary pet or item',s=>!!(s.inv&&s.inv.legend)],
+ ['fest26','🎉','Teranga Fest 2026','Find all 20 festival treasures in Tokyo and Dakar',s=>!!(s.inv&&s.inv.fest.tokyo.length>=10&&s.inv.fest.dakar.length>=10)]);
+BADGES.forEach(b=>{BADGE_BY[b[0]]={icon:b[1],name:b[2],how:b[3]};});
+function defInv(){return{eggs:0,fegg:0,inc:null,pets:[],pet:null,items:[],title:null,crates:0,legend:false,fest:{tokyo:[],dakar:[]},wseen:-1};}
+function cleanInv(v){const d=defInv();if(!v||typeof v!=='object')return d;const n=(x,m)=>Number.isFinite(x)?Math.max(0,Math.min(m,x|0)):0;
+ d.eggs=n(v.eggs,99);d.fegg=n(v.fegg,99);if(v.inc&&(v.inc.k==='n'||v.inc.k==='f'))d.inc={k:v.inc.k,d:Number.isFinite(v.inc.d)?Math.max(0,v.inc.d):0};
+ d.pets=Array.isArray(v.pets)?[...new Set(v.pets.filter(k=>PETS[k]))]:[];d.pet=PETS[v.pet]&&d.pets.includes(v.pet)?v.pet:null;
+ d.items=Array.isArray(v.items)?[...new Set(v.items.filter(k=>ITEMS[k]))]:[];d.title=ITEMS[v.title]&&ITEMS[v.title].kind==='title'&&d.items.includes(v.title)?v.title:null;
+ d.crates=n(v.crates,1e6);d.legend=!!v.legend;for(const c of['tokyo','dakar'])d.fest[c]=Array.isArray(v.fest&&v.fest[c])?[...new Set(v.fest[c].filter(x=>Number.isInteger(x)&&x>=0&&x<10))]:[];
+ d.wseen=Number.isFinite(v.wseen)?Math.max(-1,v.wseen|0):-1;return d;}
+const _dsP2=defSave;defSave=function(){return Object.assign(_dsP2(),{inv:defInv()});};
+const _sanP2=sanitize;sanitize=function(s){const d=_sanP2(s);d.inv=cleanInv(s.inv);return d;};
 let SAVE=loadSave();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));return true;}catch(e){if(!saveFailShown){saveFailShown=true;const m='⚠ Progress could not be saved in this browser (storage full or blocked).';if(typeof S!=='undefined'&&S.state==='play')feed(m);else saveWarn=m;}return false;}}
 const levelOf=xp=>Math.min(999,1+Math.floor(Math.pow(xp/120,1/1.5)));
@@ -3817,6 +3857,176 @@ const _ha15=handleAct;
 handleAct=function(act,v,el){if(act==='sellcar'){const c=CARS[v],own=SAVE.cars[v];if(!c||!own||v===SAVE.current||own.impounded){S.sellConfirm=null;renderGarage();return;}
   if(S.sellConfirm!==v){S.sellConfirm=v;renderGarage();return;}S.sellConfirm=null;const back=Math.round(c.price*SELL_PCT);delete SAVE.cars[v];SAVE.cash+=back;save();feed(`↩️ Sold ${c.name} back for ${fmt(back)}`);chime(true);renderGarage();return;}
  if(act!=='sellcar')S.sellConfirm=null;return _ha15(act,v,el);};
+/* ---------- PHASE 2 (v1.6): pets that follow you, eggs that hatch as you play, mystery crates (in-game cash only), titles, Teranga Fest hunt ---------- */
+const EVENT={id:'fest26',name:'Teranga Fest',start:new Date(2026,10,11).getTime(),end:new Date(2027,0,11).getTime(),
+ city:{dakar:{item:'Golden Baobab Seed',icon:'🌰',plural:'Golden Baobab Seeds',prize:'c_gkufi',title:'t_baobab'},tokyo:{item:'Lucky Lantern',icon:'🏮',plural:'Lucky Lanterns',prize:'c_lantern',title:'t_lantern'}}};
+const evOn=()=>{const t=Date.now();return t>=EVENT.start&&t<EVENT.end;};
+const CRATE_PRICE=3000,EGG_PRICE=2000,HATCH_M=1500,CRATE_ODDS=[60,28,10,2],DUP_CASH=[750,1500,3000,6000];
+const inv=()=>{if(!SAVE.inv)SAVE.inv=defInv();return SAVE.inv;};
+const isSuper=()=>!!(window.PASS&&PASS.super);
+function own(it){return isSuper()||inv().items.includes(it);}
+function petsOwned(){return isSuper()?Object.keys(PETS):inv().pets;}
+function rollTier(odds){let r=Math.random()*100;for(let i=0;i<odds.length;i++){if(r<odds[i])return i;r-=odds[i];}return 0;}
+// ---- festival cosmetics ----
+OPT.head.gkufi='Golden Kufi';OPT.acc.lantern='Lantern Pack';
+const COS_ITEM={'head.gkufi':'c_gkufi','acc.lantern':'c_lantern'};
+COS_LOCK['head.gkufi']=['_','Teranga Fest prize: find all 10 Golden Baobab Seeds in Dakar'];COS_LOCK['acc.lantern']=['_','Teranga Fest prize: find all 10 Lucky Lanterns in Tokyo'];
+const _cosOK2=cosOK;cosOK=function(k,v){const it=COS_ITEM[k+'.'+v];if(it)return own(it);return _cosOK2(k,v);};
+const _mkP2=makeAvatar;
+makeAvatar=function(ch){const c=cleanChar(ch),a=_mkP2(c);const gold=pm('gold',()=>stdM('#d4a52a',{metalness:.9,roughness:.25}));
+ if(c.head==='gkufi'){const k=new THREE.Mesh(PG.kufi,gold);k.position.y=.08;(a.hat||a.head).add(k);}
+ if(c.acc==='lantern'){const l=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.24,12),new THREE.MeshStandardMaterial({color:0xd21f2b,emissive:0xff3010,emissiveIntensity:.8}));l.position.set(0,1.22,-.24);a.g.add(l);
+  for(const y of[1.35,1.09]){const cp=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.03,12),gold);cp.position.set(0,y,-.24);a.g.add(cp);}}
+ return a;};
+// ---- 3D pets ----
+const PETG={s:new THREE.SphereGeometry(1,12,10),cone:new THREE.ConeGeometry(1,1,8),cyl:new THREE.CylinderGeometry(1,1,1,8),box:new THREE.BoxGeometry(1,1,1)};
+function buildPet(k){const P=PETS[k],g=new THREE.Group(),mt=c=>P.glow?new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.45,roughness:.4,metalness:.3}):stdM(c,{roughness:.65}),A=mt(P.c),B=mt(P.c2),K=plainMat('#111114');
+ const add=(geo,m,sx,sy,sz,x,y,z,rx,rz)=>{const o=new THREE.Mesh(geo,m);o.scale.set(sx,sy,sz);o.position.set(x,y,z);if(rx)o.rotation.x=rx;if(rz)o.rotation.z=rz;o.castShadow=true;g.add(o);return o;};
+ const legs=[];let tail=null;
+ if(P.t==='quad'){add(PETG.s,A,.16,.14,.22,0,.26,0);add(PETG.s,A,.12,.12,.12,0,.42,.2);add(PETG.s,P.patch?A:B,.055,.045,.05,0,.39,.31);
+  for(const s of[-1,1]){add(PETG.s,K,.018,.018,.018,s*.05,.45,.3);if(P.patch)add(PETG.s,K,.035,.03,.02,s*.05,.45,.29);}add(PETG.s,K,.016,.014,.014,0,.41,.36);
+  for(const[sx,sz]of[[-1,1],[1,1],[-1,-1],[1,-1]])legs.push(add(PETG.cyl,P.patch?K:A,.035,.18,.035,sx*.08,.1,sz*.12));
+  for(const s of[-1,1]){const em=P.patch?K:A;
+   if(P.ear==='point')add(PETG.cone,em,.04,.09,.04,s*.07,.53,.19);
+   else if(P.ear==='round')add(PETG.s,em,.04,.04,.025,s*.08,.52,.18);
+   else if(P.ear==='flop')add(PETG.box,B,.05,.11,.03,s*.11,.43,.18,0,s*.35);
+   else if(P.ear==='long')add(PETG.box,A,.045,.19,.025,s*.045,.61,.17,-.15);
+   else if(P.ear==='big')add(PETG.cone,A,.065,.17,.03,s*.085,.57,.18,0,-s*.25);}
+  if(P.mane)add(PETG.s,B,.17,.17,.1,0,.43,.15);
+  if(P.tail==='short')tail=add(PETG.s,A,.04,.04,.04,0,.3,-.22);
+  else if(P.tail==='puff')tail=add(PETG.s,B,.055,.055,.055,0,.28,-.22);
+  else if(P.tail==='long')tail=add(PETG.cyl,A,.016,.26,.016,0,.38,-.3,-.8);
+  else if(P.tail==='fluffy')tail=add(PETG.s,A,.06,.06,.15,0,.32,-.32,-.3);
+  else if(P.tail==='tuft'){tail=add(PETG.cyl,A,.014,.24,.014,0,.33,-.31,-1);add(PETG.s,B,.04,.04,.04,0,.27,-.42);}}
+ else if(P.t==='bird'){add(PETG.s,A,.14,.15,.16,0,.22,0);add(PETG.s,A,.095,.095,.095,0,.38,.07);add(PETG.cone,B,.03,.08,.03,0,.37,.17,Math.PI/2);
+  for(const s of[-1,1]){add(PETG.s,K,.016,.016,.016,s*.045,.41,.14);legs.push(add(PETG.s,P.r>0?B:A,.03,.1,.13,s*.13,.24,-.01));add(PETG.cyl,B,.01,.09,.01,s*.05,.05,0);}
+  tail=add(PETG.box,P.r>0?B:A,.12,.03,.14,0,.22,-.18,-.5);}
+ else{add(PETG.s,B,.22,.13,.26,0,.13,0);add(PETG.s,A,.07,.07,.08,0,.13,.28);add(PETG.s,K,.014,.014,.014,-.03,.16,.34);add(PETG.s,K,.014,.014,.014,.03,.16,.34);
+  for(const[sx,sz]of[[-1,1],[1,1],[-1,-1],[1,-1]])legs.push(add(PETG.s,A,.05,.04,.06,sx*.17,.05,sz*.15));tail=add(PETG.cone,A,.03,.07,.03,0,.1,-.27,-Math.PI/2);}
+ if(P.glow){const l=new THREE.PointLight(new THREE.Color(P.c),.8,4);l.position.y=.5;g.add(l);}
+ return{g,legs,tail,k,t:0};}
+function animPet(p,moving,dt){p.t+=dt;const s=moving?Math.abs(Math.sin(p.t*11)):0;p.g.children.forEach(()=>{});if(p.tail)p.tail.rotation.y=Math.sin(p.t*(moving?14:6))*.5;
+ p.legs.forEach((l,i)=>{l.rotation.x=moving?Math.sin(p.t*14+(i%2?Math.PI:0))*.6:0;});p.hop=moving?s*.07:Math.sin(p.t*2)*.006;}
+const roofH=new WeakMap();
+function roofOf(mesh){if(!mesh)return 1.4;let h=roofH.get(mesh);if(h==null){const b=new THREE.Box3().setFromObject(mesh);h=Math.max(.8,Math.min(2.4,b.max.y-mesh.position.y));roofH.set(mesh,h);}return h;}
+// place a pet: following an avatar on foot, or riding on a car roof
+function placePet(p,av,ax,az,ah,carMesh,cx,cy,cz,ch,dt,moto){
+ if(av){const tx=ax-Math.sin(ah)*1.0+Math.cos(ah)*.55,tz=az-Math.cos(ah)*1.0-Math.sin(ah)*.55;if(p.mode!=='foot'){p.x=tx;p.z=tz;p.h=ah;p.mode='foot';}
+  const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz),mv=d>.12;if(d>12){p.x=tx;p.z=tz;}else if(mv){const sp=Math.min(d,dt*Math.max(3,d*4));p.x+=dx/d*sp;p.z+=dz/d*sp;p.h+=wrapA(Math.atan2(dx,dz)-p.h)*Math.min(1,dt*8);}else p.h+=wrapA(ah-p.h)*Math.min(1,dt*3);
+  animPet(p,mv,dt);p.g.position.set(p.x,.24+(p.hop||0),p.z);p.g.rotation.y=p.h;p.g.scale.setScalar(1.45);p.g.visible=true;}
+ else if(carMesh&&!moto){p.mode='car';animPet(p,false,dt);const r=roofOf(carMesh);p.g.position.set(cx-Math.sin(ch)*.35,cy+r,cz-Math.cos(ch)*.35);p.g.rotation.y=ch;p.g.scale.setScalar(1.15);p.g.visible=true;}
+ else p.g.visible=false;}
+let MYPET=null;
+function updateMyPet(dt){const k=SAVE&&SAVE.inv?SAVE.inv.pet:null;if(isSuper()&&k&&!PETS[k])SAVE.inv.pet=null;
+ if(!k||!player||S.state!=='play'){if(MYPET){world.remove(MYPET.g);MYPET=null;}return;}
+ if(!MYPET||MYPET.k!==k||!MYPET.g.parent){if(MYPET)world.remove(MYPET.g);MYPET=buildPet(k);world.add(MYPET.g);MYPET.mode=null;}
+ const m=S.meet;if(m)placePet(MYPET,m.av,m.x,m.z,m.h,null,0,0,0,0,dt);else placePet(MYPET,null,0,0,0,player.mesh,player.x,player.y,player.z,player.h,dt,!!player.moto);}
+function updateRemotePets(dt){for(const r of NET.remotes.values()){const k=r.d&&r.d.pt;if(!k){if(r.pet){world.remove(r.pet.g);r.pet=null;}continue;}
+  if(!r.pet||r.pet.k!==k){if(r.pet)world.remove(r.pet.g);r.pet=buildPet(k);world.add(r.pet.g);}
+  const onFoot=r.av&&r.av.g.visible;placePet(r.pet,onFoot?r.av:null,r.ax,r.az,r.ah,r.car&&r.car.visible?r.car:null,r.x,r.y,r.z,r.h,dt,!!r.d.mo);}}
+const _rmP2=removeRemote;removeRemote=function(id){const r=NET.remotes.get(id);if(r&&r.pet)world.remove(r.pet.g);_rmP2(id);};
+// ---- eggs ----
+function giveEgg(kind,why){const I=inv();if(kind==='f')I.fegg++;else I.eggs++;save();feed(`${kind==='f'?'🌟 Golden egg':'🥚 Pet egg'}${why?' · '+why:''}`);toast(kind==='f'?'🌟 GOLDEN EGG!':'🥚 PET EGG!',why||'It hatches as you drive or walk','#ffc23d',2.2);}
+function hatch(){const I=inv(),kind=I.inc.k;I.inc=null;const tier=rollTier(EGG_ODDS[kind]),pool=Object.keys(PETS).filter(k=>PETS[k].r===tier),k=pick(pool);
+ const dup=I.pets.includes(k);if(!dup){I.pets.push(k);if(!I.pet)I.pet=k;}else SAVE.cash+=DUP_CASH[tier];if(tier===3)I.legend=true;save();chime(true);
+ openModal(`<div class="reveal r${tier}"><div class="rvIcon">${PETS[k].e}</div><div class="rvTier" style="color:${RAR[tier][1]}">${RAR[tier][0].toUpperCase()}</div><h1 style="font-size:34px;margin:4px 0">${dup?'ANOTHER ':''}${PETS[k].n.toUpperCase()}!</h1>
+ <div class="sub">${dup?`You already have one, so it turned into <b>${fmt(DUP_CASH[tier])}</b>.`:'Your egg hatched! Your new pet follows you on foot and rides on your car roof.'}</div></div>
+ <div class="actions">${dup?'':`<button class="btn" data-p2="pet" data-v="${k}">🐾 TAKE ${PETS[k].n.toUpperCase()} WITH ME</button>`}<button class="btn alt" data-p2="open" data-v="pets">MY PETS</button><button class="btn alt" data-act="close">CLOSE</button></div>`);}
+let lastFoot=null;
+function eggTick(dt){const I=inv();if(!I.inc){if(I.fegg>0){I.fegg--;I.inc={k:'f',d:0};save();}else if(I.eggs>0){I.eggs--;I.inc={k:'n',d:0};save();}else return;}
+ let d=0;const m=S.meet&&S.meet.free?S.meet:null;if(m){if(lastFoot)d=Math.min(2,Math.hypot(m.x-lastFoot[0],m.z-lastFoot[1]))*3;lastFoot=[m.x,m.z];}else{lastFoot=null;if(player&&!S.paused)d=Math.min(60,Math.hypot(player.vx,player.vz))*dt;}
+ I.inc.d+=d;if(I.inc.d>=HATCH_M&&!S.race&&!S.paused)hatch();}
+// ---- mystery crates (in-game cash only) ----
+function openCrate(){if(SAVE.cash<CRATE_PRICE){toast('Not enough cash',`Crates cost ${fmt(CRATE_PRICE)} · win races and run jobs`,'#ff8a00',2);return;}
+ SAVE.cash-=CRATE_PRICE;const I=inv();I.crates++;const tier=rollTier(CRATE_ODDS),pool=Object.keys(ITEMS).filter(k=>ITEMS[k].r===tier&&!ITEMS[k].ev),k=pick(pool),it=ITEMS[k];let msg='',dup=false;
+ if(it.kind==='egg'){I.eggs++;msg='It goes into your incubator and hatches as you play.';}
+ else if(it.kind==='fegg'){I.fegg++;msg='Golden eggs hatch Rare, Epic or Legendary pets!';}
+ else if(I.items.includes(k)){dup=true;SAVE.cash+=DUP_CASH[tier];msg=`You already have it, so it turned into <b>${fmt(DUP_CASH[tier])}</b>.`;}
+ else{I.items.push(k);msg=it.kind==='title'?'Show it on your player card in the Titles tab.':it.kind==='paint'?'Find it in the garage under Style → Crate paints.':'Find it in the garage under Style → Neon underglow.';}
+ if(tier===3)I.legend=true;save();
+ openModal(`<div class="crateAnim"><div class="crateBox">🎁</div></div><div class="reveal r${tier} late"><div class="rvIcon">${it.kind==='paint'||it.kind==='glow'?`<i class="rvSw" style="background:${it.v}"></i>`:it.kind==='title'?'🏷️':it.kind==='fegg'?'🌟':'🥚'}</div><div class="rvTier" style="color:${RAR[tier][1]}">${RAR[tier][0].toUpperCase()}</div><h1 style="font-size:30px;margin:4px 0">${it.n.toUpperCase()}</h1><div class="sub">${msg}</div></div>
+ <div class="actions late"><button class="btn pink" data-p2="crate">🎁 OPEN ANOTHER · ${fmt(CRATE_PRICE)}</button><button class="btn alt" data-p2="open" data-v="crates">BACK</button></div>`);chime(true);}
+// ---- Collection screen ----
+let P2TAB='pets';
+function oddsLine(o){return o.map((p,i)=>p?`<span style="color:${RAR[i][1]}">${RAR[i][0]} ${p}%</span>`:'').filter(Boolean).join(' · ');}
+function openCollection(tab){if(tab)P2TAB=tab;const I=inv();let b='';
+ if(P2TAB==='pets'){const inc=I.inc;b=`<div class="item"><div><b>🥚 Incubator</b><div class="d">${inc?`${inc.k==='f'?'Golden egg':'Pet egg'} · ${Math.floor(inc.d)} / ${HATCH_M} m · drive or walk to hatch it`:'Empty · win races, keep your daily streak, open crates or buy an egg'}</div>${inc?`<div class="bar" style="margin-top:6px;width:260px"><i style="width:${Math.min(100,inc.d/HATCH_M*100)}%"></i></div>`:''}</div><div>${I.eggs+I.fegg?`<span class="pill">${I.eggs+I.fegg} WAITING</span> `:''}<button class="btn sm ${SAVE.cash<EGG_PRICE?'alt':''}" data-p2="buyegg">BUY EGG ${fmt(EGG_PRICE)}</button></div></div>
+  <div class="note" style="margin:6px 0">Egg odds: ${oddsLine(EGG_ODDS.n)}<br>Golden egg odds: ${oddsLine(EGG_ODDS.f)}<br>Hatching a pet you already have turns it into cash.</div>
+  <div class="bdgGrid">${Object.entries(PETS).map(([k,p])=>{const has=petsOwned().includes(k),on=I.pet===k;return`<div class="bdg ${has?'on':''} ${on?'feat':''}" ${has?`data-p2="pet" data-v="${k}"`:''}><span>${has?p.e:'❓'}</span><b>${has?p.n:'???'}</b><small style="color:${RAR[p.r][1]}">${RAR[p.r][0]}</small>${on?'<em>WITH YOU</em>':''}</div>`;}).join('')}</div>
+  ${I.pet?'<div class="actions" style="margin-top:8px"><button class="btn alt sm" data-p2="pet" data-v="">LEAVE MY PET AT HOME</button></div>':''}`;}
+ if(P2TAB==='crates'){const tiers=[0,1,2,3].map(t=>`<div class="item"><div><b style="color:${RAR[t][1]}">${RAR[t][0]} · ${CRATE_ODDS[t]}%</b><div class="d">${Object.entries(ITEMS).filter(([k,i])=>i.r===t&&!i.ev).map(([k,i])=>`${own(k)?'✓ ':''}${i.n}`).join(' · ')}</div></div></div>`).join('');
+  b=`<div class="item"><div><b>🎁 Mystery Crate</b><div class="d">Paints, underglows, titles and eggs · paid with cash you earn by playing, never real money</div></div><button class="btn pink" data-p2="crate" ${SAVE.cash<CRATE_PRICE?'disabled':''}>OPEN · ${fmt(CRATE_PRICE)}</button></div>
+  <h3>WHAT'S INSIDE (THE ODDS)</h3>${tiers}<div class="note" style="margin-top:6px">Duplicates turn into cash: ${DUP_CASH.map((c,i)=>`${RAR[i][0]} ${fmt(c)}`).join(' · ')}. Items can't be traded.</div>`;}
+ if(P2TAB==='titles'){const T=Object.entries(ITEMS).filter(([k,i])=>i.kind==='title');b=`<div class="note" style="margin-bottom:8px">Pick a title to show on your player card. Get titles from crates and from Teranga Fest.</div><div class="bdgGrid">${T.map(([k,i])=>{const has=own(k),on=I.title===k;return`<div class="bdg ${has?'on':''} ${on?'feat':''}" ${has?`data-p2="title" data-v="${k}"`:''}><span>${has?'🏷️':'🔒'}</span><b>${i.n}</b><small style="color:${RAR[i.r][1]}">${RAR[i.r][0]}${i.ev?' · Fest':''}</small>${on?'<em>SHOWING</em>':''}</div>`;}).join('')}</div>${I.title?'<div class="actions" style="margin-top:8px"><button class="btn alt sm" data-p2="title" data-v="">HIDE MY TITLE</button></div>':''}`;}
+ if(P2TAB==='event'){const left=Math.ceil((EVENT.end-Date.now())/864e5),on=evOn();const row=(c)=>{const E=EVENT.city[c],n=I.fest[c].length;return`<div class="item"><div><b>${E.icon} ${CITY[c].name}: ${n}/10 ${E.plural}</b><div class="d">5 found → 🌟 Golden egg · 10 found → ${ITEMS[E.prize].n} + “${ITEMS[E.title].n}” title</div><div class="bar" style="margin-top:6px;width:260px"><i style="width:${n*10}%"></i></div></div>${n>=10?'<span class="pill">✓ DONE</span>':''}</div>`;};
+  b=`<div class="tutbox">${on?`🎉 <b>${EVENT.name} is on!</b> ${left} day${left===1?'':'s'} left. Look for glowing beams of light around both cities and drive or walk into them.`:`${EVENT.name} has ended. Your prizes are yours to keep.`}</div>${row('dakar')}${row('tokyo')}
+  <div class="item"><div><b>🎉 Find all 20</b><div class="d">Teranga Fest 2026 badge + “Fest Legend 2026” title + Festival underglow</div></div>${I.fest.dakar.length+I.fest.tokyo.length>=20?'<span class="pill">✓ DONE</span>':''}</div><div class="note">Every treasure also pays $300.</div>`;}
+ openModal(`<h1 style="font-size:32px">COLLECTION</h1><div class="sub">💰 ${fmt(SAVE.cash)} · 🐾 ${petsOwned().length}/${Object.keys(PETS).length} pets · 🎁 ${I.crates} crates opened</div>
+ <div class="tabs" style="margin:10px 0">${[['pets','🐾 Pets'],['crates','🎁 Crates'],['titles','🏷️ Titles'],['event','🎉 Teranga Fest']].map(([k,v])=>`<div class="tab ${P2TAB===k?'on':''}" data-p2="open" data-v="${k}">${v}</div>`).join('')}</div><div style="max-height:56vh;overflow:auto">${b}</div>
+ <div class="actions"><button class="btn" data-act="close">BACK</button></div>`);}
+$('modal').addEventListener('click',e=>{const b=e.target.closest('[data-p2]');if(!b)return;e.stopPropagation();const a=b.dataset.p2,v=b.dataset.v,I=inv();
+ if(a==='open')openCollection(v);
+ else if(a==='pet'){if(v&&isSuper()&&!I.pets.includes(v))I.pets.push(v);I.pet=v||null;save();if(v)toast(`${PETS[v].e} ${PETS[v].n.toUpperCase()}`,'is coming with you','#39ff9f',1.6);openCollection('pets');}
+ else if(a==='title'){I.title=v||null;save();openCollection('titles');}
+ else if(a==='buyegg'){if(SAVE.cash<EGG_PRICE){toast('Not enough cash',`Eggs cost ${fmt(EGG_PRICE)}`,'#ff8a00',1.8);return;}SAVE.cash-=EGG_PRICE;giveEgg('n','Bought for '+fmt(EGG_PRICE));openCollection('pets');}
+ else if(a==='crate')openCrate();
+ else if(a==='locked')toast('🔒 Crate item','Open mystery crates in 🎁 Collection to get it','#ffc23d',2);},true);
+(function(){const st=document.createElement('style');st.textContent=`
+.reveal{text-align:center;padding:8px 0}.rvIcon{font-size:84px;line-height:1.1;animation:rvPop .6s cubic-bezier(.2,1.6,.4,1)}.rvTier{font:900 14px Orbitron,sans-serif;letter-spacing:4px}
+.reveal.r3 .rvIcon{filter:drop-shadow(0 0 22px #ffc23d)}.reveal.r2 .rvIcon{filter:drop-shadow(0 0 16px #b967ff)}.rvSw{display:inline-block;width:84px;height:84px;border-radius:50%;border:4px solid #fff3}
+.crateAnim{display:flex;justify-content:center;height:0;overflow:visible}.crateBox{font-size:90px;animation:crShake 1s ease-in-out forwards;position:relative;top:10px}
+.late{animation:rvIn .5s 1s both}@keyframes crShake{0%,100%{transform:rotate(0)}15%{transform:rotate(-14deg)}30%{transform:rotate(14deg)}45%{transform:rotate(-10deg)}60%{transform:rotate(10deg) scale(1.1)}90%{transform:scale(1.4);opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes rvIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes rvPop{from{transform:scale(.2)}to{transform:scale(1)}}
+#festChip{position:absolute;left:14px;top:110px;padding:6px 10px;font-size:12px;pointer-events:auto;cursor:pointer}.lockSw{opacity:.35;position:relative}
+@media (max-width:760px){#festChip{top:150px;left:8px;font-size:11px}}`;document.head.appendChild(st);
+ const dk=$('socDock');if(dk){dk.insertAdjacentHTML('beforeend','<button data-soc="col" title="Collection: pets, crates, titles, event">🎁</button>');dk.querySelector('[data-soc="col"]').addEventListener('click',e=>{e.stopPropagation();if(S.state==='play')openCollection();});}
+ const fc=document.createElement('div');fc.id='festChip';fc.className='panel hidden';$('hud').appendChild(fc);fc.addEventListener('click',()=>{if(S.state==='play')openCollection('event');});})();
+// ---- garage: crate paints + underglows ----
+const EX_PAINTS=Object.entries(ITEMS).filter(([k,i])=>i.kind==='paint'),EX_GLOWS=Object.entries(ITEMS).filter(([k,i])=>i.kind==='glow');
+const _rgP2=renderGarage;
+renderGarage=function(){_rgP2();if(gTab!=='style')return;const card=$('modalCard');if(!card)return;
+ card.querySelectorAll('[data-act="glow"]').forEach(el=>{const k=el.dataset.v;if(ITEMS[k]&&!own(k)){el.removeAttribute('data-act');el.dataset.p2='locked';el.classList.add('lockSw');el.title=ITEMS[k].n+' · from crates'+(ITEMS[k].ev?' / Teranga Fest':'');}else if(ITEMS[k])el.title=ITEMS[k].n;});
+ const cs=SAVE.cars[SAVE.current],h3=[...card.querySelectorAll('h3')].find(h=>/NEON UNDERGLOW/.test(h.textContent));
+ if(h3)h3.insertAdjacentHTML('beforebegin',`<h3>CRATE PAINTS</h3><div class="sw">${EX_PAINTS.map(([k,i])=>own(k)?`<i style="background:${i.v}" class="${cs.color===i.v?'on':''}" data-act="paint" data-v="${i.v}" title="${i.n}"></i>`:`<i style="background:${i.v}" class="lockSw" data-p2="locked" title="${i.n} · from crates"></i>`).join('')}</div>`);};
+// ---- presence: pet + title ----
+const _mpP2=myPresence;myPresence=function(){const o=_mpP2();const I=SAVE.inv;if(I){if(I.pet)o.pt=I.pet;if(I.title&&own(I.title))o.ti=I.title;}return o;};
+const _rrP2=readRemote;readRemote=function(pr){const d=_rrP2(pr);if(d){d.pt=PETS[pr.pt]?pr.pt:null;d.ti=ITEMS[pr.ti]&&ITEMS[pr.ti].kind==='title'?pr.ti:null;}return d;};
+const _ocP2=openCard;openCard=function(r){_ocP2(r);const sub=$('modalCard').querySelector('.sub');if(!sub)return;const d=r.d;
+ sub.insertAdjacentHTML('afterend',`${d.ti?`<div class="pill" style="margin-top:6px;color:${RAR[ITEMS[d.ti].r][1]}">🏷️ ${ITEMS[d.ti].n}</div>`:''}${d.pt?`<div class="note" style="margin-top:6px">${PETS[d.pt].e} With their pet: <b>${PETS[d.pt].n}</b></div>`:''}`);};
+// ---- daily eggs (days 2 and 5) + race-win eggs ----
+DAILY[1][1]='$750 + 🥚 Pet egg';DAILY[4][1]='$1,500 + 150 REP + 🥚 Pet egg';
+const _dcP2=dailyCheck;dailyCheck=function(){const r=_dcP2();if(r){const i=(SAVE.daily.streak-1)%7;if(i===1||i===4){inv().eggs++;save();}}return r;};
+// ---- Teranga Fest: glowing treasures hidden around each city ----
+let FEST=[];
+function buildFest(key){FEST=[];if(!evOn()||!EVENT.city[key])return;const r=mulberry(key==='dakar'?2611:2612),got=(SAVE&&SAVE.inv)?SAVE.inv.fest[key]:[];
+ const beamM=new THREE.MeshBasicMaterial({color:key==='dakar'?0xffc23d:0xff3a2a,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+ const used=new Set();for(let k=0;k<10;k++){let i,j,s,t,tries=0;do{i=Math.floor(r()*(N+1));j=Math.floor(r()*N);s=r()<.5?-1:1;t=.2+r()*.6;tries++;}while(used.has(i+','+j)&&tries<30);used.add(i+','+j);
+  const alongX=r()<.5;let x,z;if(alongX){z=roadC(i)+s*(ROAD/2+1.4);x=roadC(j)+ROAD/2+t*(BLOCK-ROAD);}else{x=roadC(i)+s*(ROAD/2+1.4);z=roadC(j)+ROAD/2+t*(BLOCK-ROAD);}
+  if(got.includes(k))continue;const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
+  if(key==='dakar'){const seed=new THREE.Mesh(new THREE.SphereGeometry(.42,14,12),new THREE.MeshStandardMaterial({color:0xd4a52a,emissive:0xffb000,emissiveIntensity:.7,metalness:.8,roughness:.25}));seed.scale.set(.8,1.1,.8);seed.position.y=1.4;g.add(seed);
+   const lf=new THREE.Mesh(new THREE.ConeGeometry(.16,.4,8),plainMat('#2f9d3a'));lf.position.y=1.95;g.add(lf);}
+  else{const ln=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.7,14),new THREE.MeshStandardMaterial({color:0xd21f2b,emissive:0xff2a10,emissiveIntensity:.9}));ln.position.y=1.45;g.add(ln);
+   for(const y of[1.08,1.82]){const cp=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.08,12),new THREE.MeshStandardMaterial({color:0xd4a52a,metalness:.8,roughness:.3}));cp.position.y=y;g.add(cp);}}
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,40,10,1,true),beamM);beam.position.y=20;g.add(beam);
+  FEST.push({k,g,x,z,key});}}
+const _bcP2=buildCity;buildCity=function(key){_bcP2(key);try{buildFest(key);}catch(e){console.warn(e);}};
+function festTick(dt){if(!FEST.length||!player)return;const t=S.time||0,m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;
+ for(let q=FEST.length-1;q>=0;q--){const f=FEST[q];f.g.children[0].rotation.y=t*1.6;f.g.children[0].position.y=1.4+Math.sin(t*2+q)*.15;
+  if(f.key===S.city&&Math.hypot(f.x-px,f.z-pz)<3.4){world.remove(f.g);FEST.splice(q,1);collectFest(f);}}}
+function collectFest(f){const I=inv(),E=EVENT.city[f.key],L=I.fest[f.key];if(L.includes(f.k))return;L.push(f.k);SAVE.cash+=300;const n=L.length;chime(true);
+ toast(`${E.icon} ${n}/10 ${E.plural.toUpperCase()}`,'+$300 · Teranga Fest','#ffc23d',2.4);feed(`🎉 Found a ${E.item}! (${n}/10 in ${CITY[f.key].name})`);
+ if(n===5)giveEgg('f','Teranga Fest: 5 found!');
+ if(n===10){for(const it of[E.prize,E.title])if(!I.items.includes(it))I.items.push(it);toast('🎉 CITY COMPLETE!',`${ITEMS[E.prize].n} + “${ITEMS[E.title].n}” title`,'#ffc23d',3.2);}
+ if(I.fest.tokyo.length>=10&&I.fest.dakar.length>=10)for(const it of['t_fest','g_fest'])if(!I.items.includes(it))I.items.push(it);
+ save();}
+function festChip(){const el=$('festChip');const on=evOn()&&S.state==='play'&&!S.paused&&!S.race&&EVENT.city[S.city];el.classList.toggle('hidden',!on);if(!on)return;
+ const E=EVENT.city[S.city],n=inv().fest[S.city].length,m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;let best=1e9;for(const f of FEST)if(f.key===S.city)best=Math.min(best,Math.hypot(f.x-px,f.z-pz));
+ el.innerHTML=`🎉 <b>TERANGA FEST</b> · ${E.icon} ${n}/10${n<10&&best<1e9?` · nearest ${Math.round(best)} m`:n>=10?' · ✓ done':''}`;}
+// ---- per-frame hook ----
+let p2T=0;
+const _nuP2=netUpdate;netUpdate=function(dt){_nuP2(dt);if(S.state!=='play'||!SAVE)return;
+ updateMyPet(dt);updateRemotePets(dt);festTick(dt);eggTick(dt);
+ p2T+=dt;if(p2T>.5){p2T=0;festChip();const I=inv();if(I.wseen<0)I.wseen=SAVE.stats.wins;if(SAVE.stats.wins>I.wseen){const n=SAVE.stats.wins-I.wseen;I.wseen=SAVE.stats.wins;let got=0;for(let q=0;q<n;q++)if(Math.random()<.25)got++;if(got)giveEgg('n','Race win bonus!');else save();}}};
 $('modal').addEventListener('click',e=>{const b=e.target.closest('[data-soc]');if(!b)return;const a=b.dataset.soc,v=b.dataset.v;
  if(a==='best'){const f=SAVE.friends.find(x=>x.id===v);if(!f)return;if(!f.best&&SAVE.friends.filter(x=>x.best).length>=5){toast('5 best friends max','Unpin one first','#ffc23d',1.8);return;}f.best=!f.best;save();openFriends();}
  if(a==='ghost'){SAVE.ghost=!SAVE.ghost;save();toast(SAVE.ghost?'👻 APPEAR OFFLINE':'👀 VISIBLE',SAVE.ghost?'Friends can’t see or Join you':'Friends can see and Join you again','#05d9e8',1.8);openFriends();}},true);

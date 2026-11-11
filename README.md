@@ -38,6 +38,13 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
 - **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
+## Pets, crates and Teranga Fest (🎁 Collection)
+- **🐾 Pets:** 11 pets to collect, from a Puppy, Kitten, Chick and Bunny up to a Lion Cub, Panda, Golden Lion and Fire Bird. Your pet follows you on foot and rides on your car roof, and other players can see it.
+- **🥚 Eggs:** you get eggs from daily streak days 2 and 5, as a bonus when you win a race, from crates, or by buying one for $2,000. Eggs hatch after 1.5 km of driving (walking counts triple). The hatch odds are always shown.
+- **🎁 Mystery crates:** $3,000 of in-game cash per crate, never real money. They hold car paints, underglows, titles and eggs. The odds are shown, and duplicates turn into cash.
+- **🏷️ Titles:** show a title like "Neon Rider" or "Legend of the Streets" on your player card.
+- **🎉 Teranga Fest (Nov 11, 2026 – Jan 10, 2027):** find 10 glowing Golden Baobab Seeds in Dakar and 10 Lucky Lanterns in Tokyo. Look for the beams of light. Prizes: a Golden egg, a Golden Kufi, a Lantern Pack, festival titles, a Festival underglow and the Teranga Fest 2026 badge.
+
 ## Boosters
 Drive through the glowing rings during races and police chases:
 | Booster | What it does |
