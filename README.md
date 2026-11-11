@@ -60,4 +60,4 @@ Your rivals can grab boosters too, so race for them!
 
 ## Credits
 Game concept by Muhammad.
-Presented with Jollof Ventures, Planet Auto Hub, Sparklight Carrier and Nioro Farms.
+Presented with Jollof Ventures, Planet Auto Hub, Elite Global Travel and Nioro Farms.
