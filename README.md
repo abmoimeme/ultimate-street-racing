@@ -38,6 +38,10 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
 - **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
+## Languages 🇬🇧 🇫🇷 🇮🇹
+- Play in English, French or Italian. Tap EN / FR / IT in the top-right corner of the start screen or the pause menu. The game also starts in French or Italian if your phone is set to that language.
+- Menus, buttons, tips, badges, chat messages and signs are translated. Quick chat shows up in each player's own language.
+
 ## Course Builder (🛠️)
 - Build your own race right on your phone. Tap to place a start line, up to 12 checkpoints, cones, ramps, boost pads and barriers. Drag to move around, pinch or ± to zoom, and use Undo if you make a mistake.
 - Name it by picking two words (like "Baobab Jumps"), choose 1–3 laps, then test-drive it.
