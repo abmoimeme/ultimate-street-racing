@@ -38,6 +38,16 @@ Works on desktop (keyboard) and on phones (touch controls). Best in Chrome, Edge
 - **📅 Daily streak:** play every day for a 7-day reward calendar. Day 3 unlocks headphones and day 7 the gold crown.
 - **🏅 Badges:** 23 badges for racing, exploring, secrets, friends and streaks. Each one pays $250, and you can show your favorite one next to your name.
 
+## Avatar Studio (👕 Wardrobe)
+- **Age, height and build:** child, teen, adult or elder, plus taller/shorter and slim, regular or broad.
+- **Skin:** 19 skin tones from deep to light, including warm, cool and olive undertones. Skin details include freckles, vitiligo or a birthmark.
+- **Face:** stubble, mustache, goatee or full beard, plus shades, round or square glasses.
+- **Hair:** cornrows, box braids, afro puffs, waves, curly, long straight and receding, plus grey and white hair colors. Hats squash big hair so nothing pokes through.
+- **Headwear:** hijab, turban and kippah, alongside kufi, cap, musoor and more. Headwear has its own color, size, height and tilt.
+- **Clothes:** abaya, thawb, kurta, dashiki, sari, kimono, grand boubou, school uniform, tracksuit, blazer & tie, scrubs, long skirt, leggings and chinos.
+- **Outer layers:** vest, denim jacket, cardigan or long coat over shirts and hoodies.
+- **Assistive:** a wheelchair (with its own rolling animation), cane, hearing aid, cochlear implant, or a prosthetic leg or arm in carbon, metal or your own color.
+
 ## Pets, crates and Teranga Fest (🎁 Collection)
 - **🐾 Pets:** 11 pets to collect, from a Puppy, Kitten, Chick and Bunny up to a Lion Cub, Panda, Golden Lion and Fire Bird. Your pet follows you on foot and rides on your car roof, and other players can see it.
 - **🥚 Eggs:** you get eggs from daily streak days 2 and 5, as a bonus when you win a race, from crates, or by buying one for $2,000. Eggs hatch after 1.5 km of driving (walking counts triple). The hatch odds are always shown.

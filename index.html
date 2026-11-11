@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.6 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo × Dakar · Playable prototype v1.7 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -4027,6 +4027,139 @@ let p2T=0;
 const _nuP2=netUpdate;netUpdate=function(dt){_nuP2(dt);if(S.state!=='play'||!SAVE)return;
  updateMyPet(dt);updateRemotePets(dt);festTick(dt);eggTick(dt);
  p2T+=dt;if(p2T>.5){p2T=0;festChip();const I=inv();if(I.wseen<0)I.wseen=SAVE.stats.wins;if(SAVE.stats.wins>I.wseen){const n=SAVE.stats.wins-I.wseen;I.wseen=SAVE.stats.wins;let got=0;for(let q=0;q<n;q++)if(Math.random()<.25)got++;if(got)giveEgg('n','Race win bonus!');else save();}}};
+/* ---------- v1.7 AVATAR STUDIO: ages, height + build, more skin tones and skin details, facial hair, eyewear, cultural + generational wardrobe, outer layers, assistive devices ---------- */
+SKIN_ALL.push('#33201a','#4b2f2a','#6b4a35','#8a6a4f','#a8794f','#c48a62','#e0b08a','#f3d3c0','#f7e0c8','#e8c4a8');
+HAIR_COLS.push('#8e8e8e','#d8d8d8');
+CLOTH_COLS.push('#b59b6d','#3d5a80','#0f8b8d');
+Object.assign(OPT.hair,{cornrows:'Cornrows',boxbraids:'Box braids',puffs:'Afro puffs',waves:'Waves',curly:'Curly',long:'Long straight',receding:'Receding'});
+Object.assign(OPT.head,{hijab:'Hijab',turban:'Turban',kippah:'Kippah'});
+Object.assign(OPT.top,{abaya:'Abaya',thawb:'Thawb',kurta:'Kurta',dashiki:'Dashiki',sari:'Sari',kimono:'Kimono',school:'School uniform',tracksuit:'Tracksuit',blazer:'Blazer & tie',scrubs:'Scrubs'});
+Object.assign(OPT.bottom,{maxi:'Long skirt',leggings:'Leggings',chinos:'Chinos'});
+const AV={age:{child:'Child',teen:'Teen',adult:'Adult',elder:'Elder'},build:{slim:'Slim',avg:'Regular',broad:'Broad'},fh:{none:'None',stubble:'Stubble',mustache:'Mustache',goatee:'Goatee',full:'Full beard'},
+ mark:{none:'None',freckles:'Freckles',vitiligo:'Vitiligo',birthmark:'Birthmark'},eyes:{none:'None',shades:'Shades',round:'Round glasses',rect:'Square glasses'},
+ mob:{none:'None',wheelchair:'Wheelchair',cane:'Cane'},aid:{none:'None',hearing:'Hearing aid',cochlear:'Cochlear implant'},pros:{none:'None',leg:'Prosthetic leg',arm:'Prosthetic arm'},pfin:{carbon:'Carbon fiber',metal:'Metal',color:'My color'},
+ outer:{none:'None',vest:'Vest',jacket:'Denim jacket',cardigan:'Cardigan',coat:'Long coat'}};
+const ROBES=new Set(['boubou','kaftan','abaya','thawb','kimono','kurta']);
+const _dc17=defChar;defChar=function(){return Object.assign(_dc17(),{age:'adult',ht:0,build:'avg',fh:'none',mark:'none',eyes:'none',mob:'none',aid:'none',pros:'none',pfin:'carbon',outer:'none',outCol:'#3d5a80',hatS:0,v17:0});};
+const _cl17=cleanChar;
+cleanChar=function(c){const d=_cl17(c);for(const k in AV)if(!(d[k] in AV[k]))d[k]=k==='age'?'adult':k==='build'?'avg':k==='pfin'?'carbon':'none';
+ if(!/^#[0-9a-f]{6}$/i.test(d.outCol))d.outCol='#3d5a80';d.ht=clamp(Math.round(fin(d.ht)),-4,4);d.hatS=clamp(Math.round(fin(d.hatS)),-4,4);
+ if(!d.v17){if(d.beard&&d.fh==='none')d.fh='full';if(d.glasses&&d.eyes==='none')d.eyes='shades';d.v17=1;}
+ if(d.age==='child'||d.body==='f')d.fh='none';if(d.age==='teen'&&d.fh==='full')d.fh='stubble';d.beard=d.fh==='full';d.glasses=d.eyes==='shades';return d;};
+const AVK=['age','ht','build','fh','mark','eyes','mob','aid','pros','pfin','outer','outCol','hatS'];
+const _cc17=compactChar;compactChar=function(c){const a=_cc17(c);AVK.forEach((k,i)=>a[19+i]=c[k]);return a;};
+const _ec17=expandChar;expandChar=function(a){const o=_ec17(a);if(Array.isArray(a)&&a.length>19){AVK.forEach((k,i)=>{const v=a[19+i];if(v!=null)o[k]=v;});o.v17=1;}return cleanChar(o);};
+// geometry
+const AV3={band:new THREE.SphereGeometry(.121,18,8,Math.PI*.3,Math.PI*1.4,Math.PI*.22,Math.PI*.3),row:new THREE.TorusGeometry(1,.075,5,14,Math.PI*.62),
+ hijab:new THREE.SphereGeometry(.136,20,14,Math.PI/2+.62,Math.PI*2-1.24,0,Math.PI*.86),hijabTop:new THREE.SphereGeometry(.137,20,8,0,Math.PI*2,0,Math.PI*.3),drape:new THREE.CylinderGeometry(.12,.24,.26,18,1,true),
+ turban:new THREE.SphereGeometry(.15,18,12),tband:new THREE.TorusGeometry(.122,.034,8,24),kippah:new THREE.SphereGeometry(.072,14,6,0,Math.PI*2,0,Math.PI*.42),
+ ring:new THREE.TorusGeometry(.027,.005,6,16),sq:new THREE.TorusGeometry(.03,.005,4,4),bridge:new THREE.BoxGeometry(.03,.006,.006),dot:new THREE.SphereGeometry(.006,5,4),patch:new THREE.SphereGeometry(.03,8,6),
+ obi:new THREE.CylinderGeometry(.3,.3,.13,18),tie:new THREE.BoxGeometry(.05,.24,.012),vee:new THREE.CircleGeometry(.07,3),sash:new THREE.BoxGeometry(.13,.85,.025),stripe:new THREE.BoxGeometry(.012,.5,.012),
+ wheel:new THREE.TorusGeometry(.3,.025,8,24),caster:new THREE.TorusGeometry(.06,.02,6,12),pylon:new THREE.CylinderGeometry(.022,.022,.14,8),joint:new THREE.SphereGeometry(.035,10,8),cane:new THREE.CylinderGeometry(.012,.012,.86,8),
+ aid:new THREE.BoxGeometry(.018,.045,.02),coch:new THREE.CylinderGeometry(.026,.026,.01,14),sheet:new THREE.BoxGeometry(.22,.3,.05),side:new THREE.BoxGeometry(.035,.26,.12),pocket:new THREE.BoxGeometry(.09,.07,.01)};
+[AV3.hijab,AV3.hijabTop,AV3.drape,AV3.turban,AV3.tband,AV3.kippah].forEach(g=>HAT_GEO.add(g));
+const mix=(a,b,t)=>{const A=new THREE.Color(a),B=new THREE.Color(b);return'#'+A.lerp(B,t).getHexString();};
+const dashikiMat=col=>pm('dk'+col,()=>{const t=canvasTex(256,256,(g,W,H)=>{g.fillStyle=col;g.fillRect(0,0,W,H);for(const cx of[0,W]){g.fillStyle='#ffd000';g.beginPath();g.moveTo(cx-W*.2,H*.08);g.lineTo(cx,H*.5);g.lineTo(cx+W*.2,H*.08);g.lineTo(cx+W*.13,H*.08);g.lineTo(cx,H*.38);g.lineTo(cx-W*.13,H*.08);g.fill();
+ g.fillStyle='#111';for(let i=0;i<9;i++){g.beginPath();g.arc(cx+(i-4)*9,H*.44-Math.abs(i-4)*8,3.5,0,Math.PI*2);g.fill();}}g.fillStyle='#d21f2b';g.fillRect(0,H*.86,W,H*.05);});return new THREE.MeshStandardMaterial({map:t,roughness:.8});});
+function baseOf(c){const b=Object.assign({},c);const T={abaya:'boubou',thawb:'boubou',kimono:'boubou',kurta:'kaftan',dashiki:'tshirt',scrubs:'tshirt',sari:'tshirt',school:'jacket',tracksuit:'jacket',blazer:'jacket'};if(T[c.top])b.top=T[c.top];
+ const B={maxi:'pagne',leggings:'jeans',chinos:'jeans'};if(c.top==='sari')b.bottom='pagne';else if(B[c.bottom])b.bottom=B[c.bottom];if(b.bottom==='jeans'&&c.bottom!=='jeans')b.botCol='#123456';
+ const H={cornrows:'fade',boxbraids:'short',puffs:'short',waves:'short',curly:'afro',long:'short',receding:'bald'};if(H[c.hair])b.hair=H[c.hair];
+ if(c.head==='hijab'||c.head==='turban')b.head='musoor';if(c.head==='kippah')b.head='none';b.beard=c.fh==='full';b.glasses=c.eyes==='shades';return b;}
+const _mk17=makeAvatar;
+makeAvatar=function(ch){const c=cleanChar(ch),a=_mk17(baseOf(c)),g=a.g,hd=a.head,skin=plainMat(SKIN_ALL[c.skin]),hm=plainMat(c.hairCol),top=plainMat(c.topCol),bot=plainMat(c.botCol);
+ const add=(par,geo,m,x,y,z,sx,sy,sz)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);if(sx!=null)o.scale.set(sx,sy==null?sx:sy,sz==null?sx:sz);par.add(o);return o;};
+ const hatC=plainMat(c.hatCol||(c.head==='hijab'?'#24357f':c.head==='turban'?'#f6f4ef':'#111114'));
+ // headwear
+ if(c.head==='hijab'||c.head==='turban'){if(a.hat)for(const m of[...a.hat.children])if(m.geometry===PG.wrap||m.geometry===PG.knot)a.hat.remove(m);}
+ let hat=a.hat;if(!hat&&c.head!=='none'){hat=new THREE.Group();hat.position.y=c.hatY*.012;hat.rotation.x=c.hatT*.07;hd.add(hat);a.hat=hat;}
+ if(c.head==='hijab'){const m=new THREE.MeshStandardMaterial({color:c.hatCol||'#24357f',roughness:.85,side:THREE.DoubleSide});add(hat,AV3.hijab,m,0,.0,-.004,1,1.06,1.06);add(hat,AV3.hijabTop,m,0,.004,0);const d=add(hat,AV3.drape,m,0,-.2,-.005,1,1,.9);}
+ if(c.head==='turban'){add(hat,AV3.turban,hatC,0,.085,-.01,.98,.72,1.08);const b=add(hat,AV3.tband,hatC,0,.04,.0,1,1,1.1);b.rotation.x=Math.PI/2+.12;}
+ if(c.head==='kippah'){const k=add(hat,AV3.kippah,hatC,0,.098,-.035);k.rotation.x=-.45;}
+ if(hat)hat.scale.setScalar(1+c.hatS*.05);
+ // hair
+ if(c.head!=='hijab'&&c.head!=='turban'&&c.head!=='helmet'){
+  if(c.hair==='cornrows')for(let k=-3;k<=3;k++){const x=k*.024,r=Math.sqrt(.123*.123-x*x),t=new THREE.Mesh(AV3.row,hm);t.scale.set(r,r,1);t.rotation.set(0,Math.PI/2,Math.PI*.19);t.position.set(x,.012,0);hd.add(t);}
+  if(c.hair==='boxbraids')for(let k=0;k<16;k++){const an=Math.PI*.05+k/15*Math.PI*.9,l=new THREE.Mesh(AG.loc,hm);l.position.set(Math.cos(an)*.112,.03,-Math.sin(an)*.112);l.scale.set(.9,1.75,.9);hd.add(l);}
+  if(c.hair==='puffs')for(const s of[-1,1]){const p=add(hd,AG.bun,hm,s*.095,.115,-.02,1.45);if(c.head!=='none')p.scale.setScalar(1.05);}
+  if(c.hair==='long'){add(hd,AV3.sheet,hm,0,-.1,-.095);for(const s of[-1,1])add(hd,AV3.side,hm,s*.105,-.05,-.03);}
+  if(c.hair==='receding'){const b=new THREE.Mesh(AV3.band,hm);b.rotation.y=Math.PI;hd.add(b);}}
+ // squash big hair under hats
+ if(c.head!=='none'&&c.head!=='phones')hd.traverse(m=>{if(m.geometry===AG.afro)m.scale.multiplyScalar(.78);});
+ if(c.hair==='curly')hd.traverse(m=>{if(m.geometry===AG.afro){m.scale.multiplyScalar(.8);m.position.y-=.015;}});
+ // face: facial hair, eyewear, skin details
+ if(c.fh==='stubble'){const s=add(hd,AG.beard,plainMat(mix(SKIN_ALL[c.skin],c.hairCol,.45)),0,0,0,1.01,1.03,1.04);}
+ if(c.fh==='mustache')add(hd,AV3.bridge,hm,0,-.033,.112,2.1,2.2,2);
+ if(c.fh==='goatee'){add(hd,AV3.patch,hm,0,-.088,.098,.9,1.15,.55);}
+ if(c.eyes==='round'||c.eyes==='rect'){const fm=plainMat('#15151a');for(const s of[-1,1]){const r=add(hd,c.eyes==='round'?AV3.ring:AV3.sq,fm,s*.042,.02,.12);if(c.eyes==='rect')r.rotation.z=Math.PI/4;}add(hd,AV3.bridge,fm,0,.024,.122);}
+ if(c.mark!=='none'){const sk=SKIN_ALL[c.skin],dark=plainMat(mix(sk,'#2a1408',.45)),light=plainMat(mix(sk,'#f6e2d0',.62));
+  if(c.mark==='freckles'){const r=mulberry(77);for(let k=0;k<14;k++){const s=k%2?1:-1,x=s*(.025+r()*.045),y=-.005-r()*.03;add(hd,AV3.dot,dark,x,y,Math.sqrt(Math.max(0,.113*.113-x*x))-.004);}}
+  if(c.mark==='vitiligo'){for(const[x,y,z,s]of[[.07,.0,.085,1],[-.05,.05,.1,.8],[.03,-.07,.095,.7]]){const p=add(hd,AV3.patch,light,x,y,z,s,s*.9,.35);p.lookAt(p.position.clone().multiplyScalar(3));}
+   a.arms.forEach((ar,i)=>{if(i===0){const p=add(ar,AV3.patch,light,0,-.6,.03,.9,.9,.4);}});}
+  if(c.mark==='birthmark'){const p=add(hd,AV3.patch,dark,-.065,-.02,.088,.5,.4,.3);p.lookAt(p.position.clone().multiplyScalar(3));}}
+ // tops
+ const T=c.top,body=a.body;
+ if(T==='abaya'){body.material=top;body.scale.x*=.9;a.arms.forEach(ar=>ar.children[0]&&(ar.children[0].material=top));}
+ if(T==='thawb'){body.material=top;body.scale.set(.68,1,.74);a.arms.forEach(ar=>{const s=ar.children[0];if(s){s.material=top;s.scale.set(.5,1,.5);}});}
+ if(T==='kimono'){body.material=top;add(g,AV3.obi,bot,0,1.06,0,1.08,1.1,.9);}
+ if(T==='kurta'){body.material=top;a.arms.forEach(ar=>ar.children[0]&&(ar.children[0].material=top));}
+ if(T==='dashiki'){const m=dashikiMat(c.topCol);body.material=m;a.arms.forEach(ar=>{for(const s of ar.children)if(s.geometry===AG.sleeveS)s.material=m;});}
+ if(T==='scrubs'){body.material=top;add(g,AV3.pocket,plainMat(mix(c.topCol,'#000000',.2)),-.09,1.27,.12);}
+ if(T==='sari'){body.material=top;const s=add(g,AV3.sash,plainMat(c.topCol),.03,1.18,.1);s.rotation.z=.55;const e=add(g,AV3.stripe,plainMat('#d4a52a'),.085,1.18,.115);e.rotation.z=.55;e.scale.y=1.6;}
+ if(T==='school'||T==='blazer'){body.material=T==='school'?plainMat('#f6f4ef'):top;a.arms.forEach(ar=>ar.children[0]&&(ar.children[0].material=T==='school'?plainMat('#f6f4ef'):top));
+  if(T==='blazer'){const v=add(g,AV3.vee,plainMat('#f6f4ef'),0,1.33,.126,1,1.4,1);v.rotation.z=-Math.PI/2;}add(g,AV3.tie,plainMat(T==='school'?c.topCol:'#111114'),0,1.26,.13);}
+ if(T==='tracksuit'){const w=plainMat('#f6f4ef');a.arms.forEach((ar,i)=>{const s=add(ar,AV3.stripe,w,(i?1:-1)*.045,-.3,0);s.scale.y=1.1;});}
+ // bottoms
+ const isSkirt=c.bottom==='maxi'||T==='sari';
+ if(isSkirt)g.traverse(m=>{if(m.geometry===AG.skirt){m.material=T==='sari'?top:bot;m.scale.set(1,1.45,1);m.position.y=.47;}});
+ if(c.bottom==='leggings'||c.bottom==='chinos')a.legs.forEach(l=>{const m=l.children[0];if(m){m.material=bot;if(c.bottom==='leggings')m.scale.set(.86,1,.86);}});
+ // outer layer (not over robes)
+ if(c.outer!=='none'&&!ROBES.has(T)){const om=plainMat(c.outCol);const sh=add(g,PG.torso,om,0,body.position.y,0);sh.scale.set(body.scale.x*1.07,1.02,body.scale.z*1.12);
+  const st=add(g,AV3.stripe,body.material,0,body.position.y+.02,.128,c.outer==='vest'?4:2.6,1,1);
+  if(c.outer!=='vest')a.arms.forEach(ar=>{const s=add(ar,PG.arm,om,0,0,0,1.35,.88,1.35);});
+  if(c.outer==='coat'){const sk=add(g,AG.skirt,om,0,.6,0,.95,1.2,.95);}}
+ // assistive devices
+ const pfm=c.pfin==='metal'?pm('pfm',()=>stdM('#c0c4cc',{metalness:.85,roughness:.3})):c.pfin==='color'?plainMat(c.accCol):pm('pfc',()=>stdM('#2b2b30',{roughness:.45,metalness:.3}));
+ if(c.pros==='leg'){const L=a.legs[1];for(const m of L.children)if(m.material===skin){m.material=pfm;m.scale.x*=.55;m.scale.z*=.55;}add(L,AV3.pylon,pfm,0,-.83,0);add(L,AV3.joint,pfm,0,-.86,0,.8);}
+ if(c.pros==='arm'){const A=a.arms[1];for(const m of A.children)if(m.material===skin)m.material=pfm;add(A,AV3.joint,pfm,0,-.6,0,.9);}
+ if(c.aid==='hearing')add(hd,AV3.aid,plainMat(c.accCol),.114,-.005,-.035);
+ if(c.aid==='cochlear'){const d=add(hd,AV3.coch,plainMat('#3a3a40'),.112,.055,-.07);d.rotation.z=Math.PI/2;add(hd,AV3.aid,plainMat('#3a3a40'),.114,-.01,-.03,.8);}
+ if(c.mob==='cane'){const cn=add(a.arms[1],AV3.cane,plainMat('#5a3524'),0,-1.0,.03);}
+ if(c.mob==='wheelchair'){const ch=new THREE.Group(),fr=pm('wchf',()=>stdM('#2b2b30',{metalness:.6,roughness:.35})),tire=plainMat('#111114'),seatM=plainMat(c.accCol);ch.position.y=.42;
+  const seat=new THREE.Mesh(GEO.box,seatM);seat.scale.set(.46,.05,.44);seat.position.set(0,.47,.02);ch.add(seat);const back=new THREE.Mesh(GEO.box,seatM);back.scale.set(.44,.45,.04);back.position.set(0,.72,-.2);ch.add(back);
+  const wheels=[];for(const s of[-1,1]){const w=new THREE.Mesh(AV3.wheel,tire);w.rotation.y=Math.PI/2;w.position.set(s*.27,.3,-.02);ch.add(w);wheels.push(w);const c2=new THREE.Mesh(AV3.caster,tire);c2.rotation.y=Math.PI/2;c2.position.set(s*.18,.06,.3);ch.add(c2);
+   const rail=new THREE.Mesh(GEO.box,fr);rail.scale.set(.03,.03,.5);rail.position.set(s*.22,.44,.05);ch.add(rail);const leg=new THREE.Mesh(GEO.box,fr);leg.scale.set(.03,.03,.45);leg.position.set(s*.16,.1,.5);leg.rotation.x=.5;ch.add(leg);}
+  const fp=new THREE.Mesh(GEO.box,fr);fp.scale.set(.34,.02,.16);fp.position.set(0,.04,.72);ch.add(fp);g.add(ch);a.chair={g:ch,wheels};}
+ // age, height and build
+ const AGE={child:[.74,1.22],teen:[.9,1.08],adult:[1,1],elder:[.97,1]}[c.age],B={slim:.88,avg:1,broad:1.15}[c.build];
+ g.scale.setScalar(AGE[0]*(1+c.ht*.035));hd.scale.setScalar(AGE[1]);
+ if(B!==1){body.scale.x*=B;body.scale.z*=B;a.arms.forEach(ar=>{ar.position.x*=(1+(B-1)*.8);ar.scale.x*=B;ar.scale.z*=B;});a.legs.forEach(l=>{l.position.x*=B;l.scale.x*=B;l.scale.z*=B;});}
+ if(c.age==='elder')body.rotation.x=.06;
+ a.S=g.scale.y;return a;};
+// animation: scale-aware sitting + wheelchair locomotion
+const _an17=animAvatar;
+animAvatar=function(a,mode,t,dt){const S=a.S||1;
+ if(a.chair){const move=mode==='walk'||mode==='run';_an17(a,move||mode==='sit'?'idle':mode,t,dt);a.legs.forEach(l=>l.rotation.x=-1.0);
+  if(move){const p=Math.sin(t*(mode==='run'?9:6));a.arms.forEach(x=>x.rotation.set(-.35+p*.45,0,0));a.chair.wheels.forEach(w=>w.rotation.x-=(dt||.016)*(mode==='run'?9:5));}
+  a.bob=-.42*S;return;}
+ _an17(a,mode,t,dt);if(mode==='sit')a.bob=-.42*S;};
+// creator: new tabs and controls
+const _rc17=renderCreator;
+renderCreator=function(){_rc17();const c=CR.ch,P=$('crPanel'),sc=P.querySelector('.crScroll'),tabs=P.querySelector('.tabs');if(!sc)return;
+ if(tabs)tabs.innerHTML=[['body','Body'],['face','Face'],['hair','Hair & headwear'],['top','Tops & layers'],['bottom','Bottoms & shoes'],['assist','Assistive']].map(([k,v])=>`<div class="tab ${CR.tab===k?'on':''}" data-tab="${k}">${v}</div>`).join('');
+ const chips=(key,opts,skip)=>`<div class="chips">${Object.entries(opts).filter(([k])=>!skip||!skip(k)).map(([k,v])=>`<button class="chip ${c[key]===k?'on':''}" data-k="${key}" data-v="${k}">${v}</button>`).join('')}</div>`;
+ const step=(key,lo,hi,label)=>`<div class="chips"><button class="chip" data-fit="${key}" data-d="-1">${lo}</button><button class="chip" data-fit="${key}" data-d="1">${hi}</button><span class="note" style="align-self:center">${label} ${c[key]>0?'+':''}${c[key]}</span></div>`;
+ if(CR.tab==='body'){sc.querySelectorAll('[data-k="beard"],[data-k="glasses"]').forEach(b=>b.remove());
+  const first=sc.querySelector('h3');first&&first.insertAdjacentHTML('beforebegin',`<h3>AGE</h3>${chips('age',AV.age)}<h3>HEIGHT</h3>${step('ht','⬇ Shorter','⬆ Taller','Height')}<h3>BUILD</h3>${chips('build',AV.build)}`);
+  const skinH=[...sc.querySelectorAll('h3')].find(h=>/SKIN TONE/.test(h.textContent));if(skinH){skinH.textContent='SKIN TONE · DEEP TO LIGHT, WARM, COOL AND OLIVE';const sw=skinH.nextElementSibling;sw&&sw.insertAdjacentHTML('afterend',`<h3>SKIN DETAILS</h3>${chips('mark',AV.mark)}`);}}
+ if(CR.tab==='face')sc.innerHTML=`${c.body==='m'&&c.age!=='child'?`<h3>FACIAL HAIR</h3>${chips('fh',AV.fh,k=>c.age==='teen'&&k==='full')}`:''}<h3>EYEWEAR</h3>${chips('eyes',AV.eyes)}<h3>HAIR COLOR (BROWS AND BEARD MATCH IT)</h3><div class="sw">${HAIR_COLS.map(x=>`<i style="background:${x}" class="${c.hairCol===x?'on':''}" data-k="hairCol" data-v="${x}"></i>`).join('')}</div><div class="note" style="margin-top:8px">Tip: tap ZOOM FACE to see the details up close.</div>`;
+ if(CR.tab==='hair'&&c.head!=='none'){const fit=[...sc.querySelectorAll('h3')].find(h=>/HEADWEAR FIT/.test(h.textContent));if(fit)fit.nextElementSibling.insertAdjacentHTML('beforeend',`<button class="chip" data-fit="hatS" data-d="-1">➖ Smaller</button><button class="chip" data-fit="hatS" data-d="1">➕ Bigger</button>`);}
+ if(CR.tab==='top')sc.insertAdjacentHTML('beforeend',ROBES.has(c.top)?`<h3>OUTER LAYER</h3><div class="note">Outer layers go over shirts, hoodies and jackets. Robes like the ${OPT.top[c.top]} are already a full outfit.</div>`:`<h3>OUTER LAYER</h3>${chips('outer',AV.outer)}${c.outer!=='none'?`<h3>LAYER COLOR</h3><div class="sw">${CLOTH_COLS.map(x=>`<i style="background:${x}" class="${c.outCol===x?'on':''}" data-k="outCol" data-v="${x}"></i>`).join('')}</div>`:''}`);
+ if(CR.tab==='assist')sc.innerHTML=`<div class="note" style="margin-bottom:6px">Everyone belongs on the streets. Your driver can use any of these, and they work in races, at meets and in the Lounge.</div><h3>MOBILITY</h3>${chips('mob',AV.mob)}<h3>HEARING</h3>${chips('aid',AV.aid)}<h3>PROSTHETIC</h3>${chips('pros',AV.pros)}${c.pros!=='none'?`<h3>PROSTHETIC FINISH</h3>${chips('pfin',AV.pfin)}`:''}${c.pros!=='none'&&c.pfin==='color'||c.mob==='wheelchair'||c.aid==='hearing'?`<h3>DEVICE COLOR</h3><div class="sw">${CLOTH_COLS.map(x=>`<i style="background:${x}" class="${c.accCol===x?'on':''}" data-k="accCol" data-v="${x}"></i>`).join('')}</div>`:''}`;
+ const wear=[OPT.head[c.head]!=='None'&&OPT.head[c.head],c.outer!=='none'&&!ROBES.has(c.top)&&AV.outer[c.outer],OPT.top[c.top],c.top!=='sari'&&OPT.bottom[c.bottom],c.acc!=='none'&&OPT.acc[c.acc],c.eyes!=='none'&&AV.eyes[c.eyes],c.mob!=='none'&&AV.mob[c.mob],c.aid!=='none'&&AV.aid[c.aid],c.pros!=='none'&&AV.pros[c.pros]].filter(Boolean);
+ const act=P.querySelector('.actions');act&&act.insertAdjacentHTML('beforebegin',`<div class="note" style="margin-top:10px">👕 Wearing: ${wear.join(' · ')}</div>`);};
+// hat size steps reuse the fit buttons from v1.5; height uses the same buttons
+const _crc17=creatorClick;creatorClick=function(e){const f=e.target.closest('[data-fit]');if(f&&CR&&CR.ch&&(f.dataset.fit==='ht'||f.dataset.fit==='hatS')){const k=f.dataset.fit;CR.ch[k]=clamp((CR.ch[k]|0)+(+f.dataset.d),-4,4);rebuildAvatarPreview();renderCreator();return;}
+ _crc17(e);if(CR&&CR.ch){const d=cleanChar(CR.ch);if(d.fh!==CR.ch.fh||d.beard!==CR.ch.beard){Object.assign(CR.ch,{fh:d.fh,beard:d.beard});rebuildAvatarPreview();renderCreator();}}};
 $('modal').addEventListener('click',e=>{const b=e.target.closest('[data-soc]');if(!b)return;const a=b.dataset.soc,v=b.dataset.v;
  if(a==='best'){const f=SAVE.friends.find(x=>x.id===v);if(!f)return;if(!f.best&&SAVE.friends.filter(x=>x.best).length>=5){toast('5 best friends max','Unpin one first','#ffc23d',1.8);return;}f.best=!f.best;save();openFriends();}
  if(a==='ghost'){SAVE.ghost=!SAVE.ghost;save();toast(SAVE.ghost?'👻 APPEAR OFFLINE':'👀 VISIBLE',SAVE.ghost?'Friends can’t see or Join you':'Friends can see and Join you again','#05d9e8',1.8);openFriends();}},true);
