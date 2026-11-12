@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Ultimate Street Racing · Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#07060f;--card:#12101f;--card2:#191629;--line:#ffffff1a;--ink:#f4f2ff;--mute:#a8a3c4;--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--red:#ff5470}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#2a0f3a 0,transparent 60%),radial-gradient(900px 500px at 110% 0,#06303a 0,transparent 55%),var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1280px;margin:0 auto;padding:22px 18px 60px}
+h1{font:900 26px Orbitron,sans-serif;letter-spacing:1px;margin:0;background:linear-gradient(90deg,var(--pink),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font:800 12px Inter;letter-spacing:2.5px;text-transform:uppercase;color:var(--mute);margin:26px 0 10px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.top .sp{flex:1}.sub{color:var(--mute);font-size:13px}
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.kpi b{display:block;font:900 26px Orbitron,sans-serif;margin-top:4px}.kpi span{color:var(--mute);font-size:12px;letter-spacing:.5px}
+.btn{border:0;border-radius:10px;padding:9px 14px;font:800 12px Inter;letter-spacing:.8px;cursor:pointer;background:var(--cyan);color:#021014}
+.btn.alt{background:#ffffff12;color:var(--ink);border:1px solid var(--line)}.btn.pink{background:var(--pink);color:#fff}.btn.sm{padding:6px 9px;font-size:11px}.btn:disabled{opacity:.45;cursor:default}
+input,textarea{background:#0b0a16;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font:600 14px Inter;outline:none}input:focus,textarea:focus{border-color:var(--cyan)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);text-align:left;font-weight:700;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid #ffffff0d;vertical-align:middle}tr.unused td{color:#77738f}tr:hover td{background:#ffffff05}
+.scroll{overflow-x:auto}.code{font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.5px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#555}.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#ffffff10;border:1px solid var(--line);white-space:nowrap}.pill.lock{color:var(--gold)}.pill.open{color:var(--cyan)}.pill.warn{color:var(--red);border-color:#ff547055}
+.who{width:150px;padding:6px 8px;font-size:13px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.list .row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #ffffff0d}.list .row:last-child{border:0}.mute{color:var(--mute)}
+.bar{height:6px;border-radius:9px;background:#ffffff12;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink))}
+.login{max-width:460px;margin:12vh auto 0}.err{color:var(--red);margin-top:10px;font-weight:600}.ok{color:var(--green);font-weight:600}
+.tiny{font-size:11px;color:var(--mute)}.actions{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body><div class="wrap" id="app"></div>
+<script>
+const CFG={databaseURL:"https://ultimate-street-racing-default-rtdb.firebaseio.com"};
+firebase.initializeApp(CFG);const db=firebase.database();
+const S1='usr-save-7f3a',S2='usr-net-b91c',SUPER_NET='200b30764f8b8a5e8b5590bc',STALE=20000,DK='usr_dash_v1';
+const CARS={m240i:'BMW M240i',r32:'Nissan GT-R R32',ctr:'Honda Civic Type R',supra:'Toyota Supra MK4',x1:'Teranga X1 Concept',gt3:'Porsche 911 GT3'};
+const PETS={puppy:'🐶',kitten:'🐱',chick:'🐤',bunny:'🐰',fennec:'🦊',turtle:'🐢',parrot:'🦜',lion:'🦁',panda:'🐼',glion:'🦁✨',firebird:'🔥'};
+const TRACKS=[['tokyo_intro','Tokyo intro'],['tokyo_raceA','Tokyo race A'],['tokyo_raceB','Tokyo race B'],['tokyo_drag','Tokyo duel'],['dakar_intro','Dakar intro'],['dakar_raceA','Dakar race A'],['dakar_raceB','Dakar race B'],['dakar_drag','Dakar duel']];
+const CRS_A=['Corniche','Neon','Baobab','Shibuya','Sunset','Thunder','Lion','Midnight','Teranga','Harbor','Rocket','Mango','Dragon','Ocean','Golden','Turbo'],CRS_B=['Sprint','Run','Rally','Loop','Dash','Circuit','Jumps','Madness','Drift','Challenge','Race','Ride','Maze','Cruise','Blitz','Quest'];
+const $=id=>document.getElementById(id),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const a=s.match(/^ABMOIMEME([A-Z0-9]{4})([A-Z0-9]{4})([A-Z0-9]{4})$/);if(a)return'ABMOIMEME-'+a[1]+'-'+a[2]+'-'+a[3];const m=s.match(/^([A-Z]+)(\d{4})$/);return m?m[1]+'-'+m[2]:'';};
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);}
+const levelOf=xp=>Math.min(999,1+Math.floor(Math.pow((xp||0)/120,1/1.5)));
+const money=n=>'$'+Math.round(n||0).toLocaleString('en-US');
+const ago=t=>{if(!t)return'never';const s=(Date.now()-t)/1000;if(s<90)return'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';const d=Math.round(s/86400);return d+' day'+(d>1?'s':'')+' ago';};
+const fmtT=t=>{if(!t)return'—';const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);};
+const ST={admin:null,codes:{},rows:[],online:[],lb:[],crs:[],loading:false,msg:''};
+const KEYS={};async function keys(c){if(!KEYS[c])KEYS[c]={save:await sha(S1+c),net:await sha(S2+c)};return KEYS[c];}
+// ---------- sign-in ----------
+function renderLogin(err){$('app').innerHTML=`<div class="login card"><h1>OWNER DASHBOARD</h1><div class="sub" style="margin:6px 0 16px">Ultimate Street Racing · for AB only. Opens with your super-user code.</div>
+ <input id="sc" placeholder="ABMOIMEME-XXXX-XXXX-XXXX" style="width:100%;font-size:16px;letter-spacing:1px" autocomplete="off">
+ <label class="tiny" style="display:flex;gap:6px;align-items:center;margin:10px 0"><input type="checkbox" id="rem" checked style="width:auto"> Remember on this device</label>
+ <button class="btn" id="go" style="width:100%">OPEN DASHBOARD</button>${err?`<div class="err">${esc(err)}</div>`:''}</div>`;
+ $('go').onclick=()=>signIn($('sc').value,$('rem').checked);$('sc').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('sc').focus();}
+async function signIn(raw,rem){const c=normCode(raw);if(!c||!c.startsWith('ABMOIMEME')){renderLogin('That is not a super-user code.');return;}
+ const k=await keys(c);if(k.net!==SUPER_NET){renderLogin('Only the ABMOIMEME super-user code opens the dashboard.');return;}
+ let rec=null;try{rec=(await db.ref('usr/players/'+k.save).once('value')).val();}catch(e){renderLogin('Could not reach the database: '+(e.code||e.message));return;}
+ ST.admin={code:c,save:k.save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}
+ loadAll();}
+async function saveCodes(){const ref=db.ref('usr/players/'+ST.admin.save);if(!ST.admin.rec){await ref.set({tag:'ABMOIMEME',save:'',upd:0,codes:ST.codes});ST.admin.rec={tag:'ABMOIMEME',save:'',upd:0};}else await ref.child('codes').set(ST.codes);}
+// ---------- data ----------
+function parseSave(raw){try{const s=JSON.parse(raw||'null');if(!s||typeof s!=='object')return null;const inv=s.inv||{};
+ return{lv:levelOf(s.xp),xp:s.xp|0,cash:s.cash||0,rep:s.rep||0,cars:Object.keys(s.cars||{}),car:s.current,badges:Object.keys(s.badges||{}).length,pets:inv.pets||[],pet:inv.pet,crates:inv.crates||0,
+  streak:(s.daily&&s.daily.streak)||0,best:(s.daily&&s.daily.best)||0,stats:s.stats||{},city:s.city,crew:s.profile&&s.profile.crew,friends:(s.friends||[]).length,courses:(s.crs||[]).filter(Boolean).length,fest:inv.fest?((inv.fest.tokyo||[]).length+(inv.fest.dakar||[]).length):0};}catch(e){return null;}}
+async function loadAll(){ST.loading=true;render();const codes=Object.keys(ST.codes);
+ const rows=await Promise.all(codes.map(async c=>{const k=await keys(c);let v=null,err='';try{v=(await db.ref('usr/players/'+k.save).once('value')).val();}catch(e){err=e.code||e.message;}
+  return{code:c,who:ST.codes[c].who||'',net:k.net,rec:v,err,save:v?parseSave(v.save):null};}));
+ ST.rows=rows.sort((a,b)=>((b.rec&&b.rec.upd)||0)-((a.rec&&a.rec.upd)||0)||a.code.localeCompare(b.code));
+ await loadOnline();
+ try{const s=(await db.ref('usr/lb').once('value')).val()||{};ST.lb=Object.entries(s).map(([id,v])=>Object.assign({id},v));}catch(e){ST.lb=[];}
+ try{const s=(await db.ref('usr/crs').once('value')).val()||{},r=(await db.ref('usr/crr').once('value').catch(()=>({val:()=>({})}))).val()||{};const R={};
+  for(const id in r){const v=r[id]||{};for(const k in(v.r||{})){(R[k]=R[k]||{s:0,n:0,p:0,best:null}).s+=v.r[k];R[k].n++;}for(const k in(v.p||{}))(R[k]=R[k]||{s:0,n:0,p:0,best:null}).p++;for(const k in(v.t||{})){const q=R[k]=R[k]||{s:0,n:0,p:0,best:null};if(!q.best||v.t[k]<q.best.t)q.best={t:v.t[k],n:v.n};}}
+  ST.crs=[];for(const id in s){const v=s[id]||{};for(const sl in(v.c||{})){const c=v.c[sl];if(!c||!c.nm)continue;const cid=id+'_'+sl;ST.crs.push({cid,by:v.by,c,R:R[cid]||{s:0,n:0,p:0}});}}}catch(e){ST.crs=[];}
+ ST.loading=false;ST.when=Date.now();render();}
+async function loadOnline(){const out=[],byNet={};for(const r of ST.rows)byNet[r.net]=r;
+ for(const city of['tokyo','dakar']){try{const v=(await db.ref('usr/rooms/usr-'+city).once('value')).val()||{};for(const id in v){const x=v[id];if(!x||Date.now()-(x.t||0)>STALE)continue;const net=id.split('_')[0],p=x.p||{};out.push({city,net,row:byNet[net],n:p.n,lv:p.lv,m:p.m,lg:p.lg,mo:p.mo,car:p.car||p.c,su:net===SUPER_NET});}}catch(e){}}
+ ST.online=out;}
+// ---------- view ----------
+function render(){if(!ST.admin)return renderLogin();const R=ST.rows,used=R.filter(r=>r.rec),on=new Set(ST.online.map(o=>o.net));
+ const tot=used.reduce((a,r)=>{const s=r.save||{stats:{}};a.races+=(s.stats.races|0);a.wins+=(s.stats.wins|0);a.cash+=s.cash||0;a.badges+=s.badges||0;a.pets+=(s.pets||[]).length;return a;},{races:0,wins:0,cash:0,badges:0,pets:0});
+ const today=used.filter(r=>Date.now()-(r.rec.upd||0)<864e5).length,locked=used.filter(r=>r.rec.lock!==0).length;
+ const kpi=(l,v,c)=>`<div class="card kpi"><span>${l}</span><b style="color:${c||'var(--ink)'}">${v}</b></div>`;
+ const pub=ST.crs.length;
+ $('app').innerHTML=`<div class="top"><div><h1>OWNER DASHBOARD</h1><div class="sub">Ultimate Street Racing · ${ST.loading?'Loading…':'Updated '+ago(ST.when)} · <a href="./" style="color:var(--cyan)">Open the game</a></div></div><span class="sp"></span>
+  <button class="btn alt" id="rf">🔄 REFRESH</button><button class="btn alt" id="addc">＋ ADD CODES</button><button class="btn alt" id="out">SIGN OUT</button></div>
+ ${ST.msg?`<div class="card" style="margin-top:12px">${ST.msg}</div>`:''}
+ ${!R.length&&!ST.loading?`<div class="card" style="margin-top:16px"><b>Add your player codes to start.</b><div class="sub">Paste one code per line, optionally followed by who has it (e.g. <span class="code">JAGUAR-9731 Amadou</span>). They are saved privately under your super-user account, never in the public game.</div><textarea id="imp" rows="8" style="width:100%;margin-top:10px"></textarea><div style="margin-top:8px"><button class="btn" id="impGo">SAVE CODES</button></div></div>`:''}
+ <div class="kpis">${kpi('Codes in use',`${used.length}<span class="mute" style="font-size:14px">/${R.length}</span>`)}${kpi('Online now',ST.online.length,'var(--green)')}${kpi('Played today',today,'var(--cyan)')}${kpi('Races run',tot.races.toLocaleString())}${kpi('Race wins',tot.wins.toLocaleString())}${kpi('Locked codes',locked,'var(--gold)')}${kpi('Badges earned',tot.badges)}${kpi('Pets hatched',tot.pets)}${kpi('Courses published',pub)}</div>
+ <h2>🟢 Online now</h2><div class="card list">${ST.online.length?ST.online.map(o=>`<div class="row"><div><span class="dot on"></span><b>${esc(o.n||'Driver')}</b> ${o.su?'<span class="pill lock">👑 SUPER</span>':''} <span class="mute">${o.row?esc(o.row.code)+(o.row.who?' · '+esc(o.row.who):''):''}</span></div><div class="mute">${o.city==='tokyo'?'Tokyo':'Dakar'} · LV ${o.lv||1} · ${o.lg?'🛋️ Lounge':o.m==='foot'?'on foot':o.m==='race'?'🏁 racing':o.m==='duel'?'🚦 duel':o.m==='meet'?'car meet':'driving'}${o.mo?' · 🛵':''}</div></div>`).join(''):'<div class="mute">Nobody is online right now.</div>'}</div>
+ <h2>👥 Players and codes</h2><div class="card scroll"><table><thead><tr><th>Code</th><th>Given to</th><th>Player</th><th>Last played</th><th>Level</th><th>Cash</th><th>Cars</th><th>Races / wins</th><th>Badges</th><th>Pets</th><th>Streak</th><th>Lock · devices</th><th></th></tr></thead><tbody>
+ ${R.map(r=>{const v=r.rec,s=r.save,lk=v&&v.lock!==0,dv=v?String(v.devs||'').split(',').filter(Boolean).length:0,mx=(v&&v.devMax)||2;
+  return`<tr class="${v?'':'unused'}"><td class="code">${r.code}</td><td><input class="who" data-who="${r.code}" value="${esc(r.who)}" placeholder="who has it?"></td>
+  <td>${v?`<span class="dot ${on.has(r.net)?'on':''}"></span><b>${esc(v.tag)}</b>${s&&s.crew?`<div class="tiny">${esc(s.crew)}</div>`:''}`:'<span class="mute">not used yet</span>'}</td>
+  <td>${v?ago(v.upd):'—'}</td><td>${s?s.lv:'—'}</td><td>${s?money(s.cash):'—'}</td><td>${s?`${s.cars.length} <span class="tiny">${esc(CARS[s.car]||'')}</span>`:'—'}</td>
+  <td>${s?`${s.stats.races|0} / ${s.stats.wins|0}`:'—'}</td><td>${s?s.badges:'—'}</td><td>${s&&s.pets.length?s.pets.map(p=>PETS[p]||'').join(''):'—'}</td><td>${s&&s.streak?'🔥 '+s.streak:'—'}</td>
+  <td>${v?`<span class="pill ${lk?'lock':'open'}">${lk?'🔒':'🔓'} ${dv}/${mx}</span>${dv>=mx&&lk?' <span class="pill warn">FULL</span>':''}`:'<span class="tiny">locks on first use</span>'}</td>
+  <td>${v?`<div class="actions">${lk?`<button class="btn alt sm" data-a="unlock" data-c="${r.code}">UNLOCK</button>`:`<button class="btn sm" data-a="lock" data-c="${r.code}">LOCK</button>`}<button class="btn alt sm" data-a="reset" data-c="${r.code}" title="Clear the registered devices">RESET</button>${mx<3?`<button class="btn alt sm" data-a="plus" data-c="${r.code}" title="Allow a third device">+1</button>`:''}</div>`:''}</td></tr>`;}).join('')}
+ </tbody></table><div class="tiny" style="margin-top:8px">🔒 Each code works only on its registered devices. RESET clears them so the next device to sign in takes the slot (use it when a kid gets a new phone). "Given to" is saved privately to your account.</div></div>
+ <div class="grid2"><div><h2>🏆 Leaderboard · reputation</h2><div class="card list">${ST.lb.slice().sort((a,b)=>(b.rep||0)-(a.rep||0)).slice(0,12).map((p,i)=>`<div class="row"><div><b>${i+1}. ${esc(p.n)}</b> <span class="mute">${esc(p.cr||'')}</span></div><div class="mute">LV ${p.lv||1} · ${(p.rep||0).toLocaleString()} REP · ${esc(CARS[p.car]||'')}</div></div>`).join('')||'<div class="mute">No leaderboard entries yet.</div>'}</div></div>
+ <div><h2>⏱️ Fastest times</h2><div class="card list">${TRACKS.map(([k,l])=>{const b=ST.lb.filter(p=>p['t_'+k]>0).sort((a,b)=>a['t_'+k]-b['t_'+k])[0];return`<div class="row"><div>${l}</div><div class="mute">${b?`<b style="color:var(--ink)">${fmtT(b['t_'+k])}</b> · ${esc(b.n)}`:'—'}</div></div>`;}).join('')}</div></div></div>
+ <h2>🛠️ Published courses</h2><div class="card list">${ST.crs.length?ST.crs.sort((a,b)=>(b.R.p||0)-(a.R.p||0)).map(x=>`<div class="row"><div><b>${esc((CRS_A[x.c.nm[0]]||'')+' '+(CRS_B[x.c.nm[1]]||''))}</b> <span class="mute">by ${esc(x.by||'?')} · ${x.c.city==='tokyo'?'Tokyo':'Dakar'} · ${(x.c.pcs||[]).filter(p=>p[0]==='cp').length} checkpoints · ${x.c.laps||1} lap${(x.c.laps||1)>1?'s':''}</span></div><div class="mute">${x.R.n?'⭐ '+(x.R.s/x.R.n).toFixed(1)+' ('+x.R.n+')':'no stars yet'} · ${x.R.p||0} played${x.R.best?` · record ${fmtT(x.R.best.t)} by ${esc(x.R.best.n)}`:''}</div></div>`).join(''):'<div class="mute">No courses published yet.</div>'}</div>
+ <h2>📊 Progress by player</h2><div class="card">${used.filter(r=>r.save).sort((a,b)=>b.save.xp-a.save.xp).map(r=>{const mx=Math.max(...used.filter(q=>q.save).map(q=>q.save.xp),1);return`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between"><b>${esc(r.rec.tag)}</b><span class="mute">LV ${r.save.lv} · ${r.save.xp.toLocaleString()} XP · ${r.save.friends} friends · ${r.save.courses} courses · 🎉 ${r.save.fest}/20 fest</span></div><div class="bar"><i style="width:${Math.max(2,r.save.xp/mx*100)}%"></i></div></div>`;}).join('')||'<div class="mute">No progress yet.</div>'}</div>
+ <div class="tiny" style="margin-top:24px">Private owner page. Nothing here is shown to players.</div>`;
+ $('rf').onclick=loadAll;$('out').onclick=()=>{try{localStorage.removeItem(DK);}catch(e){}ST.admin=null;ST.rows=[];renderLogin();};$('addc').onclick=()=>{ST.msg=`<b>Add codes</b><div class="sub">One per line, optionally followed by a name.</div><textarea id="imp" rows="6" style="width:100%;margin-top:8px"></textarea><div style="margin-top:8px"><button class="btn" id="impGo">SAVE CODES</button> <button class="btn alt" id="impX">CANCEL</button></div>`;render();};
+ const ig=$('impGo');if(ig)ig.onclick=async()=>{const lines=$('imp').value.split('\n');let n=0;for(const ln of lines){const m=ln.trim().match(/^([A-Za-z]+[\s-]?\d{4})\s*[,;:\-–]?\s*(.*)$/);if(!m)continue;const c=normCode(m[1]);if(!c||c.startsWith('ABMOIMEME'))continue;ST.codes[c]=Object.assign({},ST.codes[c],{who:(m[2]||ST.codes[c]&&ST.codes[c].who||'').slice(0,40)});n++;}
+  try{await saveCodes();ST.msg=`<span class="ok">Saved ${n} code${n===1?'':'s'}.</span>`;}catch(e){ST.msg=`<span class="err">Could not save: ${esc(e.code||e.message)}</span>`;}loadAll();};
+ const ix=$('impX');if(ix)ix.onclick=()=>{ST.msg='';render();};
+ document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});try{await saveCodes();el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
+ document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const c=b.dataset.c,a=b.dataset.a,k=await keys(c),ref=db.ref('usr/players/'+k.save);b.disabled=true;
+  try{if(a==='lock')await ref.update({lock:1});if(a==='unlock')await ref.update({lock:0});if(a==='reset')await ref.update({devs:''});if(a==='plus')await ref.update({lock:1,devMax:3});}catch(e){alert('Could not update: '+(e.code||e.message));}
+  const row=ST.rows.find(r=>r.code===c);try{row.rec=(await ref.once('value')).val();}catch(e){}render();});}
+setInterval(async()=>{const ae=document.activeElement;if(ST.admin&&!ST.loading&&!document.hidden&&!(ae&&/INPUT|TEXTAREA/.test(ae.tagName))){await loadOnline();render();}},20000);
+(async()=>{let c=null;try{c=localStorage.getItem(DK);}catch(e){}if(c)signIn(c,true);else renderLogin();})();
+</script>
+</body></html>
