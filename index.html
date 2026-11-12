@@ -5651,6 +5651,25 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
  const m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;for(let i=0;i<SPB.length;i++){const b=SPB[i];if(!TEL.seenB[i]&&Math.hypot(b.x-px,b.z-pz)<30){TEL.seenB[i]=1;TEL.add('sv',{p:'board',s:b.k});}}
  // connection drops / reconnects
  const on=!!(NET.connected&&NET.city);if(TEL.conn===true&&!on&&NET.room)TEL.add('drop');if(TEL.conn===false&&on)TEL.add('rec');TEL.conn=on;}
+// ---- live presence + performance (owner dashboard) ----
+(function(){const F={n:0,last:performance.now(),hist:[],boot:Math.round(performance.now())};TEL.t0=Date.now();
+ function tick(t){F.n++;if(t-F.last>=1000){if(!document.hidden&&typeof S!=='undefined'&&S.state==='play'&&!S.paused)F.hist.push(Math.round(F.n*1000/(t-F.last)));if(F.hist.length>90)F.hist.shift();F.n=0;F.last=t;}requestAnimationFrame(tick);}
+ requestAnimationFrame(tick);TEL.fps=()=>F.hist.length?Math.round(F.hist.slice(-10).reduce((a,b)=>a+b,0)/Math.min(10,F.hist.length)):0;
+ let perfSent=false;setInterval(()=>{if(perfSent||F.hist.length<60)return;perfSent=true;const h=F.hist.slice().sort((a,b)=>a-b);
+  TEL.add('perf',{f:Math.round(h.reduce((a,b)=>a+b,0)/h.length),lo:h[Math.floor(h.length*.1)],q:(function(){try{return localStorage.getItem('usr_gfx')||'auto'}catch(e){return'?'}})(),mob:matchMedia('(pointer:coarse)').matches?1:0,ld:F.boot,w:innerWidth});},5000);
+ TEL.live=function(){try{if(typeof S==='undefined')return null;let a='menu',d='';
+  const modal=$('modal')&&!$('modal').classList.contains('hidden');
+  if(S.state!=='play')a='menu';
+  else if(S.race){a=S.race.online?'duel':S.race.type==='drag'?'drag':'race';d=S.race.ev&&S.race.ev.id||'';}
+  else if(S.heat&&(S.heat.level|0)>0){a='chase';d='heat '+(S.heat.level|0);}
+  else if(S.deliv)a='job';else if(S.crun)a='course';else if(S.build)a='build';
+  else if(S.photo)a='photo';else if(modal){const c=$('modalCard'),tt=c?c.innerText:'';a=/CREW GARAGE/.test(tt)?'garage':S.showroom?'showroom':'menus';}
+  else if(S.paused)a='paused';else if(S.meet)a=S.meet.free?'foot':'meet';
+  else{a='drive';try{if(player&&typeof inLounge==='function'&&inLounge(player.x,player.z))a='lounge';}catch(e){}}
+  const o={t:Date.now(),s:TEL.t0||(TEL.t0=Date.now()),c:S.city||'',a,d,v:TEL.ver,f:TEL.fps(),mob:matchMedia('(pointer:coarse)').matches?1:0,lang:typeof LANG!=='undefined'?LANG:'en'};
+  try{if(SAVE){if(typeof CARS!=='undefined'&&CARS[SAVE.current])o.car=CARS[SAVE.current].name;o.lv=levelOf(SAVE.xp);o.cash=SAVE.cash|0;}}catch(e){}
+  try{if(typeof NET!=='undefined'&&NET){o.on=NET.connected?1:0;if(NET.room)o.rm=NET.cityName||S.city||'';o.nb=NET.remotes?Object.keys(NET.remotes).length:0;}}catch(e){}
+  return o;}catch(e){return null;}};})();
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 </script>
@@ -5707,7 +5726,9 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
   try{await ref().child('ev').update(up);}catch(e){TEL.unshift(q);}telBusy=false;}
  function telStart(){if(telStarted)return;telStarted=true;TEL.flush=()=>{if(!telTimer)telTimer=setTimeout(()=>{telTimer=null;telFlush();},20000);};setTimeout(telFlush,4000);
   setInterval(()=>{if(!P.user||P.super||document.hidden||typeof S==='undefined'||S.state!=='play')return;ref().child('act/'+dayK(Date.now())).transaction(v=>(v||0)+1).catch(()=>{});},60000);
-  addEventListener('pagehide',()=>{telFlush();});document.addEventListener('visibilitychange',()=>{if(document.hidden)telFlush();});}
+  let liveSig='',liveAt=0,liveOn=false;const liveSend=force=>{if(!P.user||P.super||!window.TEL||!TEL.live)return;if(document.hidden){if(liveOn){liveOn=false;ref().child('live').remove().catch(()=>{});}return;}const o=TEL.live();if(!o)return;const sig=o.c+'|'+o.a+'|'+o.d+'|'+o.rm;const now=Date.now();if(!force&&sig===liveSig&&now-liveAt<25000)return;if(now-liveAt<4000&&!force)return;liveSig=sig;liveAt=now;if(!liveOn){liveOn=true;try{ref().child('live').onDisconnect().remove();}catch(e){}}ref().child('live').set(o).catch(()=>{});};
+  setTimeout(()=>liveSend(true),2500);setInterval(()=>liveSend(false),5000);document.addEventListener('visibilitychange',()=>liveSend(true));
+  addEventListener('pagehide',()=>{telFlush();try{ref().child('live').remove();}catch(e){}});document.addEventListener('visibilitychange',()=>{if(document.hidden)telFlush();});}
  const withT=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),ms))]);
  async function enter(code,silent){P.busy=true;P.err='';if(!silent)renderStart();
   let v;try{P.saveKey=await sha(S1+code);P.netKey=await sha(S2+code);const s=await withT(ref().once('value'),12000);v=s.val();}
