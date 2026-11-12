@@ -2,119 +2,213 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Ultimate Street Racing · Owner Dashboard</title>
+<meta name="theme-color" content="#07060f">
+<title>USR Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#07060f;--card:#12101f;--card2:#191629;--line:#ffffff1a;--ink:#f4f2ff;--mute:#a8a3c4;--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--red:#ff5470}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#2a0f3a 0,transparent 60%),radial-gradient(900px 500px at 110% 0,#06303a 0,transparent 55%),var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif;min-height:100vh}
-.wrap{max-width:1280px;margin:0 auto;padding:22px 18px 60px}
-h1{font:900 26px Orbitron,sans-serif;letter-spacing:1px;margin:0;background:linear-gradient(90deg,var(--pink),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-h2{font:800 12px Inter;letter-spacing:2.5px;text-transform:uppercase;color:var(--mute);margin:26px 0 10px}
-.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.top .sp{flex:1}.sub{color:var(--mute);font-size:13px}
-.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:16px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
-.kpi b{display:block;font:900 26px Orbitron,sans-serif;margin-top:4px}.kpi span{color:var(--mute);font-size:12px;letter-spacing:.5px}
-.btn{border:0;border-radius:10px;padding:9px 14px;font:800 12px Inter;letter-spacing:.8px;cursor:pointer;background:var(--cyan);color:#021014}
-.btn.alt{background:#ffffff12;color:var(--ink);border:1px solid var(--line)}.btn.pink{background:var(--pink);color:#fff}.btn.sm{padding:6px 9px;font-size:11px}.btn:disabled{opacity:.45;cursor:default}
-input,textarea{background:#0b0a16;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font:600 14px Inter;outline:none}input:focus,textarea:focus{border-color:var(--cyan)}
-table{width:100%;border-collapse:collapse;font-size:13px}th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);text-align:left;font-weight:700;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 8px;border-bottom:1px solid #ffffff0d;vertical-align:middle}tr.unused td{color:#77738f}tr:hover td{background:#ffffff05}
-.scroll{overflow-x:auto}.code{font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.5px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#555}.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
-.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#ffffff10;border:1px solid var(--line);white-space:nowrap}.pill.lock{color:var(--gold)}.pill.open{color:var(--cyan)}.pill.warn{color:var(--red);border-color:#ff547055}
-.who{width:150px;padding:6px 8px;font-size:13px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-.list .row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #ffffff0d}.list .row:last-child{border:0}.mute{color:var(--mute)}
-.bar{height:6px;border-radius:9px;background:#ffffff12;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink))}
-.login{max-width:460px;margin:12vh auto 0}.err{color:var(--red);margin-top:10px;font-weight:600}.ok{color:var(--green);font-weight:600}
-.tiny{font-size:11px;color:var(--mute)}.actions{display:flex;gap:6px;flex-wrap:wrap}
+:root{--bg:#07060f;--card:#12101f;--line:#ffffff1a;--ink:#f4f2ff;--mute:#a8a3c4;--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--red:#ff5470}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif;min-height:100vh;-webkit-text-size-adjust:100%}
+.wrap{max-width:1100px;margin:0 auto;padding:0 12px 60px}
+header{position:sticky;top:0;z-index:5;background:rgba(7,6,15,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 12px 0;margin:0 -12px 12px}
+body.reveal header{background:rgba(60,8,30,.95);border-bottom-color:var(--pink)}
+.hrow{display:flex;align-items:center;gap:8px}.hrow h1{font:900 16px Orbitron,sans-serif;letter-spacing:1px;margin:0;flex:1;white-space:nowrap}.hrow h1 span{color:var(--pink)}
+.tog{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:5px 10px 5px 6px;background:#ffffff0a;cursor:pointer;font:700 12px Inter;color:var(--mute);user-select:none}
+.tog i{width:30px;height:18px;border-radius:99px;background:#ffffff22;position:relative;transition:.2s}.tog i:after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s}
+body.reveal .tog{border-color:var(--pink);color:#fff;background:#ff2a6d33}body.reveal .tog i{background:var(--pink)}body.reveal .tog i:after{left:14px}
+.banner{display:none;background:var(--pink);color:#fff;font:800 11px Inter;letter-spacing:1px;text-align:center;padding:4px;margin:8px -12px 0}body.reveal .banner{display:block}
+nav{display:flex;gap:4px;overflow-x:auto;padding:10px 0 8px;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{flex:none;border:0;background:transparent;color:var(--mute);font:700 13px Inter;padding:7px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}nav button.on{background:var(--cyan);color:#021014}
+.bar2{display:flex;align-items:center;gap:8px;margin:2px 0 12px;flex-wrap:wrap}.bar2 .sp{flex:1}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{border:0;background:transparent;color:var(--mute);font:700 12px Inter;padding:6px 10px;cursor:pointer}.seg button.on{background:#ffffff18;color:var(--ink)}
+.btn{border:0;border-radius:10px;padding:8px 12px;font:800 12px Inter;letter-spacing:.5px;cursor:pointer;background:var(--cyan);color:#021014}.btn.alt{background:#ffffff12;color:var(--ink);border:1px solid var(--line)}.btn.sm{padding:5px 8px;font-size:11px}.btn:disabled{opacity:.4}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}@media(min-width:700px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi span{display:block;color:var(--mute);font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}.kpi b{display:block;font:900 24px Orbitron,sans-serif;margin-top:2px}.kpi small{color:var(--mute);font-size:11px}
+h2{font:800 11px Inter;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin:16px 0 8px}
+.att{display:flex;flex-direction:column;gap:6px}.att div{padding:9px 10px;border-radius:10px;font-weight:600;font-size:13px}.att .bad{background:#ff547020;border:1px solid #ff547055}.att .warn{background:#ffc23d18;border:1px solid #ffc23d55}.att .good{background:#39ff9f14;border:1px solid #39ff9f44;color:var(--green)}
+svg{display:block;width:100%;height:auto}svg text{fill:var(--mute);font:600 10px Inter}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mute);margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}th{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);text-align:left;font-weight:800;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid #ffffff0d;white-space:nowrap}tr.click{cursor:pointer}tr.click:hover td{background:#ffffff06}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.search{width:100%;background:#0b0a16;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 12px;font:600 14px Inter;margin-bottom:8px;outline:none}.search:focus{border-color:var(--cyan)}
+.pcode{font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.5px;background:#ffffff10;border-radius:6px;padding:2px 6px}body.reveal .real{color:var(--pink);font-weight:700}
+.funnel .step{margin:8px 0}.funnel .lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}.funnel .track{height:22px;background:#ffffff0c;border-radius:6px;overflow:hidden;margin-top:4px}.funnel .track i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),#05d9e8aa);border-radius:6px}
+.drop{font-size:11px;color:var(--red);font-weight:700;margin-left:6px}
+.feed .e{padding:10px 0;border-bottom:1px solid #ffffff0d}.feed .e:last-child{border:0}.feed .m{font:600 13px ui-monospace,Menlo,monospace;color:#ffd0da;word-break:break-word}.mute{color:var(--mute)}.tiny{font-size:11px;color:var(--mute)}
+.tl .it{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #ffffff0a;font-size:13px}.tl .it b{min-width:96px;color:var(--mute);font-weight:600;font-size:12px}
+.pill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:700;background:#ffffff10;border:1px solid var(--line)}.pill.y{color:var(--gold)}
+.login{max-width:380px;margin:18vh auto 0;padding:0 16px}.login h1{font:900 22px Orbitron,sans-serif;margin:0 0 4px}.login input[type=password]{width:100%;background:#0b0a16;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:13px 14px;font:600 16px Inter;outline:none;margin-top:14px}
+.err{color:var(--red);font-weight:600;margin-top:10px}.who{background:#0b0a16;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font:600 13px Inter;width:180px}
+.grid2{display:grid;gap:10px}@media(min-width:800px){.grid2{grid-template-columns:1fr 1fr}}
+.back{background:none;border:0;color:var(--cyan);font:700 13px Inter;cursor:pointer;padding:0;margin-bottom:8px}
 </style>
 </head>
-<body><div class="wrap" id="app"></div>
+<body>
+<div id="app"></div>
 <script>
 const CFG={databaseURL:"https://ultimate-street-racing-default-rtdb.firebaseio.com"};
 firebase.initializeApp(CFG);const db=firebase.database();
-const S1='usr-save-7f3a',S2='usr-net-b91c',SUPER_NET='200b30764f8b8a5e8b5590bc',STALE=20000,DK='usr_dash_v1';
-const CARS={m240i:'BMW M240i',r32:'Nissan GT-R R32',ctr:'Honda Civic Type R',supra:'Toyota Supra MK4',x1:'Teranga X1 Concept',gt3:'Porsche 911 GT3'};
-const PETS={puppy:'🐶',kitten:'🐱',chick:'🐤',bunny:'🐰',fennec:'🦊',turtle:'🐢',parrot:'🦜',lion:'🦁',panda:'🐼',glion:'🦁✨',firebird:'🔥'};
-const TRACKS=[['tokyo_intro','Tokyo intro'],['tokyo_raceA','Tokyo race A'],['tokyo_raceB','Tokyo race B'],['tokyo_drag','Tokyo duel'],['dakar_intro','Dakar intro'],['dakar_raceA','Dakar race A'],['dakar_raceB','Dakar race B'],['dakar_drag','Dakar duel']];
-const CRS_A=['Corniche','Neon','Baobab','Shibuya','Sunset','Thunder','Lion','Midnight','Teranga','Harbor','Rocket','Mango','Dragon','Ocean','Golden','Turbo'],CRS_B=['Sprint','Run','Rally','Loop','Dash','Circuit','Jumps','Madness','Drift','Challenge','Race','Ride','Maze','Cruise','Blitz','Quest'];
+const S1='usr-save-7f3a',S2='usr-net-b91c',SUPER_NET='200b30764f8b8a5e8b5590bc',DK='usr_dash_v1';
+const SPN={jollof:'Jollof Ventures',jvh:'Jollof Ventures',pah:'Planet Auto Hub',spark:'Elite Global Travel',farm:'Nioro Farms',all:'All sponsors (start screen)'};
+const MODES={race:'Street race',drag:'Stoplight duel',duel:'Online duel',chase:'Police chase',job:'Delivery job',course:'Player course'};
 const $=id=>document.getElementById(id),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const a=s.match(/^ABMOIMEME([A-Z0-9]{4})([A-Z0-9]{4})([A-Z0-9]{4})$/);if(a)return'ABMOIMEME-'+a[1]+'-'+a[2]+'-'+a[3];const m=s.match(/^([A-Z]+)(\d{4})$/);return m?m[1]+'-'+m[2]:'';};
+const normCode=s=>{s=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const a=s.match(/^ABMOIMEME([A-Z0-9]{4})([A-Z0-9]{4})([A-Z0-9]{4})$/);return a?'ABMOIMEME-'+a[1]+'-'+a[2]+'-'+a[3]:'';};
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);}
+const DAY=864e5,dayK=t=>{const d=new Date(t);return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');};
+const kDate=k=>new Date(+k.slice(0,4),+k.slice(4,6)-1,+k.slice(6,8));const short=k=>{const d=kDate(k);return(d.getMonth()+1)+'/'+d.getDate();};
+const ago=t=>{if(!t)return'never';const s=(Date.now()-t)/1000;if(s<90)return'just now';if(s<3600)return Math.round(s/60)+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';return Math.round(s/86400)+'d ago';};
+const when=t=>new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—',dur=s=>!s?'—':s<60?Math.round(s)+'s':Math.floor(s/60)+'m '+String(Math.round(s%60)).padStart(2,'0')+'s';
 const levelOf=xp=>Math.min(999,1+Math.floor(Math.pow((xp||0)/120,1/1.5)));
-const money=n=>'$'+Math.round(n||0).toLocaleString('en-US');
-const ago=t=>{if(!t)return'never';const s=(Date.now()-t)/1000;if(s<90)return'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';const d=Math.round(s/86400);return d+' day'+(d>1?'s':'')+' ago';};
-const fmtT=t=>{if(!t)return'—';const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);};
-const ST={admin:null,codes:{},rows:[],online:[],lb:[],crs:[],loading:false,msg:''};
-const KEYS={};async function keys(c){if(!KEYS[c])KEYS[c]={save:await sha(S1+c),net:await sha(S2+c)};return KEYS[c];}
-// ---------- sign-in ----------
-function renderLogin(err){$('app').innerHTML=`<div class="login card"><h1>OWNER DASHBOARD</h1><div class="sub" style="margin:6px 0 16px">Ultimate Street Racing · for AB only. Opens with your super-user code.</div>
- <input id="sc" placeholder="ABMOIMEME-XXXX-XXXX-XXXX" style="width:100%;font-size:16px;letter-spacing:1px" autocomplete="off">
- <label class="tiny" style="display:flex;gap:6px;align-items:center;margin:10px 0"><input type="checkbox" id="rem" checked style="width:auto"> Remember on this device</label>
- <button class="btn" id="go" style="width:100%">OPEN DASHBOARD</button>${err?`<div class="err">${esc(err)}</div>`:''}</div>`;
- $('go').onclick=()=>signIn($('sc').value,$('rem').checked);$('sc').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('sc').focus();}
-async function signIn(raw,rem){const c=normCode(raw);if(!c||!c.startsWith('ABMOIMEME')){renderLogin('That is not a super-user code.');return;}
- const k=await keys(c);if(k.net!==SUPER_NET){renderLogin('Only the ABMOIMEME super-user code opens the dashboard.');return;}
- let rec=null;try{rec=(await db.ref('usr/players/'+k.save).once('value')).val();}catch(e){renderLogin('Could not reach the database: '+(e.code||e.message));return;}
- ST.admin={code:c,save:k.save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}
- loadAll();}
-async function saveCodes(){const ref=db.ref('usr/players/'+ST.admin.save);if(!ST.admin.rec){await ref.set({tag:'ABMOIMEME',save:'',upd:0,codes:ST.codes});ST.admin.rec={tag:'ABMOIMEME',save:'',upd:0};}else await ref.child('codes').set(ST.codes);}
+const ST={admin:null,codes:{},P:[],tab:'overview',range:7,reveal:false,q:{},sel:null,loading:false,when:0,exp:{}};
+// ---------- sign-in (one account: the owner) ----------
+function renderLogin(err){document.body.classList.remove('reveal');$('app').innerHTML=`<div class="login"><h1>USR ADMIN</h1><div class="mute">Private owner page · Ultimate Street Racing</div>
+ <input type="password" id="pw" placeholder="Password" autocomplete="current-password"><label class="tiny" style="display:flex;gap:6px;align-items:center;margin:10px 0"><input type="checkbox" id="rem" checked> Keep me signed in on this device</label>
+ <button class="btn" id="go" style="width:100%;padding:12px">SIGN IN</button>${err?`<div class="err">${esc(err)}</div>`:''}<div class="tiny" style="margin-top:14px">Your password is your ABMOIMEME super-user code.</div></div>`;
+ $('go').onclick=()=>signIn($('pw').value,$('rem').checked);$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('pw').focus();}
+async function signIn(raw,rem){const c=normCode(raw);if(!c){renderLogin('Wrong password.');return;}const save=await sha(S1+c),net=await sha(S2+c);if(net!==SUPER_NET){renderLogin('Wrong password.');return;}
+ let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){renderLogin('Could not reach the database.');return;}
+ ST.admin={save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}load();}
 // ---------- data ----------
-function parseSave(raw){try{const s=JSON.parse(raw||'null');if(!s||typeof s!=='object')return null;const inv=s.inv||{};
- return{lv:levelOf(s.xp),xp:s.xp|0,cash:s.cash||0,rep:s.rep||0,cars:Object.keys(s.cars||{}),car:s.current,badges:Object.keys(s.badges||{}).length,pets:inv.pets||[],pet:inv.pet,crates:inv.crates||0,
-  streak:(s.daily&&s.daily.streak)||0,best:(s.daily&&s.daily.best)||0,stats:s.stats||{},city:s.city,crew:s.profile&&s.profile.crew,friends:(s.friends||[]).length,courses:(s.crs||[]).filter(Boolean).length,fest:inv.fest?((inv.fest.tokyo||[]).length+(inv.fest.dakar||[]).length):0};}catch(e){return null;}}
-async function loadAll(){ST.loading=true;render();const codes=Object.keys(ST.codes);
- const rows=await Promise.all(codes.map(async c=>{const k=await keys(c);let v=null,err='';try{v=(await db.ref('usr/players/'+k.save).once('value')).val();}catch(e){err=e.code||e.message;}
-  return{code:c,who:ST.codes[c].who||'',net:k.net,rec:v,err,save:v?parseSave(v.save):null};}));
- ST.rows=rows.sort((a,b)=>((b.rec&&b.rec.upd)||0)-((a.rec&&a.rec.upd)||0)||a.code.localeCompare(b.code));
- await loadOnline();
- try{const s=(await db.ref('usr/lb').once('value')).val()||{};ST.lb=Object.entries(s).map(([id,v])=>Object.assign({id},v));}catch(e){ST.lb=[];}
- try{const s=(await db.ref('usr/crs').once('value')).val()||{},r=(await db.ref('usr/crr').once('value').catch(()=>({val:()=>({})}))).val()||{};const R={};
-  for(const id in r){const v=r[id]||{};for(const k in(v.r||{})){(R[k]=R[k]||{s:0,n:0,p:0,best:null}).s+=v.r[k];R[k].n++;}for(const k in(v.p||{}))(R[k]=R[k]||{s:0,n:0,p:0,best:null}).p++;for(const k in(v.t||{})){const q=R[k]=R[k]||{s:0,n:0,p:0,best:null};if(!q.best||v.t[k]<q.best.t)q.best={t:v.t[k],n:v.n};}}
-  ST.crs=[];for(const id in s){const v=s[id]||{};for(const sl in(v.c||{})){const c=v.c[sl];if(!c||!c.nm)continue;const cid=id+'_'+sl;ST.crs.push({cid,by:v.by,c,R:R[cid]||{s:0,n:0,p:0}});}}}catch(e){ST.crs=[];}
- ST.loading=false;ST.when=Date.now();render();}
-async function loadOnline(){const out=[],byNet={};for(const r of ST.rows)byNet[r.net]=r;
- for(const city of['tokyo','dakar']){try{const v=(await db.ref('usr/rooms/usr-'+city).once('value')).val()||{};for(const id in v){const x=v[id];if(!x||Date.now()-(x.t||0)>STALE)continue;const net=id.split('_')[0],p=x.p||{};out.push({city,net,row:byNet[net],n:p.n,lv:p.lv,m:p.m,lg:p.lg,mo:p.mo,car:p.car||p.c,su:net===SUPER_NET});}}catch(e){}}
- ST.online=out;}
-// ---------- view ----------
-function render(){if(!ST.admin)return renderLogin();const R=ST.rows,used=R.filter(r=>r.rec),on=new Set(ST.online.map(o=>o.net));
- const tot=used.reduce((a,r)=>{const s=r.save||{stats:{}};a.races+=(s.stats.races|0);a.wins+=(s.stats.wins|0);a.cash+=s.cash||0;a.badges+=s.badges||0;a.pets+=(s.pets||[]).length;return a;},{races:0,wins:0,cash:0,badges:0,pets:0});
- const today=used.filter(r=>Date.now()-(r.rec.upd||0)<864e5).length,locked=used.filter(r=>r.rec.lock!==0).length;
- const kpi=(l,v,c)=>`<div class="card kpi"><span>${l}</span><b style="color:${c||'var(--ink)'}">${v}</b></div>`;
- const pub=ST.crs.length;
- $('app').innerHTML=`<div class="top"><div><h1>OWNER DASHBOARD</h1><div class="sub">Ultimate Street Racing · ${ST.loading?'Loading…':'Updated '+ago(ST.when)} · <a href="./" style="color:var(--cyan)">Open the game</a></div></div><span class="sp"></span>
-  <button class="btn alt" id="rf">🔄 REFRESH</button><button class="btn alt" id="addc">＋ ADD CODES</button><button class="btn alt" id="out">SIGN OUT</button></div>
- ${ST.msg?`<div class="card" style="margin-top:12px">${ST.msg}</div>`:''}
- ${!R.length&&!ST.loading?`<div class="card" style="margin-top:16px"><b>Add your player codes to start.</b><div class="sub">Paste one code per line, optionally followed by who has it (e.g. <span class="code">JAGUAR-9731 Amadou</span>). They are saved privately under your super-user account, never in the public game.</div><textarea id="imp" rows="8" style="width:100%;margin-top:10px"></textarea><div style="margin-top:8px"><button class="btn" id="impGo">SAVE CODES</button></div></div>`:''}
- <div class="kpis">${kpi('Codes in use',`${used.length}<span class="mute" style="font-size:14px">/${R.length}</span>`)}${kpi('Online now',ST.online.length,'var(--green)')}${kpi('Played today',today,'var(--cyan)')}${kpi('Races run',tot.races.toLocaleString())}${kpi('Race wins',tot.wins.toLocaleString())}${kpi('Locked codes',locked,'var(--gold)')}${kpi('Badges earned',tot.badges)}${kpi('Pets hatched',tot.pets)}${kpi('Courses published',pub)}</div>
- <h2>🟢 Online now</h2><div class="card list">${ST.online.length?ST.online.map(o=>`<div class="row"><div><span class="dot on"></span><b>${esc(o.n||'Driver')}</b> ${o.su?'<span class="pill lock">👑 SUPER</span>':''} <span class="mute">${o.row?esc(o.row.code)+(o.row.who?' · '+esc(o.row.who):''):''}</span></div><div class="mute">${o.city==='tokyo'?'Tokyo':'Dakar'} · LV ${o.lv||1} · ${o.lg?'🛋️ Lounge':o.m==='foot'?'on foot':o.m==='race'?'🏁 racing':o.m==='duel'?'🚦 duel':o.m==='meet'?'car meet':'driving'}${o.mo?' · 🛵':''}</div></div>`).join(''):'<div class="mute">Nobody is online right now.</div>'}</div>
- <h2>👥 Players and codes</h2><div class="card scroll"><table><thead><tr><th>Code</th><th>Given to</th><th>Player</th><th>Last played</th><th>Level</th><th>Cash</th><th>Cars</th><th>Races / wins</th><th>Badges</th><th>Pets</th><th>Streak</th><th>Lock · devices</th><th></th></tr></thead><tbody>
- ${R.map(r=>{const v=r.rec,s=r.save,lk=v&&v.lock!==0,dv=v?String(v.devs||'').split(',').filter(Boolean).length:0,mx=(v&&v.devMax)||2;
-  return`<tr class="${v?'':'unused'}"><td class="code">${r.code}</td><td><input class="who" data-who="${r.code}" value="${esc(r.who)}" placeholder="who has it?"></td>
-  <td>${v?`<span class="dot ${on.has(r.net)?'on':''}"></span><b>${esc(v.tag)}</b>${s&&s.crew?`<div class="tiny">${esc(s.crew)}</div>`:''}`:'<span class="mute">not used yet</span>'}</td>
-  <td>${v?ago(v.upd):'—'}</td><td>${s?s.lv:'—'}</td><td>${s?money(s.cash):'—'}</td><td>${s?`${s.cars.length} <span class="tiny">${esc(CARS[s.car]||'')}</span>`:'—'}</td>
-  <td>${s?`${s.stats.races|0} / ${s.stats.wins|0}`:'—'}</td><td>${s?s.badges:'—'}</td><td>${s&&s.pets.length?s.pets.map(p=>PETS[p]||'').join(''):'—'}</td><td>${s&&s.streak?'🔥 '+s.streak:'—'}</td>
-  <td>${v?`<span class="pill ${lk?'lock':'open'}">${lk?'🔒':'🔓'} ${dv}/${mx}</span>${dv>=mx&&lk?' <span class="pill warn">FULL</span>':''}`:'<span class="tiny">locks on first use</span>'}</td>
-  <td>${v?`<div class="actions">${lk?`<button class="btn alt sm" data-a="unlock" data-c="${r.code}">UNLOCK</button>`:`<button class="btn sm" data-a="lock" data-c="${r.code}">LOCK</button>`}<button class="btn alt sm" data-a="reset" data-c="${r.code}" title="Clear the registered devices">RESET</button>${mx<3?`<button class="btn alt sm" data-a="plus" data-c="${r.code}" title="Allow a third device">+1</button>`:''}</div>`:''}</td></tr>`;}).join('')}
- </tbody></table><div class="tiny" style="margin-top:8px">🔒 Each code works only on its registered devices. RESET clears them so the next device to sign in takes the slot (use it when a kid gets a new phone). "Given to" is saved privately to your account.</div></div>
- <div class="grid2"><div><h2>🏆 Leaderboard · reputation</h2><div class="card list">${ST.lb.slice().sort((a,b)=>(b.rep||0)-(a.rep||0)).slice(0,12).map((p,i)=>`<div class="row"><div><b>${i+1}. ${esc(p.n)}</b> <span class="mute">${esc(p.cr||'')}</span></div><div class="mute">LV ${p.lv||1} · ${(p.rep||0).toLocaleString()} REP · ${esc(CARS[p.car]||'')}</div></div>`).join('')||'<div class="mute">No leaderboard entries yet.</div>'}</div></div>
- <div><h2>⏱️ Fastest times</h2><div class="card list">${TRACKS.map(([k,l])=>{const b=ST.lb.filter(p=>p['t_'+k]>0).sort((a,b)=>a['t_'+k]-b['t_'+k])[0];return`<div class="row"><div>${l}</div><div class="mute">${b?`<b style="color:var(--ink)">${fmtT(b['t_'+k])}</b> · ${esc(b.n)}`:'—'}</div></div>`;}).join('')}</div></div></div>
- <h2>🛠️ Published courses</h2><div class="card list">${ST.crs.length?ST.crs.sort((a,b)=>(b.R.p||0)-(a.R.p||0)).map(x=>`<div class="row"><div><b>${esc((CRS_A[x.c.nm[0]]||'')+' '+(CRS_B[x.c.nm[1]]||''))}</b> <span class="mute">by ${esc(x.by||'?')} · ${x.c.city==='tokyo'?'Tokyo':'Dakar'} · ${(x.c.pcs||[]).filter(p=>p[0]==='cp').length} checkpoints · ${x.c.laps||1} lap${(x.c.laps||1)>1?'s':''}</span></div><div class="mute">${x.R.n?'⭐ '+(x.R.s/x.R.n).toFixed(1)+' ('+x.R.n+')':'no stars yet'} · ${x.R.p||0} played${x.R.best?` · record ${fmtT(x.R.best.t)} by ${esc(x.R.best.n)}`:''}</div></div>`).join(''):'<div class="mute">No courses published yet.</div>'}</div>
- <h2>📊 Progress by player</h2><div class="card">${used.filter(r=>r.save).sort((a,b)=>b.save.xp-a.save.xp).map(r=>{const mx=Math.max(...used.filter(q=>q.save).map(q=>q.save.xp),1);return`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between"><b>${esc(r.rec.tag)}</b><span class="mute">LV ${r.save.lv} · ${r.save.xp.toLocaleString()} XP · ${r.save.friends} friends · ${r.save.courses} courses · 🎉 ${r.save.fest}/20 fest</span></div><div class="bar"><i style="width:${Math.max(2,r.save.xp/mx*100)}%"></i></div></div>`;}).join('')||'<div class="mute">No progress yet.</div>'}</div>
- <div class="tiny" style="margin-top:24px">Private owner page. Nothing here is shown to players.</div>`;
- $('rf').onclick=loadAll;$('out').onclick=()=>{try{localStorage.removeItem(DK);}catch(e){}ST.admin=null;ST.rows=[];renderLogin();};$('addc').onclick=()=>{ST.msg=`<b>Add codes</b><div class="sub">One per line, optionally followed by a name.</div><textarea id="imp" rows="6" style="width:100%;margin-top:8px"></textarea><div style="margin-top:8px"><button class="btn" id="impGo">SAVE CODES</button> <button class="btn alt" id="impX">CANCEL</button></div>`;render();};
- const ig=$('impGo');if(ig)ig.onclick=async()=>{const lines=$('imp').value.split('\n');let n=0;for(const ln of lines){const m=ln.trim().match(/^([A-Za-z]+[\s-]?\d{4})\s*[,;:\-–]?\s*(.*)$/);if(!m)continue;const c=normCode(m[1]);if(!c||c.startsWith('ABMOIMEME'))continue;ST.codes[c]=Object.assign({},ST.codes[c],{who:(m[2]||ST.codes[c]&&ST.codes[c].who||'').slice(0,40)});n++;}
-  try{await saveCodes();ST.msg=`<span class="ok">Saved ${n} code${n===1?'':'s'}.</span>`;}catch(e){ST.msg=`<span class="err">Could not save: ${esc(e.code||e.message)}</span>`;}loadAll();};
- const ix=$('impX');if(ix)ix.onclick=()=>{ST.msg='';render();};
- document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});try{await saveCodes();el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
- document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const c=b.dataset.c,a=b.dataset.a,k=await keys(c),ref=db.ref('usr/players/'+k.save);b.disabled=true;
-  try{if(a==='lock')await ref.update({lock:1});if(a==='unlock')await ref.update({lock:0});if(a==='reset')await ref.update({devs:''});if(a==='plus')await ref.update({lock:1,devMax:3});}catch(e){alert('Could not update: '+(e.code||e.message));}
-  const row=ST.rows.find(r=>r.code===c);try{row.rec=(await ref.once('value')).val();}catch(e){}render();});}
-setInterval(async()=>{const ae=document.activeElement;if(ST.admin&&!ST.loading&&!document.hidden&&!(ae&&/INPUT|TEXTAREA/.test(ae.tagName))){await loadOnline();render();}},20000);
+async function load(){ST.loading=true;draw();const out=[];
+ await Promise.all(Object.keys(ST.codes).map(async code=>{const save=await sha(S1+code),net=await sha(S2+code);let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){}
+  const ev=[];if(rec&&rec.ev)for(const d in rec.ev)for(const id in rec.ev[d]){const e=rec.ev[d][id];if(e&&e.k&&e.t)ev.push(e);}ev.sort((a,b)=>a.t-b.t);
+  let sv=null;try{sv=rec&&rec.save?JSON.parse(rec.save):null;}catch(e){}
+  out.push({code,save,net,pc:'P-'+net.slice(0,4).toUpperCase(),who:ST.codes[code].who||'',tag:rec&&rec.tag||'',rec,ev,act:(rec&&rec.act)||{},sv,last:Math.max(rec&&rec.upd||0,ev.length?ev[ev.length-1].t:0)});}));
+ ST.P=out.sort((a,b)=>b.last-a.last||a.code.localeCompare(b.code));ST.loading=false;ST.when=Date.now();draw();}
+const since=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()-(ST.range-1)*DAY;};
+const inR=e=>e.t>=since();
+function allEv(f){const r=[];for(const p of ST.P)for(const e of p.ev)if(!f||f(e))r.push(Object.assign({p},e));return r;}
+function days(n){const out=[];const d=new Date();d.setHours(12,0,0,0);for(let i=n-1;i>=0;i--)out.push(dayK(d.getTime()-i*DAY));return out;}
+const chartDays=()=>days(Math.max(ST.range,7));
+function activeOn(p,k){if((p.act[k]|0)>0)return true;return p.ev.some(e=>e.k!=='open'&&e.k!=='sv'&&dayK(e.t)===k);}
+function nm(p){return ST.reveal?`<span class="real">${esc(p.who||p.tag||'?')}</span> <span class="tiny">${esc(p.tag&&p.tag!==p.who?p.tag+' · ':'')}${esc(p.code)}</span>`:`<span class="pcode">${p.pc}</span>`;}
+const nmTxt=p=>ST.reveal?[p.who,p.tag,p.code].filter(Boolean).join(' · '):p.pc;
+// ---------- charts ----------
+function bars(rows,opt={}){const W=600,H=opt.h||150,pad=24,n=rows.length,max=Math.max(1,...rows.map(r=>(r.v||0)+(r.v2||0))),bw=(W-pad)/n;
+ let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`;for(let i=0;i<=2;i++){const y=6+(H-12)*(1-i/2);s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#ffffff12"/><text x="0" y="${y+3}">${Math.round(max*i/2)}</text>`;}
+ rows.forEach((r,i)=>{const x=pad+i*bw+bw*.15,w=bw*.7,h1=(H-12)*(r.v||0)/max,h2=(H-12)*(r.v2||0)/max,base=H-6;
+  if(h1)s+=`<rect x="${x}" y="${base-h1}" width="${w}" height="${h1}" rx="2" fill="${opt.c||'#05d9e8'}"><title>${esc(r.l)}: ${r.v}</title></rect>`;if(h2)s+=`<rect x="${x}" y="${base-h1-h2}" width="${w}" height="${h2}" rx="2" fill="${opt.c2||'#ff5470'}"><title>${esc(r.l)}: ${r.v2}</title></rect>`;
+  if(n<=16||i%Math.ceil(n/10)===0)s+=`<text x="${x+w/2}" y="${H+12}" text-anchor="middle">${esc(r.l)}</text>`;});
+ return s+'</svg>'+(opt.lg?`<div class="lg">${opt.lg.map(([c,l])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>`:'');}
+function hbars(rows,opt={}){const max=Math.max(1,...rows.map(r=>r.v));return rows.map(r=>`<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span>${r.l}</span><b>${r.v}</b></div><div class="funnel"><div class="track" style="height:10px"><i style="width:${Math.max(r.v?3:0,r.v/max*100)}%;background:${opt.c||'var(--cyan)'}"></i></div></div></div>`).join('')||'<div class="mute">No data yet.</div>';}
+function line(series,labels,opt={}){const W=600,H=opt.h||140,pad=24,n=labels.length,max=Math.max(1,...series.flatMap(s=>s.d));const x=i=>pad+6+i*(W-pad-12)/Math.max(1,n-1),y=v=>6+(H-12)*(1-v/max);
+ let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`;for(let i=0;i<=2;i++){const yy=y(max*i/2);s+=`<line x1="${pad}" x2="${W}" y1="${yy}" y2="${yy}" stroke="#ffffff12"/><text x="0" y="${yy+3}">${Math.round(max*i/2)}</text>`;}
+ series.forEach(se=>{s+=`<polyline fill="none" stroke="${se.c}" stroke-width="2.5" stroke-linejoin="round" points="${se.d.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;se.d.forEach((v,i)=>{if(v)s+=`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${se.c}"><title>${esc(labels[i])}: ${v}</title></circle>`;});});
+ labels.forEach((l,i)=>{if(n<=12||i%Math.ceil(n/8)===0)s+=`<text x="${x(i)}" y="${H+12}" text-anchor="middle">${esc(l)}</text>`;});
+ return s+'</svg>'+`<div class="lg">${series.map(se=>`<span><i style="background:${se.c}"></i>${se.n}</span>`).join('')}</div>`;}
+const kpi=(l,v,sub,c)=>`<div class="card kpi"><span>${l}</span><b style="color:${c||'var(--ink)'}">${v}</b>${sub?`<small>${sub}</small>`:''}</div>`;
+function table(id,cols,rows,opt={}){const q=(ST.q[id]||'').toLowerCase();const vis=q?rows.filter(r=>(r.s||'').toLowerCase().includes(q)):rows;ST.exp[id]={cols,rows:vis};
+ return`${opt.search?`<input class="search" data-q="${id}" placeholder="${opt.search}" value="${esc(ST.q[id]||'')}">`:''}<div class="card scroll"><table><thead><tr>${cols.map(c=>`<th class="${c.n?'num':''}">${c.h}</th>`).join('')}</tr></thead><tbody>${vis.map(r=>`<tr class="${r.click?'click':''}" ${r.click?`data-open="${r.click}"`:''}>${r.c.map((v,i)=>`<td class="${cols[i].n?'num':''}">${v}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length}" class="mute">${q?'No matches.':'Nothing yet.'}</td></tr>`}</tbody></table></div>`;}
+// ---------- tabs ----------
+const TABS=[['overview','Overview'],['login','Login health'],['first','First steps'],['games','Games'],['online','Online play'],['sponsors','Sponsors'],['players','Players'],['errors','Errors']];
+function vOverview(){const D=chartDays(),R=days(ST.range),today=dayK(Date.now()),P=ST.P.filter(p=>p.rec);
+ const act=k=>P.filter(p=>activeOn(p,k)).length,actWeek=P.filter(p=>days(7).some(k=>activeOn(p,k))).length;
+ const news=allEv(e=>e.k==='new'&&inR(e)).length,games=allEv(e=>e.k==='g'&&inR(e)),mins=P.reduce((a,p)=>a+R.reduce((b,k)=>b+(p.act[k]|0),0),0);
+ const A=[];const errs=allEv(e=>e.k==='err'&&e.t>Date.now()-DAY).length;if(errs)A.push(['bad',`🐞 ${errs} error${errs>1?'s':''} in the last 24 hours → Errors`]);
+ const si=allEv(e=>e.k==='sin'&&inR(e)).length,sf=allEv(e=>e.k==='sfail'&&inR(e)).length;if(si+sf>=4&&sf/(si+sf)>.25)A.push(['warn',`🔑 ${pct(sf,si+sf)} of sign-ins failed → Login health`]);
+ const ab=games.filter(g=>g.ab).length;if(games.length>=5&&ab/games.length>.3)A.push(['warn',`🏁 ${pct(ab,games.length)} of games were abandoned → Games`]);
+ const jf=allEv(e=>e.k==='joinf'&&inR(e)).length,jo=allEv(e=>e.k==='join'&&inR(e)).length;if(jf&&jf/(jf+jo)>.2)A.push(['warn',`📶 ${pct(jf,jf+jo)} of online room joins failed → Online play`]);
+ const dr=allEv(e=>e.k==='drop'&&inR(e)).length,rc=allEv(e=>e.k==='rec'&&inR(e)).length;if(dr>=3&&rc<dr*.5)A.push(['warn',`📶 ${dr} connection drops, only ${rc} reconnected → Online play`]);
+ const full=P.filter(p=>p.rec.lock!==0&&String(p.rec.devs||'').split(',').filter(Boolean).length>=(p.rec.devMax||2));if(full.length)A.push(['warn',`🔒 ${full.length} code${full.length>1?'s are':' is'} at the device limit — fine unless a kid says they're locked out → Players`]);
+ const quiet=P.filter(p=>p.last&&Date.now()-p.last>7*DAY).length;if(quiet)A.push(['warn',`💤 ${quiet} player${quiet>1?'s haven’t':' hasn’t'} played in over a week`]);
+ return`<div class="kpis">${kpi('Active today',act(today),`of ${P.length} players`,'var(--green)')}${kpi('Active this week',actWeek)}${kpi('New sign-ups',news,ST.range===1?'today':`last ${ST.range} days`)}${kpi('Games played',games.length,`${Math.round(mins/6)/10} h of play`)}</div>
+ <h2>Needs attention</h2><div class="att">${A.length?A.map(([c,t])=>`<div class="${c}">${t}</div>`).join(''):'<div class="good">✅ Nothing needs attention right now.</div>'}</div>
+ <h2>Active players per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:act(k)})))}</div>`;}
+function vLogin(){const D=chartDays(),si=allEv(e=>e.k==='sin'&&inR(e)),sf=allEv(e=>e.k==='sfail'&&inR(e)),R={wrong:'Wrong or unknown code',locked:'Code locked to other devices',net:'No internet / timed out'};
+ const all={si:allEv(e=>e.k==='sin'),sf:allEv(e=>e.k==='sfail')};const by=Object.keys(R).map(r=>({r,n:sf.filter(e=>e.r===r).length}));
+ return`<div class="kpis">${kpi('Sign-in attempts',si.length+sf.length)}${kpi('Succeeded',si.length,pct(si.length,si.length+sf.length),'var(--green)')}${kpi('Failed',sf.length,pct(sf.length,si.length+sf.length),sf.length?'var(--red)':'')}${kpi('Auto sign-ins',si.filter(e=>e.auto).length,'remembered devices')}</div>
+ <h2>Attempts vs failures per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:all.si.filter(e=>dayK(e.t)===k).length,v2:all.sf.filter(e=>dayK(e.t)===k).length})),{c:'#39ff9f',c2:'#ff5470',lg:[['#39ff9f','Succeeded'],['#ff5470','Failed']]})}</div>
+ <h2>Failures by reason</h2>${table('login',[{h:'Reason'},{h:'Failures',n:1},{h:'Share',n:1}],by.map(x=>({s:R[x.r],c:[R[x.r],x.n,pct(x.n,sf.length)]})))}
+ <div class="tiny" style="margin-top:8px">A failed attempt is counted once that phone or computer gets in, so a device that never succeeds doesn't appear here.</div>`;}
+const playedAny=p=>p.ev.some(e=>e.k==='g')||(p.sv&&p.sv.stats&&p.sv.stats.races>0);
+function vFirst(){const P=ST.P;const given=P.filter(p=>p.who||p.rec).length,signed=P.filter(p=>p.rec).length,played=P.filter(playedAny).length;
+ const back=P.filter(p=>{const ds=new Set();for(const e of p.ev)if(e.k!=='open'&&e.k!=='sv')ds.add(dayK(e.t));for(const k in p.act)if(p.act[k]>0)ds.add(k);return ds.size>=2;}).length;
+ const steps=[['Code handed out',given],['Opened the game & signed up',signed],['Played a first game',played],['Came back another day',back]];
+ return`<div class="kpis">${kpi('Handed out',given)}${kpi('Signed up',signed,pct(signed,given))}${kpi('Played',played,pct(played,given))}${kpi('Came back',back,pct(back,given),'var(--green)')}</div>
+ <h2>Funnel · where players drop off</h2><div class="card funnel">${steps.map(([l,v],i)=>`<div class="step"><div class="lbl"><span>${i+1}. ${l}</span><span><b>${v}</b> <span class="mute">${pct(v,steps[0][1])}</span>${i&&steps[i-1][1]>v?`<span class="drop">−${steps[i-1][1]-v}</span>`:''}</span></div><div class="track"><i style="width:${steps[0][1]?v/steps[0][1]*100:0}%"></i></div></div>`).join('')}</div>
+ <h2>Who is at which step</h2>${table('first',[{h:'Player'},{h:'Step reached'},{h:'Last seen'}],P.filter(p=>p.who||p.rec).map(p=>{const st=!p.rec?'1 · Has code, not opened':!playedAny(p)?'2 · Signed up, no game yet':'3 · Playing';return{s:nmTxt(p)+' '+st,c:[nm(p),st,p.rec?ago(p.last):'—'],click:p.rec?p.code:''};}),{search:'Search players'})}
+ <div class="tiny" style="margin-top:8px">"Handed out" counts codes with a Given-to name (set with Show real names on) plus codes already used.</div>`;}
+function vGames(){const D=chartDays(),G=allEv(e=>e.k==='g'&&inR(e)),GA=allEv(e=>e.k==='g'),fin=G.filter(g=>!g.ab),avg=fin.length?fin.reduce((a,g)=>a+(g.d||0),0)/fin.length:0,w=fin.filter(g=>g.w).length;
+ const by=Object.keys(MODES).map(m=>{const g=G.filter(x=>x.m===m),f=g.filter(x=>!x.ab);return{m,n:g.length,w:f.filter(x=>x.w).length,l:f.filter(x=>!x.w).length,ab:g.filter(x=>x.ab).length,d:f.length?f.reduce((a,x)=>a+(x.d||0),0)/f.length:0};}).filter(x=>x.n);
+ return`<div class="kpis">${kpi('Games played',G.length)}${kpi('Average length',dur(avg))}${kpi('Win rate',pct(w,fin.length),`${w} won · ${fin.length-w} lost`,'var(--green)')}${kpi('Abandoned',G.length-fin.length,pct(G.length-fin.length,G.length),G.length-fin.length?'var(--gold)':'')}</div>
+ <h2>Games per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:GA.filter(g=>dayK(g.t)===k&&!g.ab).length,v2:GA.filter(g=>dayK(g.t)===k&&g.ab).length})),{c:'#05d9e8',c2:'#ffc23d',lg:[['#05d9e8','Finished'],['#ffc23d','Abandoned']]})}</div>
+ <h2>By game type</h2>${table('games',[{h:'Type'},{h:'Played',n:1},{h:'Won',n:1},{h:'Lost',n:1},{h:'Abandoned',n:1},{h:'Avg length',n:1}],by.map(x=>({s:MODES[x.m],c:[MODES[x.m],x.n,x.w,x.l,x.ab,dur(x.d)]})))}
+ <div class="tiny" style="margin-top:8px">Police chases count as won when the player escapes and lost when busted. Delivery jobs count as abandoned when no money was earned.</div>`;}
+function vOnline(){const D=chartDays(),f=k=>allEv(e=>e.k===k&&inR(e)),a=k=>allEv(e=>e.k===k),j=f('join'),jf=f('joinf'),dr=f('drop'),rc=f('rec');
+ return`<div class="kpis">${kpi('Room joins',j.length+jf.length)}${kpi('Join success',pct(j.length,j.length+jf.length),`${jf.length} failed`,jf.length?'var(--gold)':'var(--green)')}${kpi('Connection drops',dr.length,'',dr.length?'var(--red)':'')}${kpi('Reconnected',rc.length,dr.length?pct(rc.length,dr.length)+' of drops':'')}</div>
+ <h2>Per day</h2><div class="card">${line([{n:'Room joins',c:'#05d9e8',d:D.map(k=>a('join').filter(e=>dayK(e.t)===k).length)},{n:'Drops',c:'#ff5470',d:D.map(k=>a('drop').filter(e=>dayK(e.t)===k).length)},{n:'Reconnects',c:'#39ff9f',d:D.map(k=>a('rec').filter(e=>dayK(e.t)===k).length)}],D.map(short))}</div>
+ <h2>By player</h2>${table('online',[{h:'Player'},{h:'Joins',n:1},{h:'Failed',n:1},{h:'Drops',n:1},{h:'Reconnects',n:1}],ST.P.filter(p=>p.rec).map(p=>{const c=k=>p.ev.filter(e=>e.k===k&&inR(e)).length;return{s:nmTxt(p),c:[nm(p),c('join'),c('joinf'),c('drop'),c('rec')],click:p.code};}),{search:'Search players'})}`;}
+function vSponsors(){const D=chartDays(),V=allEv(e=>e.k==='sv'&&inR(e)),C=allEv(e=>e.k==='sc'&&inR(e)),VA=allEv(e=>e.k==='sv'),CA=allEv(e=>e.k==='sc');
+ const sk=e=>{const s=e.s||'';for(const k in SPN)if(s===k||SPN[k]===s)return k==='jvh'?'jollof':k;return s||'other';};
+ const POS={start:'Start screen',board:'City billboards',race:'Race intro screen',garage:'Crew garage',menu:'Menus'};
+ const brands=['jollof','pah','spark','farm'],startV=V.filter(e=>e.p==='start').length;
+ const rowsS=brands.map(k=>{const v=V.filter(e=>e.p!=='start'&&sk(e)===k).length+startV,c=C.filter(e=>sk(e)===k).length;return{k,v,c};}).sort((a,b)=>b.v-a.v);
+ const rowsP=Object.keys(POS).map(p=>{const v=V.filter(e=>e.p===p).length*(p==='start'?brands.length:1),c=C.filter(e=>e.p===p).length;return{p,v,c};}).filter(r=>r.v||r.c).sort((a,b)=>(b.c/(b.v||1))-(a.c/(a.v||1))||b.v-a.v);
+ const tv=rowsS.reduce((a,r)=>a+r.v,0),tc=C.length,best=rowsP.find(r=>r.v>0&&r.c>0)||rowsP[0];const ctr=(c,v)=>v?(c/v*100).toFixed(1)+'%':'—';
+ return`<div class="kpis">${kpi('Views',tv)}${kpi('Taps',tc)}${kpi('Tap-through rate',ctr(tc,tv))}${kpi('Best position',best?POS[best.p]:'—',best&&best.v?ctr(best.c,best.v)+' tap rate':'')}</div>
+ <h2>Views and taps per day</h2><div class="card">${line([{n:'Views',c:'#05d9e8',d:D.map(k=>VA.filter(e=>dayK(e.t)===k).reduce((a,e)=>a+(e.p==='start'?brands.length:1),0))},{n:'Taps',c:'#ff2a6d',d:D.map(k=>CA.filter(e=>dayK(e.t)===k).length)}],D.map(short))}</div>
+ <div class="grid2"><div><h2>By sponsor</h2>${table('sponsors',[{h:'Sponsor'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsS.map(r=>({s:SPN[r.k],c:[SPN[r.k],r.v,r.c,ctr(r.c,r.v)]})))}</div>
+ <div><h2>By position</h2>${table('spos',[{h:'Position'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsP.map(r=>({s:POS[r.p],c:[POS[r.p],r.v,r.c,ctr(r.c,r.v)]})))}</div></div>
+ <div class="tiny" style="margin-top:8px">A billboard counts once per board per visit when a player drives or walks within 30 m. The start-screen strip shows all four sponsors together, so each start-screen view counts for every sponsor. Logos don't open links yet, so a tap shows interest only.</div>`;}
+function vPlayers(){if(ST.sel)return vPlayer(ST.P.find(p=>p.code===ST.sel));const R=days(ST.range);
+ return table('players',[{h:'Player'},{h:'Last active'},{h:'Days active',n:1},{h:'Minutes',n:1},{h:'Games',n:1},{h:'Level',n:1},{h:'Device lock'}],ST.P.map(p=>{const da=R.filter(k=>activeOn(p,k)).length,mn=R.reduce((a,k)=>a+(p.act[k]|0),0),g=p.ev.filter(e=>e.k==='g'&&inR(e)).length;
+  const dv=p.rec?String(p.rec.devs||'').split(',').filter(Boolean).length:0,lk=p.rec?(p.rec.lock!==0?`<span class="pill y">🔒 ${dv}/${p.rec.devMax||2}</span>`:'<span class="pill">🔓 open</span>'):'<span class="tiny">unused</span>';
+  return{s:(ST.reveal?nmTxt(p):'')+' '+p.pc,c:[nm(p),p.rec?ago(p.last):'—',da,mn,g,p.sv?levelOf(p.sv.xp):'—',lk],click:p.code};}),{search:ST.reveal?'Search by name, gamer tag or code':'Search by player code, e.g. P-A4F2'});}
+const EVT={open:'📱 Opened the game',sin:'✅ Signed in',sfail:'❌ Sign-in failed',new:'🆕 Created their driver',join:'🌐 Joined online room',joinf:'⚠️ Online room join failed',drop:'📶 Connection dropped',rec:'🔁 Reconnected',sv:'👀 Saw sponsor',sc:'👆 Tapped sponsor',err:'🐞 Error'};
+function evTxt(e){if(e.k==='g')return`${e.ab?'🚪 Left':e.w?'🏆 Won':'🏁 Finished'} · ${MODES[e.m]||e.m}${e.d?' · '+dur(e.d):''}`;let t=EVT[e.k]||e.k;
+ if(e.k==='sfail')t+=' · '+({wrong:'wrong code',locked:'locked to other devices',net:'no internet'}[e.r]||e.r);if(e.k==='sc')t+=' · '+esc(SPN[e.s]||e.s||'');if(e.k==='err')t+=' · '+esc(e.m);if(e.k==='join'||e.k==='joinf')t+=' · '+esc(e.c||'');if(e.k==='sin'&&e.auto)t+=' (remembered)';return t;}
+function vPlayer(p){if(!p){ST.sel=null;return vPlayers();}const R=days(ST.range),D=chartDays(),ev=p.ev.filter(e=>e.k!=='sv').slice().reverse(),v=p.rec,dv=v?String(v.devs||'').split(',').filter(Boolean).length:0;
+ const q=(ST.q.tl||'').toLowerCase(),vis=ev.filter(e=>!q||evTxt(e).toLowerCase().includes(q));ST.exp.timeline={cols:[{h:'When'},{h:'What'}],rows:vis.map(e=>({c:[when(e.t),evTxt(e)]}))};
+ return`<button class="back" data-back="1">← All players</button><div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div style="font-size:18px">${nm(p)}</div>
+ <div class="tiny">${v?`Last active ${ago(p.last)} · ${v.lock!==0?'🔒 locked':'🔓 open'} · ${dv}/${v.devMax||2} devices`:'Not used yet'}</div></div>
+ ${ST.reveal?`<div style="margin-top:8px"><span class="tiny">Given to </span><input class="who" data-who="${p.code}" value="${esc(p.who)}" placeholder="who has this code?"></div>`:''}
+ ${v?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${v.lock!==0?`<button class="btn alt sm" data-a="unlock" data-c="${p.code}">UNLOCK</button>`:`<button class="btn sm" data-a="lock" data-c="${p.code}">LOCK</button>`}<button class="btn alt sm" data-a="reset" data-c="${p.code}">RESET DEVICES</button>${(v.devMax||2)<3?`<button class="btn alt sm" data-a="plus" data-c="${p.code}">ALLOW 3RD DEVICE</button>`:''}</div>`:''}</div>
+ <div class="kpis">${kpi('Days active',R.filter(k=>activeOn(p,k)).length,ST.range===1?'today':`last ${ST.range} days`)}${kpi('Minutes played',R.reduce((a,k)=>a+(p.act[k]|0),0))}${kpi('Games',p.ev.filter(e=>e.k==='g'&&inR(e)).length)}${kpi('Errors',p.ev.filter(e=>e.k==='err'&&inR(e)).length,'',p.ev.some(e=>e.k==='err'&&inR(e))?'var(--red)':'')}</div>
+ <h2>Minutes played per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:p.act[k]|0})),{c:'#ff2a6d',h:110})}</div>
+ <h2>Timeline</h2><input class="search" data-q="tl" placeholder="Filter, e.g. won, error, signed" value="${esc(ST.q.tl||'')}">
+ <div class="card tl">${vis.slice(0,300).map(e=>`<div class="it"><b>${when(e.t)}</b><span>${evTxt(e)}</span></div>`).join('')||'<div class="mute">No activity yet.</div>'}</div>`;}
+function vErrors(){const E=allEv(e=>e.k==='err'&&inR(e)).sort((a,b)=>b.t-a.t),q=(ST.q.err||'').toLowerCase(),vis=q?E.filter(e=>(e.m+' '+e.src+' '+nmTxt(e.p)).toLowerCase().includes(q)):E;
+ ST.exp.errors={cols:[{h:'When'},{h:'Player'},{h:'Message'},{h:'Where'},{h:'Version'}],rows:vis.map(e=>({c:[when(e.t),nmTxt(e.p),e.m,(e.src||'')+(e.l?':'+e.l:''),e.v||'']}))};
+ const groups={};E.forEach(e=>{groups[e.m]=(groups[e.m]||0)+1;});const top=Object.entries(groups).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ return`<div class="kpis">${kpi('Errors',E.length,ST.range===1?'today':`last ${ST.range} days`,E.length?'var(--red)':'var(--green)')}${kpi('Players affected',new Set(E.map(e=>e.p.code)).size)}${kpi('Distinct errors',Object.keys(groups).length)}${kpi('Last error',E.length?ago(E[0].t):'—')}</div>
+ ${top.length?`<h2>Most common</h2><div class="card">${hbars(top.map(([m,n])=>({l:`<span style="font:600 12px ui-monospace,monospace">${esc(m.slice(0,80))}</span>`,v:n})),{c:'var(--red)'})}</div>`:''}
+ <h2>Recent errors · newest first</h2><input class="search" data-q="err" placeholder="Filter errors" value="${esc(ST.q.err||'')}"><div class="card feed">${vis.slice(0,200).map(e=>`<div class="e"><div class="tiny">${when(e.t)} · ${nm(e.p)} · ${esc(e.src||'')}${e.l?':'+e.l:''}${e.v?' · v'+esc(e.v):''}</div><div class="m">${esc(e.m)}</div></div>`).join('')||'<div class="mute" style="padding:6px 0">✅ No errors recorded.</div>'}</div>`;}
+// ---------- frame ----------
+function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classList.toggle('reveal',ST.reveal);
+ const V={overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors};
+ const ae=document.activeElement,qid=ae&&ae.dataset&&ae.dataset.q,pos=ae&&ae.selectionStart;
+ $('app').innerHTML=`<div class="wrap"><header><div class="hrow"><h1>USR <span>ADMIN</span></h1><div class="tog" id="tog" role="switch" aria-checked="${ST.reveal}" title="Show real names">${ST.reveal?'🔓':'🔒'}<i></i>Show real names</div></div>
+ <div class="banner">🔓 REAL NAMES VISIBLE · switch off when you're done</div><nav>${TABS.map(([k,l])=>`<button class="${ST.tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</nav></header>
+ <div class="bar2"><div class="seg">${[[1,'Today'],[7,'7 days'],[30,'30 days']].map(([d,l])=>`<button class="${ST.range===d?'on':''}" data-r="${d}">${l}</button>`).join('')}</div><span class="sp"></span>
+ <span class="tiny">${ST.loading?'Loading…':'Updated '+ago(ST.when)}</span><button class="btn alt sm" id="rf" title="Refresh">↻</button><button class="btn alt sm" id="ex">⬇ Export</button></div>
+ ${ST.loading&&!ST.P.length?'<div class="card mute">Loading players…</div>':V[ST.tab]()}
+ <div class="tiny" style="margin-top:22px;display:flex;justify-content:space-between"><span>Private owner page · players never see it</span><a href="#" id="out" style="color:var(--mute)">Sign out</a></div></div>`;
+ $('tog').onclick=()=>{ST.reveal=!ST.reveal;draw();};
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.tab;ST.sel=null;draw();scrollTo(0,0);});
+ document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ST.range=+b.dataset.r;draw();});
+ $('rf').onclick=load;$('out').onclick=e=>{e.preventDefault();try{localStorage.removeItem(DK);}catch(x){}ST.admin=null;ST.P=[];renderLogin();};$('ex').onclick=exportTab;
+ document.querySelectorAll('[data-q]').forEach(el=>el.oninput=()=>{ST.q[el.dataset.q]=el.value;draw();});
+ if(qid){const el=document.querySelector(`[data-q="${qid}"]`);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
+ document.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>{if(!r.dataset.open)return;ST.tab='players';ST.sel=r.dataset.open;draw();scrollTo(0,0);});
+ document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ST.sel=null;draw();});
+ document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});const p=ST.P.find(x=>x.code===c);if(p)p.who=ST.codes[c].who;
+  try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
+ document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const p=ST.P.find(x=>x.code===b.dataset.c),a=b.dataset.a,ref=db.ref('usr/players/'+p.save);b.disabled=true;
+  try{if(a==='lock')await ref.update({lock:1});if(a==='unlock')await ref.update({lock:0});if(a==='reset')await ref.update({devs:''});if(a==='plus')await ref.update({lock:1,devMax:3});p.rec=(await ref.once('value')).val();}catch(e){alert('Could not update.');}draw();});}
+function exportTab(){const k={login:'login',first:'first',games:'games',online:'online',sponsors:'sponsors',players:ST.sel?'timeline':'players',errors:'errors'}[ST.tab];
+ let cols=[],rows=[];if(k&&ST.exp[k]){cols=ST.exp[k].cols.map(c=>c.h);rows=ST.exp[k].rows.map(r=>r.c);}
+ if(!cols.length){const D=days(ST.range);cols=['Day','Active players','Games','Minutes played','Errors'];rows=D.map(d=>[d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6),ST.P.filter(p=>activeOn(p,d)).length,allEv(e=>e.k==='g'&&dayK(e.t)===d).length,ST.P.reduce((a,p)=>a+(p.act[d]|0),0),allEv(e=>e.k==='err'&&dayK(e.t)===d).length]);}
+ const clean=v=>String(v==null?'':v).replace(/<[^>]*>/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/\s+/g,' ').trim(),csv=[cols,...rows].map(r=>r.map(v=>'"'+clean(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download=`usr-${ST.tab}${ST.sel?'-timeline':''}-${dayK(Date.now())}${ST.reveal?'-names':''}.csv`;document.body.appendChild(a);a.click();a.remove();}
+setInterval(()=>{const ae=document.activeElement;if(ST.admin&&!ST.loading&&!document.hidden&&!(ae&&/INPUT|TEXTAREA/.test(ae.tagName)))load();},120000);
 (async()=>{let c=null;try{c=localStorage.getItem(DK);}catch(e){}if(c)signIn(c,true);else renderLogin();})();
 </script>
-</body></html>
+</body>
+</html>

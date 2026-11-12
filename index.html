@@ -5604,6 +5604,47 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  else toast(CITY[S.city].name,CITY[S.city].sub,'#05d9e8',2.4);
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
+/* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'1.9'};
+ try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
+ T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
+ T.add=(k,o)=>{const e=Object.assign({k,t:Date.now()},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
+ T.take=()=>{const q=T.q;T.q=[];T.save();return q;};
+ T.unshift=q=>{T.q=q.concat(T.q).slice(-300);T.save();};
+ return T;})();
+TEL.add('open',{lang:typeof LANG!=='undefined'?LANG:'en',mob:matchMedia('(pointer:coarse)').matches?1:0});
+addEventListener('error',e=>{if(TEL.errs++>8)return;TEL.add('err',{m:String(e.message||'error').slice(0,160),src:String(e.filename||'').split('/').pop().slice(0,40),l:e.lineno|0,v:TEL.ver});});
+addEventListener('unhandledrejection',e=>{if(TEL.errs++>8)return;const r=e.reason;TEL.add('err',{m:String((r&&(r.message||r.code))||r||'promise rejected').slice(0,160),src:'promise',v:TEL.ver});});
+// sponsor boards in the 3D cities
+var SPB=[];
+const _abT=addBoard;addBoard=function(x,y,z,rotY,w,h,k){SPB.push({x,z,k});return _abT.apply(this,arguments);};
+const _bcT=buildCity;buildCity=function(key){SPB=[];TEL.seenB={};return _bcT.apply(this,arguments);};
+// sponsor logos on screens: views + taps
+const _omT=openModal;openModal=function(html,side){const r=_omT.apply(this,arguments);try{const c=$('modalCard');if(c&&c.querySelector('.presented img'))TEL.add('sv',{p:/CREW GARAGE/.test(c.innerText)?'garage':'race',s:(c.querySelector('.presented img').alt||'').slice(0,30)});}catch(e){}return r;};
+const _rsT=renderStart;let startSeenT=0;renderStart=function(){const r=_rsT.apply(this,arguments);if(Date.now()-startSeenT>60000&&document.querySelector('#startBody .sponsors')){startSeenT=Date.now();TEL.add('sv',{p:'start',s:'all'});}return r;};
+document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('.sponsors img,.presented img,.sponsors span');if(!im)return;const img=im.tagName==='IMG'?im:im.querySelector('img');TEL.add('sc',{p:im.closest('#startBody')?'start':'menu',s:((img&&img.alt)||'').slice(0,30)});},true);
+// online: room joins, drops, reconnects
+const _njT=netJoinCity;netJoinCity=async function(city){const was=NET.cityName===city&&NET.city;try{await _njT.apply(this,arguments);}catch(e){TEL.add('joinf',{c:city,m:String(e&&e.message||e).slice(0,80)});throw e;}if(!was)TEL.add(NET.city?'join':'joinf',{c:city});};
+// games: races, duels, chases, deliveries, courses
+let telT=0;
+const _upT=update;update=function(dt){_upT.apply(this,arguments);telT+=dt;if(telT<1)return;telT=0;try{telTick();}catch(e){}};
+function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now();
+ if(!TEL.st)TEL.st={races:st.races|0,wins:st.wins|0,esc:st.escapes|0,bust:st.busts|0};
+ // races and duels
+ if(S.race&&!TEL.cur)TEL.cur={t:now,r:st.races|0,w:st.wins|0,m:S.race.online?'duel':S.race.type==='drag'?'drag':'race',id:S.race.ev&&S.race.ev.id||''};
+ if(!S.race&&TEL.cur){const c=TEL.cur,d=Math.round((now-c.t)/1000);if((st.races|0)>c.r)TEL.add('g',{m:c.m,id:c.id,d,w:(st.wins|0)>c.w?1:0});else if(d>5)TEL.add('g',{m:c.m,id:c.id,d,ab:1});TEL.cur=null;}
+ // police chases
+ const lvl=S.heat&&S.heat.level|0;if(lvl>0&&!TEL.heat)TEL.heat={t:now,e:st.escapes|0,b:st.busts|0};
+ if(TEL.heat&&lvl===0){const h=TEL.heat,d=Math.round((now-h.t)/1000);if((st.escapes|0)>h.e)TEL.add('g',{m:'chase',d,w:1});else if((st.busts|0)>h.b)TEL.add('g',{m:'chase',d,w:0});TEL.heat=null;}
+ // deliveries
+ if(S.deliv&&!TEL.deliv)TEL.deliv={t:now,c:SAVE.cash};
+ if(!S.deliv&&TEL.deliv){const j=TEL.deliv,d=Math.round((now-j.t)/1000);TEL.add('g',{m:'job',d,w:SAVE.cash>j.c?1:0,ab:SAVE.cash>j.c?0:1});TEL.deliv=null;}
+ // player-made courses
+ if(S.crun&&!TEL.crun)TEL.crun={t:now};if(!S.crun&&TEL.crun){const d=Math.round((now-TEL.crun.t)/1000);TEL.add('g',{m:'course',d,w:$('modalCard')&&/FINISHED|TERMIN|FINITO/.test($('modalCard').innerText)?1:0});TEL.crun=null;}
+ // sponsor billboards seen while driving or walking
+ const m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;for(let i=0;i<SPB.length;i++){const b=SPB[i];if(!TEL.seenB[i]&&Math.hypot(b.x-px,b.z-pz)<30){TEL.seenB[i]=1;TEL.add('sv',{p:'board',s:b.k});}}
+ // connection drops / reconnects
+ const on=!!(NET.connected&&NET.city);if(TEL.conn===true&&!on&&NET.room)TEL.add('drop');if(TEL.conn===false&&on)TEL.add('rec');TEL.conn=on;}
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 </script>
@@ -5652,23 +5693,34 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
     out.querySelectorAll('[data-lk]').forEach(b=>b.onclick=async()=>{const a=b.dataset.lk;b.disabled=true;try{if(a==='lock')await window.PASS_ADMIN.lock(c,st.devMax);if(a==='unlock')await window.PASS_ADMIN.unlock(c);if(a==='reset')await window.PASS_ADMIN.reset(c);if(a==='three')await window.PASS_ADMIN.lock(c,3);}catch(e){}show();});}
    catch(e){out.innerHTML=`<div class="note">${/permission/i.test(String(e&&(e.code||e.message)))?c+' is not one of your player codes.':'Could not check right now.'}</div>`;}};
   $('lkGo').onclick=show;inp.onkeydown=e=>{if(e.key==='Enter')show();};setTimeout(()=>inp.focus(),50);}
+ // analytics upload: events go into this player's own record (readable only with their code)
+ const dayK=t=>{const d=new Date(t);return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');};
+ let telBusy=false,telTimer=null,telStarted=false;
+ async function telFlush(){if(telBusy||!P.user||P.super||!window.TEL||!TEL.q.length)return;const s=await ref().once('value').catch(()=>null);if(!s||!s.exists())return;
+  telBusy=true;const q=TEL.take(),up={};q.forEach((e,i)=>{up[dayK(e.t)+'/'+e.t.toString(36)+i.toString(36)+Math.random().toString(36).slice(2,5)]=e;});
+  try{await ref().child('ev').update(up);}catch(e){TEL.unshift(q);}telBusy=false;}
+ function telStart(){if(telStarted)return;telStarted=true;TEL.flush=()=>{if(!telTimer)telTimer=setTimeout(()=>{telTimer=null;telFlush();},20000);};setTimeout(telFlush,4000);
+  setInterval(()=>{if(!P.user||P.super||document.hidden||typeof S==='undefined'||S.state!=='play')return;ref().child('act/'+dayK(Date.now())).transaction(v=>(v||0)+1).catch(()=>{});},60000);
+  addEventListener('pagehide',()=>{telFlush();});document.addEventListener('visibilitychange',()=>{if(document.hidden)telFlush();});}
  const withT=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),ms))]);
  async function enter(code,silent){P.busy=true;P.err='';if(!silent)renderStart();
   let v;try{P.saveKey=await sha(S1+code);P.netKey=await sha(S2+code);const s=await withT(ref().once('value'),12000);v=s.val();}
   catch(e){P.busy=false;P.saveKey=P.netKey=null;const msg=String((e&&(e.code||e.message))||'');
+   if(window.TEL)TEL.add('sfail',{r:/permission/i.test(msg)?'wrong':'net',auto:silent?1:0});
    P.err=/permission/i.test(msg)?'That code isn’t right. Check it with the grown-up who gave it to you.':'No internet right now. Check your connection, or play as a guest.';
    if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}
   if(!v)P.claimDev=true;
   if(v&&v.lock!==0&&P.netKey!==SUPER_NET){const devs=String(v.devs||'').split(',').filter(Boolean),me=devId();
    if(!devs.includes(me)){if(devs.length<(v.devMax||2)){devs.push(me);try{await ref().child('devs').set(devs.join(','));}catch(e){}}
-    else{P.busy=false;P.saveKey=P.netKey=null;P.err=LOCK_MSG;if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}}}
-  P.user={uid:P.netKey};P.code=code;P.super=P.netKey===SUPER_NET;try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
+    else{if(window.TEL)TEL.add('sfail',{r:'locked',auto:silent?1:0});P.busy=false;P.saveKey=P.netKey=null;P.err=LOCK_MSG;if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}}}
+  P.user={uid:P.netKey};P.code=code;P.super=P.netKey===SUPER_NET;if(window.TEL&&!P.super){TEL.add('sin',{auto:silent?1:0});telStart();}try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
   P.busy=false;if(P.super){P.tag=SUPER_TAG;await openPlayer(v);}else if(v&&v.tag){P.tag=v.tag;await openPlayer(v);}else{P.mode='name';renderStart();}}
  async function openPlayer(v){const p=ensureProfile(P.tag);let how='new';
   if(v&&typeof v.save==='string'&&v.save.length){let local=null;try{local=JSON.parse(localStorage.getItem(p.key)||'null');}catch(e){}const lu=local&&local._upd||0;
    if(!local||(v.upd||0)>lu)localStorage.setItem(p.key,v.save);how='old';}
   useProfile(p.id);SAVE.profile=Object.assign({},SAVE.profile||{},{name:P.tag,crew:(SAVE.profile&&SAVE.profile.crew)||''});
   if(P.super)grantAll();
+  if(how==='new'&&window.TEL&&!P.super)TEL.add('new');
   if(how==='new'||P.super){SAVE.char=SAVE.char||defChar();save();pushNow();}
   pickCity=SAVE.city||pickCity;if(pickCity!==S.city)buildCity(pickCity);
   P.mode='done';START.step='pick';if(!SAVE.current){openCreator('new',()=>{START.step='car';renderStart();});}renderStart();}
