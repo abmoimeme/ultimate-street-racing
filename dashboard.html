@@ -94,20 +94,22 @@ const since=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()-(ST.r
 const inR=e=>e.t>=since();
 function allEv(f){const r=[];for(const p of ST.P)for(const e of p.ev)if(!f||f(e))r.push(Object.assign({p},e));return r;}
 function days(n){const out=[];const d=new Date();d.setHours(12,0,0,0);for(let i=n-1;i>=0;i--)out.push(dayK(d.getTime()-i*DAY));return out;}
-const chartDays=()=>days(Math.max(ST.range,7));
+const chartDays=()=>(ST.curD=days(Math.max(ST.range,7)));
 function activeOn(p,k){if((p.act[k]|0)>0)return true;return p.ev.some(e=>e.k!=='open'&&e.k!=='sv'&&dayK(e.t)===k);}
 function nm(p){return ST.reveal?(p.who?`<span class="real">${esc(p.who)}</span>`:'<span class="tiny">No name yet</span>')+` <span class="pcode">${p.pc}</span>`:`<span class="pcode">${p.pc}</span>`;}
 const nmTxt=p=>ST.reveal?[p.who||'No name yet',p.pc,p.tag,p.code].filter(Boolean).join(' · '):p.pc;
 // ---------- charts ----------
+function relMarks(n){const D=ST.curD;if(!D||D.length!==n)return[];const R=releases();return D.map((k,i)=>({i,r:R.filter(r=>dayK(r.t)===k)})).filter(o=>o.r.length);}
+function markSvg(n,xf,H){return relMarks(n).map(o=>{const x=xf(o.i);return`<line x1="${x}" x2="${x}" y1="0" y2="${H-6}" stroke="#ffc23d" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${x+3}" y="10" style="fill:#ffc23d;font-weight:800">v${o.r.map(r=>r.v).join(',v')}</text>`;}).join('');}
 function bars(rows,opt={}){const W=600,H=opt.h||150,pad=24,n=rows.length,max=Math.max(1,...rows.map(r=>(r.v||0)+(r.v2||0))),bw=(W-pad)/n;
- let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`;for(let i=0;i<=2;i++){const y=6+(H-12)*(1-i/2);s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#ffffff12"/><text x="0" y="${y+3}">${Math.round(max*i/2)}</text>`;}
+ let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`+markSvg(n,i=>pad+i*bw+bw*.5,H);for(let i=0;i<=2;i++){const y=6+(H-12)*(1-i/2);s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#ffffff12"/><text x="0" y="${y+3}">${Math.round(max*i/2)}</text>`;}
  rows.forEach((r,i)=>{const x=pad+i*bw+bw*.15,w=bw*.7,h1=(H-12)*(r.v||0)/max,h2=(H-12)*(r.v2||0)/max,base=H-6;
   if(h1)s+=`<rect x="${x}" y="${base-h1}" width="${w}" height="${h1}" rx="2" fill="${opt.c||'#05d9e8'}"><title>${esc(r.l)}: ${r.v}</title></rect>`;if(h2)s+=`<rect x="${x}" y="${base-h1-h2}" width="${w}" height="${h2}" rx="2" fill="${opt.c2||'#ff5470'}"><title>${esc(r.l)}: ${r.v2}</title></rect>`;
   if(n<=16||i%Math.ceil(n/10)===0)s+=`<text x="${x+w/2}" y="${H+12}" text-anchor="middle">${esc(r.l)}</text>`;});
  return s+'</svg>'+(opt.lg?`<div class="lg">${opt.lg.map(([c,l])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>`:'');}
 function hbars(rows,opt={}){const max=Math.max(1,...rows.map(r=>r.v));return rows.map(r=>`<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span>${r.l}</span><b>${r.v}</b></div><div class="funnel"><div class="track" style="height:10px"><i style="width:${Math.max(r.v?3:0,r.v/max*100)}%;background:${opt.c||'var(--cyan)'}"></i></div></div></div>`).join('')||'<div class="mute">No data yet.</div>';}
 function line(series,labels,opt={}){const W=600,H=opt.h||140,pad=24,n=labels.length,max=Math.max(1,...series.flatMap(s=>s.d));const x=i=>pad+6+i*(W-pad-12)/Math.max(1,n-1),y=v=>6+(H-12)*(1-v/max);
- let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`;for(let i=0;i<=2;i++){const yy=y(max*i/2);s+=`<line x1="${pad}" x2="${W}" y1="${yy}" y2="${yy}" stroke="#ffffff12"/><text x="0" y="${yy+3}">${Math.round(max*i/2)}</text>`;}
+ let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`+markSvg(n,x,H);for(let i=0;i<=2;i++){const yy=y(max*i/2);s+=`<line x1="${pad}" x2="${W}" y1="${yy}" y2="${yy}" stroke="#ffffff12"/><text x="0" y="${yy+3}">${Math.round(max*i/2)}</text>`;}
  series.forEach(se=>{s+=`<polyline fill="none" stroke="${se.c}" stroke-width="2.5" stroke-linejoin="round" points="${se.d.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;se.d.forEach((v,i)=>{if(v)s+=`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${se.c}"><title>${esc(labels[i])}: ${v}</title></circle>`;});});
  labels.forEach((l,i)=>{if(n<=12||i%Math.ceil(n/8)===0)s+=`<text x="${x(i)}" y="${H+12}" text-anchor="middle">${esc(l)}</text>`;});
  return s+'</svg>'+`<div class="lg">${series.map(se=>`<span><i style="background:${se.c}"></i>${se.n}</span>`).join('')}</div>`;}
@@ -131,8 +133,69 @@ function retention(){const today=dayK(Date.now()),add=(k,n)=>dayK(kDate(k).getTi
  ST.P.forEach(p=>{const ds=new Set();p.ev.forEach(e=>{if(e.k!=='open'&&e.k!=='sv'&&e.k!=='sfail')ds.add(dayK(e.t));});for(const k in p.act)if(p.act[k]>0)ds.add(k);if(!ds.size)return;
   const nw=p.ev.find(e=>e.k==='new'),f=nw?dayK(nw.t):[...ds].sort()[0];if(add(f,1)<=today){n1++;if(ds.has(add(f,1)))d1++;}
   if(add(f,7)<=today){n7++;for(let i=1;i<=7;i++)if(ds.has(add(f,i))){d7++;break;}}});return{n1,d1,n7,d7};}
+
+// ---------- v2.0: releases, trouble map, leaving, duels, features ----------
+const REL_NOTES={'1.9':'French & Italian, code locks, play stats','2.0':'Live status, trouble map, feature tracking'};
+function releases(){if(ST._rel&&ST._relAt===ST.when)return ST._rel;const f={};for(const p of ST.P)for(const e of p.ev)if(e.v&&(!f[e.v]||e.t<f[e.v]))f[e.v]=e.t;
+ const r=Object.entries(f).map(([v,t])=>({v,t,n:REL_NOTES[v]||''})).sort((a,b)=>a.t-b.t);ST._rel=r;ST._relAt=ST.when;return r;}
+function relCompare(){const R=releases();if(!R.length)return'';const row=r=>{const b0=r.t-7*DAY,a1=r.t+7*DAY,inB=e=>e.t>=b0&&e.t<r.t,inA=e=>e.t>=r.t&&e.t<a1;
+  const daysA=Math.max(1,Math.min(7,Math.ceil((Date.now()-r.t)/DAY))),daysB=7;
+  const actv=f=>{const s=new Set();for(const p of ST.P)for(const e of p.ev)if(f(e)&&e.k!=='open'&&e.k!=='sv')s.add(p.code+dayK(e.t));return s.size;};
+  const cnt=(k,f)=>allEv(e=>e.k===k&&f(e)).length,G=f=>allEv(e=>e.k==='g'&&f(e)),qr=f=>{const g=G(f);return g.length?Math.round(g.filter(x=>x.ab).length/g.length*100)+'%':'—';};
+  const hasB=ST.P.some(p=>p.ev.some(inB));
+  return{s:'v'+r.v,c:[`<b>v${esc(r.v)}</b> <span class="tiny">${new Date(r.t).toLocaleDateString([],{month:'short',day:'numeric'})}${r.n?' · '+esc(r.n):''}</span>`,
+   hasB?(actv(inB)/daysB).toFixed(1):'—',(actv(inA)/daysA).toFixed(1),hasB?qr(inB):'—',qr(inA),hasB?(cnt('err',inB)/daysB).toFixed(1):'—',(cnt('err',inA)/daysA).toFixed(1)]};};
+ return`<h2>Updates · 7 days before vs after</h2>${table('rel',[{h:'Update'},{h:'Players/day before',n:1},{h:'after',n:1},{h:'Quit rate before',n:1},{h:'after',n:1},{h:'Errors/day before',n:1},{h:'after',n:1}],R.slice().reverse().map(row))}
+ <div class="tiny" style="margin-top:6px">Each update also shows as a gold dashed line on the daily charts. "Before" is blank until there's data from before the update.</div>`;}
+const MAPS={tokyo:{img:'maps/tokyo.jpg',H:349,name:'🇯🇵 Tokyo'},dakar:{img:'maps/dakar.jpg',H:385,name:'🇸🇳 Dakar'}};
+const LAYERS={cr:{l:'💥 Crashes',c:'#ffc23d'},bust:{l:'🚨 Busted',c:'#ff2a6d'},quit:{l:'🚪 Quit a game',c:'#05d9e8'},bye:{l:'👋 Closed the game',c:'#b388ff'}};
+function vMap(){ST.mapCity=ST.mapCity||'tokyo';ST.layers=ST.layers||{cr:1,bust:1,quit:1,bye:1};const M=MAPS[ST.mapCity];
+ const pts=allEv(e=>inR(e)&&e.c===ST.mapCity&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&((e.k==='cr'&&ST.layers.cr)||(e.k==='bust'&&ST.layers.bust)||(e.k==='g'&&e.ab&&ST.layers.quit)||(e.k==='bye'&&ST.layers.bye)));
+ const L=e=>e.k==='g'?'quit':e.k,px=v=>(v+M.H)/(2*M.H)*800;
+ const cells={};pts.forEach(e=>{const cx=Math.floor(px(e.x)/80),cz=Math.floor(px(e.z)/80),k=cx+','+cz;(cells[k]=cells[k]||{cx,cz,n:0,k:{}}).n++;cells[k].k[L(e)]=(cells[k].k[L(e)]||0)+1;});
+ const hot=Object.values(cells).sort((a,b)=>b.n-a.n).slice(0,5);const colL='ABCDEFGHIJ';
+ const allC=c=>allEv(e=>inR(e)&&e.c===c&&Number.isFinite(e.x)&&(e.k==='cr'||e.k==='bust'||(e.k==='g'&&e.ab)||e.k==='bye')).length;
+ return`<div class="bar2"><div class="seg">${Object.entries(MAPS).map(([k,m])=>`<button class="${ST.mapCity===k?'on':''}" data-city="${k}">${m.name} · ${allC(k)}</button>`).join('')}</div></div>
+ <div class="bar2">${Object.entries(LAYERS).map(([k,o])=>`<button class="btn sm ${ST.layers[k]?'':'alt'}" data-layer="${k}" style="${ST.layers[k]?`background:${o.c};color:#07060f`:''}">${o.l} · ${pts.filter(e=>L(e)===k).length}</button>`).join('')}</div>
+ <div class="card" style="padding:6px"><div style="position:relative"><img src="${M.img}" alt="${M.name} map" style="width:100%;display:block;border-radius:10px;opacity:.85">
+ <svg viewBox="0 0 800 800" style="position:absolute;inset:0;width:100%;height:100%">
+ ${[...Array(9)].map((_,i)=>`<line x1="${(i+1)*80}" x2="${(i+1)*80}" y1="0" y2="800" stroke="#ffffff22"/><line y1="${(i+1)*80}" y2="${(i+1)*80}" x1="0" x2="800" stroke="#ffffff22"/>`).join('')}
+ ${[...Array(10)].map((_,i)=>`<text x="${i*80+4}" y="14" style="fill:#fff;font-size:13px;font-weight:800;paint-order:stroke;stroke:#000;stroke-width:3px">${colL[i]}</text><text x="4" y="${i*80+30}" style="fill:#fff;font-size:13px;font-weight:800;paint-order:stroke;stroke:#000;stroke-width:3px">${i+1}</text>`).join('')}
+ ${pts.map(e=>`<circle cx="${px(e.x).toFixed(1)}" cy="${px(e.z).toFixed(1)}" r="9" fill="${LAYERS[L(e)].c}" fill-opacity=".55" stroke="#000" stroke-opacity=".5"><title>${LAYERS[L(e)].l.slice(2)} · ${esc(nmTxt(e.p))} · ${when(e.t)}${e.k==='g'?' · '+(MODES[e.m]||e.m):''}${e.a?' · '+(ACT[e.a]||e.a).replace(/^\S+ /,''):''}</title></circle>`).join('')}
+ </svg></div></div>
+ <h2>Trouble spots</h2>${table('hot',[{h:'Square'},{h:'Total',n:1},{h:'Crashes',n:1},{h:'Busted',n:1},{h:'Quit',n:1},{h:'Closed',n:1}],hot.map(h=>({s:colL[h.cx]+(h.cz+1),c:[`<b>${colL[h.cx]||'?'}${h.cz+1}</b>`,h.n,h.k.cr||0,h.k.bust||0,h.k.quit||0,h.k.bye||0]})))}
+ <div class="tiny" style="margin-top:8px">North is at the top. Use the letters and numbers to find a square. Lots of crashes in one square can mean a tricky corner, a badly placed obstacle or heavy traffic. Lots of quits or closed games in one place can mean kids get stuck or bored there. Crashes are counted at most once every 4 seconds per player.</div>`;}
+const isQuiet=p=>p.rec&&p.last&&Date.now()-p.last>3*DAY;
+function lastThing(p){const L=p.rec&&p.rec.last,B=p.ev.filter(e=>e.k==='bye').pop();const use=L&&(!B||L.t>=B.t)?L:B;return use?{a:use.a,c:use.c,t:use.t,s:B&&B.s}:null;}
+function vLeaving(){const Q=ST.P.filter(isQuiet),byes=allEv(e=>e.k==='bye'&&inR(e)),agg={};byes.forEach(e=>{agg[e.a||'?']=(agg[e.a||'?']||0)+1;});
+ const qa={};Q.forEach(p=>{const l=lastThing(p);const k=l?l.a:'?';qa[k]=(qa[k]||0)+1;});
+ return`<h2>Kids who stopped playing (nothing for 3+ days)</h2>${Q.length?table('quiet',[{h:'Player'},{h:'Last seen'},{h:'Last thing they were doing'},{h:'Where'},{h:'Last few things before that'}],Q.map(p=>{const l=lastThing(p),ev=p.ev.filter(e=>e.k!=='sv'&&e.k!=='open'&&e.k!=='bye').slice(-3).reverse();
+  return{s:nmTxt(p),c:[nm(p),ago(p.last),l?(ACT[l.a]||esc(l.a||'—')):'<span class="tiny">not recorded</span>',l&&l.c?(CITY[l.c]||esc(l.c)):'—',`<span class="tiny">${ev.map(e=>evTxt(e)).join(' ← ')||'—'}</span>`],click:p.code};}),{search:'Search players'}):'<div class="card good" style="color:var(--green);font-weight:700">✅ Every player has played in the last 3 days.</div>'}
+ ${Q.length?`<h2>What they were doing when they left for good</h2><div class="card">${hbars(Object.entries(qa).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({l:ACT[k]||esc(k),v})),{c:'var(--red)'})}</div>`:''}
+ <h2>What kids were doing when they closed the game</h2><div class="card">${hbars(Object.entries(agg).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({l:ACT[k]||esc(k),v})),{c:'#b388ff'})}</div>
+ <div class="tiny" style="margin-top:8px">If one activity keeps showing up here — say, lots of kids leave in the middle of a police chase or in the menus — that part may be too hard, too long or confusing. Recorded from v2.0 on.</div>`;}
+function duelRows(){const out=[];for(const p of ST.P){const ev=p.ev;ev.forEach((e,i)=>{if(e.k!=='g'||e.m!=='duel'||!inR(e))return;let quit=false;
+  if(!e.ab&&!e.w){for(let j=i+1;j<ev.length;j++){const n=ev[j];if(n.t-e.t>180000)break;if(n.k==='g'||n.k==='join')break;if(n.k==='bye'){quit=true;break;}}
+   if(!quit&&!ev.slice(i+1).some(n=>n.k!=='sv'&&n.t-e.t<1800000)&&Date.now()-e.t>1800000)quit=true;}
+  out.push({p,e,gap:(e.ol&&e.ml)?e.ml-e.ol:null,res:e.ab?'left':e.w?'won':'lost',quit});});}return out.sort((a,b)=>b.e.t-a.e.t);}
+function vDuels(){const D=duelRows(),lost=D.filter(d=>d.res==='lost'),big=D.filter(d=>d.gap!=null&&Math.abs(d.gap)>=5),lq=lost.filter(d=>d.quit).length,won=D.filter(d=>d.res==='won');
+ const avgGap=D.filter(d=>d.gap!=null);const ag=avgGap.length?(avgGap.reduce((a,d)=>a+Math.abs(d.gap),0)/avgGap.length).toFixed(1):'—';
+ const lostBig=lost.filter(d=>d.gap!=null&&d.gap<=-5);
+ return`<h2>Online duel fairness</h2><div class="kpis">${kpi('Duels',D.length)}${kpi('Average level gap',ag,'between the two drivers')}${kpi('Uneven duels',big.length,'5+ levels apart',big.length?'var(--gold)':'')}${kpi('Quit after losing',lost.length?pct(lq,lost.length):'—',`${lq} of ${lost.length} losses`,lq?'var(--red)':'')}</div>
+ ${lostBig.length?`<div class="att" style="margin-top:8px"><div class="warn">⚖️ ${lostBig.length} duel${lostBig.length>1?'s were':' was'} lost to a driver 5+ levels higher${lostBig.filter(d=>d.quit).length?` — ${lostBig.filter(d=>d.quit).length} of those players then quit`:''}.</div></div>`:''}
+ <h2>Every duel</h2>${table('duels',[{h:'Player'},{h:'Their level',n:1},{h:'Rival level',n:1},{h:'Gap',n:1},{h:'Result'},{h:'Then'},{h:'When'}],D.map(d=>({s:nmTxt(d.p)+' '+d.res,c:[nm(d.p),d.e.ml||'—',d.e.ol||'—',d.gap==null?'—':`<span style="color:${Math.abs(d.gap)>=5?'var(--gold)':'inherit'}">${d.gap>0?'+':''}${d.gap}</span>`,d.res==='won'?'🏆 Won':d.res==='lost'?'Lost':'🚪 Left',d.res==='lost'?(d.quit?'<span style="color:var(--red);font-weight:700">Quit the game</span>':'Kept playing'):'',ago(d.e.t)],click:d.p.code})),{search:'Search duels'})}
+ <div class="tiny" style="margin-top:8px">Gap is the player's level minus the rival's: −8 means the rival was 8 levels higher. "Quit the game" means they closed it within 3 minutes of losing without starting anything else. Wins against rivals 5+ levels higher: ${won.filter(d=>d.gap!=null&&d.gap<=-5).length} of ${won.length}.</div>`;}
+const FEATN={garage:'🔧 Crew garage',avatar:'🧑 Driver / avatar creator',builder:'🧱 Course builder',publish:'📤 Shared a course',course_play:'🛣️ Played a player course',courses:'📋 Browsed courses',crate:'📦 Opened a crate',pet_hatch:'🥚 Hatched a pet',pet_out:'🐾 Took a pet out',item_new:'🎁 Got a new item',collection:'🗂️ Opened collection',friends:'👥 Friends list',friend_add:'🤝 Added a friend',lounge:'🛋️ Visited the lounge',emote:'💃 Used an emote',fest:'🎉 Teranga Fest item',daily:'📅 Daily reward'};
+function vFeatures(){const F=allEv(e=>e.k==='f'&&inR(e)),act=ST.P.filter(p=>p.ev.some(e=>inR(e)&&e.k!=='open'&&e.k!=='sv')).length;
+ const rows=Object.keys(FEATN).map(n=>{const f=F.filter(e=>e.n===n),pl=new Set(f.map(e=>e.p.code));return{n,u:f.length,pl:pl.size};});
+ const used=rows.filter(r=>r.u).sort((a,b)=>b.pl-a.pl||b.u-a.u),unused=rows.filter(r=>!r.u);
+ return`<div class="kpis">${kpi('Feature uses',F.length)}${kpi('Active players',act)}${kpi('Most popular',used[0]?FEATN[used[0].n].replace(/^\S+ /,''):'—',used[0]?`${used[0].pl} players`:'')}${kpi('Never used',unused.length,'features in this period',unused.length?'var(--gold)':'')}</div>
+ <h2>Players using each feature</h2><div class="card">${hbars(used.map(r=>({l:FEATN[r.n],v:r.pl})),{c:'var(--cyan)'})}</div>
+ <h2>Details</h2>${table('feat',[{h:'Feature'},{h:'Players',n:1},{h:'% of active',n:1},{h:'Uses',n:1},{h:'Uses per player',n:1}],used.concat(unused).map(r=>({s:FEATN[r.n],c:[FEATN[r.n],r.pl,pct(r.pl,act),r.u,r.pl?(r.u/r.pl).toFixed(1):'—']})),{search:'Search features'})}
+ ${unused.length?`<div class="tiny" style="margin-top:8px">Nobody used: ${unused.map(r=>FEATN[r.n].replace(/^\S+ /,'')).join(', ')}. A feature nobody finds may need a clearer button or a tip in the tutorial.</div>`:''}
+ <div class="tiny" style="margin-top:6px">Repeated taps within 20 seconds count once. Recorded from v2.0 on.</div>`;}
 // ---------- tabs ----------
-const TABS=[['overview','Overview'],['live','Live now'],['login','Login health'],['first','First steps'],['games','Games'],['online','Online play'],['sponsors','Sponsors'],['players','Players'],['errors','Errors & speed']];
+const TABS=[['overview','Overview'],['live','Live now'],['map','Trouble map'],['login','Login health'],['first','First steps'],['games','Games'],['features','Features'],['online','Online play'],['sponsors','Sponsors'],['players','Players'],['errors','Errors & speed']];
 function vOverview(){const D=chartDays(),R=days(ST.range),today=dayK(Date.now()),P=ST.P.filter(p=>p.rec);
  const act=k=>P.filter(p=>activeOn(p,k)).length,actWeek=P.filter(p=>days(7).some(k=>activeOn(p,k))).length;
  const news=allEv(e=>e.k==='new'&&inR(e)).length,games=allEv(e=>e.k==='g'&&inR(e)),mins=P.reduce((a,p)=>a+R.reduce((b,k)=>b+(p.act[k]|0),0),0);
@@ -148,7 +211,7 @@ function vOverview(){const D=chartDays(),R=days(ST.range),today=dayK(Date.now())
  ${kpi('Games played',games.length,`${Math.round(mins/6)/10} h of play`)}${kpi('Avg session',sess?Math.round(mins/sess)+' min':'—',`${sess} sessions`)}${kpi('Next-day return',rt.n1?pct(rt.d1,rt.n1):'—',rt.n1?`${rt.d1} of ${rt.n1} new players`:'needs a day of data')}${kpi('Errors (24h)',errs,'',errs?'var(--red)':'var(--green)')}</div>
  ${on?`<h2>Online now</h2>${liveBlock(4)}`:''}
  <h2>Needs attention</h2><div class="att">${A.length?A.map(([c,t])=>`<div class="${c}">${t}</div>`).join(''):'<div class="good">✅ Nothing needs attention right now.</div>'}</div>
- <h2>Active players per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:act(k)})))}</div>`;}
+ <h2>Active players per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:act(k)})))}</div>${relCompare()}`;}
 function vLogin(){const D=chartDays(),si=allEv(e=>e.k==='sin'&&inR(e)),sf=allEv(e=>e.k==='sfail'&&inR(e)),R={wrong:'Wrong or unknown code',locked:'Code locked to other devices',net:'No internet / timed out'};
  const all={si:allEv(e=>e.k==='sin'),sf:allEv(e=>e.k==='sfail')};const by=Object.keys(R).map(r=>({r,n:sf.filter(e=>e.r===r).length}));
  return`<div class="kpis">${kpi('Sign-in attempts',si.length+sf.length)}${kpi('Succeeded',si.length,pct(si.length,si.length+sf.length),'var(--green)')}${kpi('Failed',sf.length,pct(sf.length,si.length+sf.length),sf.length?'var(--red)':'')}${kpi('Auto sign-ins',si.filter(e=>e.auto).length,'remembered devices')}</div>
@@ -163,6 +226,7 @@ function vFirst(){const P=ST.P;const given=P.filter(p=>p.who||p.rec).length,sign
  ${(()=>{const r=retention();return`<div class="kpis" style="margin-top:8px">${kpi('Next-day return',r.n1?pct(r.d1,r.n1):'—',r.n1?`${r.d1} of ${r.n1} came back the day after starting`:'needs a day of data','var(--green)')}${kpi('First-week return',r.n7?pct(r.d7,r.n7):'—',r.n7?`${r.d7} of ${r.n7} came back within 7 days`:'needs a week of data')}</div>`;})()}
  <h2>Funnel · where players drop off</h2><div class="card funnel">${steps.map(([l,v],i)=>`<div class="step"><div class="lbl"><span>${i+1}. ${l}</span><span><b>${v}</b> <span class="mute">${pct(v,steps[0][1])}</span>${i&&steps[i-1][1]>v?`<span class="drop">−${steps[i-1][1]-v}</span>`:''}</span></div><div class="track"><i style="width:${steps[0][1]?v/steps[0][1]*100:0}%"></i></div></div>`).join('')}</div>
  <h2>Who is at which step</h2>${table('first',[{h:'Player'},{h:'Step reached'},{h:'Last seen'}],P.filter(p=>p.who||p.rec).map(p=>{const st=!p.rec?'1 · Has code, not opened':!playedAny(p)?'2 · Signed up, no game yet':'3 · Playing';return{s:nmTxt(p)+' '+st,c:[nm(p),st,p.rec?ago(p.last):'—'],click:p.rec?p.code:''};}),{search:'Search players'})}
+${vLeaving()}
  <div class="tiny" style="margin-top:8px">"Handed out" counts codes with a Given-to name (set with Show real names on) plus codes already used.</div>`;}
 function vGames(){const D=chartDays(),G=allEv(e=>e.k==='g'&&inR(e)),GA=allEv(e=>e.k==='g'),fin=G.filter(g=>!g.ab),avg=fin.length?fin.reduce((a,g)=>a+(g.d||0),0)/fin.length:0,w=fin.filter(g=>g.w).length;
  const by=Object.keys(MODES).map(m=>{const g=G.filter(x=>x.m===m),f=g.filter(x=>!x.ab);return{m,n:g.length,w:f.filter(x=>x.w).length,l:f.filter(x=>!x.w).length,ab:g.filter(x=>x.ab).length,d:f.length?f.reduce((a,x)=>a+(x.d||0),0)/f.length:0};}).filter(x=>x.n);
@@ -175,6 +239,7 @@ function vGames(){const D=chartDays(),G=allEv(e=>e.k==='g'&&inR(e)),GA=allEv(e=>
 function vOnline(){const D=chartDays(),f=k=>allEv(e=>e.k===k&&inR(e)),a=k=>allEv(e=>e.k===k),j=f('join'),jf=f('joinf'),dr=f('drop'),rc=f('rec');
  return`<div class="kpis">${kpi('Room joins',j.length+jf.length)}${kpi('Join success',pct(j.length,j.length+jf.length),`${jf.length} failed`,jf.length?'var(--gold)':'var(--green)')}${kpi('Connection drops',dr.length,'',dr.length?'var(--red)':'')}${kpi('Reconnected',rc.length,dr.length?pct(rc.length,dr.length)+' of drops':'')}</div>
  <h2>Per day</h2><div class="card">${line([{n:'Room joins',c:'#05d9e8',d:D.map(k=>a('join').filter(e=>dayK(e.t)===k).length)},{n:'Drops',c:'#ff5470',d:D.map(k=>a('drop').filter(e=>dayK(e.t)===k).length)},{n:'Reconnects',c:'#39ff9f',d:D.map(k=>a('rec').filter(e=>dayK(e.t)===k).length)}],D.map(short))}</div>
+ ${vDuels()}
  <h2>By player</h2>${table('online',[{h:'Player'},{h:'Joins',n:1},{h:'Failed',n:1},{h:'Drops',n:1},{h:'Reconnects',n:1}],ST.P.filter(p=>p.rec).map(p=>{const c=k=>p.ev.filter(e=>e.k===k&&inR(e)).length;return{s:nmTxt(p),c:[nm(p),c('join'),c('joinf'),c('drop'),c('rec')],click:p.code};}),{search:'Search players'})}`;}
 function vSponsors(){const D=chartDays(),V=allEv(e=>e.k==='sv'&&inR(e)),C=allEv(e=>e.k==='sc'&&inR(e)),VA=allEv(e=>e.k==='sv'),CA=allEv(e=>e.k==='sc');
  const sk=e=>{const s=e.s||'';for(const k in SPN)if(s===k||SPN[k]===s)return k==='jvh'?'jollof':k;return s||'other';};
@@ -193,9 +258,9 @@ function vPlayers(){if(ST.sel)return vPlayer(ST.P.find(p=>p.code===ST.sel));cons
  return table('players',[...lead,{h:'Now'},{h:'Last active'},{h:'Days active',n:1},{h:'Minutes',n:1},{h:'Games',n:1},{h:'Level',n:1},{h:'Device lock'}],ST.P.map(p=>{const da=R.filter(k=>activeOn(p,k)).length,mn=R.reduce((a,k)=>a+(p.act[k]|0),0),g=p.ev.filter(e=>e.k==='g'&&inR(e)).length;
   const dv=p.rec?String(p.rec.devs||'').split(',').filter(Boolean).length:0,lk=p.rec?(p.rec.lock!==0?`<span class="pill y">🔒 ${dv}/${p.rec.devMax||2}</span>`:'<span class="pill">🔓 open</span>'):'<span class="tiny">unused</span>';
   return{s:(ST.reveal?nmTxt(p):'')+' '+p.pc+(isLive(p)?' online':''),c:[...(ST.reveal?[(isLive(p)?'<span title="Online now" style="color:var(--green)">● </span>':'')+`<input class="who" data-who="${p.code}" value="${esc(p.who)}" placeholder="type a name" style="width:140px">`,esc(p.tag||'—'),`<span class="tiny">${esc(p.code)}</span> <span class="pcode">${p.pc}</span>`]:[(isLive(p)?'<span title="Online now" style="color:var(--green)">● </span>':'')+nm(p)]),isLive(p)?`<span style="color:var(--green);font-weight:700">● ${(ACT[p.live.a]||p.live.a).replace(/^\S+ /,'')}</span>`:'<span class="tiny">offline</span>',p.rec?ago(p.last):'—',da,mn,g,p.sv?levelOf(p.sv.xp):'—',lk],click:p.code};}),{search:ST.reveal?'Search by name, gamer tag or code':'Search by player code, e.g. P-A4F2'})+(ST.reveal?'<div class="tiny" style="margin-top:8px">Type a name in “Given to” and tap away — it saves straight away. Tap any other part of a row to open that player.</div>':'');}
-const EVT={open:'📱 Opened the game',sin:'✅ Signed in',sfail:'❌ Sign-in failed',new:'🆕 Created their driver',join:'🌐 Joined online room',joinf:'⚠️ Online room join failed',drop:'📶 Connection dropped',rec:'🔁 Reconnected',sv:'👀 Saw sponsor',sc:'👆 Tapped sponsor',err:'🐞 Error'};
+const EVT={cr:'💥 Crashed',bust:'🚨 Got busted',bye:'👋 Closed the game',f:'✨ Used a feature',perf:'⚙️ Speed check',open:'📱 Opened the game',sin:'✅ Signed in',sfail:'❌ Sign-in failed',new:'🆕 Created their driver',join:'🌐 Joined online room',joinf:'⚠️ Online room join failed',drop:'📶 Connection dropped',rec:'🔁 Reconnected',sv:'👀 Saw sponsor',sc:'👆 Tapped sponsor',err:'🐞 Error'};
 function evTxt(e){if(e.k==='g')return`${e.ab?'🚪 Left':e.w?'🏆 Won':'🏁 Finished'} · ${MODES[e.m]||e.m}${e.d?' · '+dur(e.d):''}`;let t=EVT[e.k]||e.k;
- if(e.k==='sfail')t+=' · '+({wrong:'wrong code',locked:'locked to other devices',net:'no internet'}[e.r]||e.r);if(e.k==='sc')t+=' · '+esc(SPN[e.s]||e.s||'');if(e.k==='err')t+=' · '+esc(e.m);if(e.k==='join'||e.k==='joinf')t+=' · '+esc(e.c||'');if(e.k==='sin'&&e.auto)t+=' (remembered)';return t;}
+ if(e.k==='sfail')t+=' · '+({wrong:'wrong code',locked:'locked to other devices',net:'no internet'}[e.r]||e.r);if(e.k==='sc')t+=' · '+esc(SPN[e.s]||e.s||'');if(e.k==='err')t+=' · '+esc(e.m);if(e.k==='f')t=FEATN[e.n]||('✨ '+esc(e.n));if(e.k==='bye'&&e.a)t+=' · while '+(ACT[e.a]||e.a).replace(/^\S+ /,'').toLowerCase();if(e.k==='perf')t+=' · '+e.f+' fps';if((e.k==='cr'||e.k==='bust')&&e.c)t+=' · '+(CITY[e.c]||e.c);if(e.k==='g'&&e.m==='duel'&&e.ol)t+=` · rival level ${e.ol}`;if(e.k==='join'||e.k==='joinf')t+=' · '+esc(e.c||'');if(e.k==='sin'&&e.auto)t+=' (remembered)';return t;}
 function vPlayer(p){if(!p){ST.sel=null;return vPlayers();}const R=days(ST.range),D=chartDays(),ev=p.ev.filter(e=>e.k!=='sv').slice().reverse(),v=p.rec,dv=v?String(v.devs||'').split(',').filter(Boolean).length:0;
  const q=(ST.q.tl||'').toLowerCase(),vis=ev.filter(e=>!q||evTxt(e).toLowerCase().includes(q));ST.exp.timeline={cols:[{h:'When'},{h:'What'}],rows:vis.map(e=>({c:[when(e.t),evTxt(e)]}))};
  return`<button class="back" data-back="1">← All players</button><div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div style="font-size:18px">${nm(p)}</div>
@@ -221,7 +286,7 @@ ${(()=>{const P=allEv(e=>e.k==='perf'&&inR(e));if(!P.length)return'<h2>Game spee
  <h2>Recent errors · newest first</h2><input class="search" data-q="err" placeholder="Filter errors" value="${esc(ST.q.err||'')}"><div class="card feed">${vis.slice(0,200).map(e=>`<div class="e"><div class="tiny">${when(e.t)} · ${nm(e.p)} · ${esc(e.src||'')}${e.l?':'+e.l:''}${e.v?' · v'+esc(e.v):''}</div><div class="m">${esc(e.m)}</div></div>`).join('')||'<div class="mute" style="padding:6px 0">✅ No errors recorded.</div>'}</div>`;}
 // ---------- frame ----------
 function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classList.toggle('reveal',ST.reveal);
- const V={live:vLive,overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors};
+ const V={map:vMap,features:vFeatures,live:vLive,overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors};
  const ae=document.activeElement,qid=ae&&ae.dataset&&ae.dataset.q,pos=ae&&ae.selectionStart;
  $('app').innerHTML=`<div class="wrap"><header><div class="hrow"><h1>USR <span>ADMIN</span></h1><div class="tog" id="tog" role="switch" aria-checked="${ST.reveal}" title="Show real names">${ST.reveal?'🔓':'🔒'}<i></i>Show real names</div></div>
  <div class="banner">🔓 REAL NAMES VISIBLE · switch off when you're done</div><nav>${TABS.map(([k,l])=>`<button class="${ST.tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</nav></header>
@@ -236,13 +301,15 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  document.querySelectorAll('[data-q]').forEach(el=>el.oninput=()=>{ST.q[el.dataset.q]=el.value;draw();});
  if(qid){const el=document.querySelector(`[data-q="${qid}"]`);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
  document.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>{if(!r.dataset.open)return;ST.tab='players';ST.sel=r.dataset.open;draw();scrollTo(0,0);});
+ document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{ST.mapCity=b.dataset.city;draw();});
+ document.querySelectorAll('[data-layer]').forEach(b=>b.onclick=()=>{ST.layers[b.dataset.layer]=!ST.layers[b.dataset.layer];draw();});
  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ST.sel=null;draw();});
  document.querySelectorAll('[data-who]').forEach(el=>el.onclick=e=>e.stopPropagation());
  document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});const p=ST.P.find(x=>x.code===c);if(p)p.who=ST.codes[c].who;
   try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const p=ST.P.find(x=>x.code===b.dataset.c),a=b.dataset.a,ref=db.ref('usr/players/'+p.save);b.disabled=true;
   try{if(a==='lock')await ref.update({lock:1});if(a==='unlock')await ref.update({lock:0});if(a==='reset')await ref.update({devs:''});if(a==='plus')await ref.update({lock:1,devMax:3});p.rec=(await ref.once('value')).val();}catch(e){alert('Could not update.');}draw();});}
-function exportTab(){const k={login:'login',first:'first',games:'games',online:'online',sponsors:'sponsors',players:ST.sel?'timeline':'players',errors:'errors'}[ST.tab];
+function exportTab(){const k={map:'hot',features:'feat',login:'login',first:'first',games:'games',online:'online',sponsors:'sponsors',players:ST.sel?'timeline':'players',errors:'errors'}[ST.tab];
  let cols=[],rows=[];if(k&&ST.exp[k]){cols=ST.exp[k].cols.map(c=>c.h);rows=ST.exp[k].rows.map(r=>r.c);}
  if(!cols.length){const D=days(ST.range);cols=['Day','Active players','Games','Minutes played','Errors'];rows=D.map(d=>[d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6),ST.P.filter(p=>activeOn(p,d)).length,allEv(e=>e.k==='g'&&dayK(e.t)===d).length,ST.P.reduce((a,p)=>a+(p.act[d]|0),0),allEv(e=>e.k==='err'&&dayK(e.t)===d).length]);}
  const clean=v=>String(v==null?'':v).replace(/<[^>]*>/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/\s+/g,' ').trim(),csv=[cols,...rows].map(r=>r.map(v=>'"'+clean(v).replace(/"/g,'""')+'"').join(',')).join('\n');

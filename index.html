@@ -5605,10 +5605,10 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'1.9'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.0'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
- T.add=(k,o)=>{const e=Object.assign({k,t:Date.now()},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
+ T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
  T.take=()=>{const q=T.q;T.q=[];T.save();return q;};
  T.unshift=q=>{T.q=q.concat(T.q).slice(-300);T.save();};
  return T;})();
@@ -5634,17 +5634,19 @@ const _njT=netJoinCity;netJoinCity=async function(city){const was=NET.cityName==
 // games: races, duels, chases, deliveries, courses
 let telT=0;
 const _upT=update;update=function(dt){_upT.apply(this,arguments);telT+=dt;if(telT<1)return;telT=0;try{telTick();}catch(e){}};
+function telPos(){try{return player?{x:Math.round(player.x),z:Math.round(player.z),c:S.city||''}:{};}catch(e){return{};}}
 function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now();
  if(!TEL.st)TEL.st={races:st.races|0,wins:st.wins|0,esc:st.escapes|0,bust:st.busts|0};
  // races and duels
  if(S.race&&!TEL.cur)TEL.cur={t:now,r:st.races|0,w:st.wins|0,m:S.race.online?'duel':S.race.type==='drag'?'drag':'race',id:S.race.ev&&S.race.ev.id||''};
- if(!S.race&&TEL.cur){const c=TEL.cur,d=Math.round((now-c.t)/1000);if((st.races|0)>c.r)TEL.add('g',{m:c.m,id:c.id,d,w:(st.wins|0)>c.w?1:0});else if(d>5)TEL.add('g',{m:c.m,id:c.id,d,ab:1});TEL.cur=null;}
+ if(TEL.cur&&TEL.cur.m==='duel'&&!TEL.cur.ol){try{const r=NET.duel&&NET.remotes&&NET.remotes.get?NET.remotes.get(NET.duel.peer):null;TEL.cur.ol=r&&r.d&&r.d.lv||0;TEL.cur.ml=levelOf(SAVE.xp);}catch(e){}}
+ if(!S.race&&TEL.cur){const c=TEL.cur,d=Math.round((now-c.t)/1000);if((st.races|0)>c.r)TEL.add('g',Object.assign({m:c.m,id:c.id,d,w:(st.wins|0)>c.w?1:0},c.ol?{ol:c.ol,ml:c.ml}:{},telPos()));else if(d>5)TEL.add('g',Object.assign({m:c.m,id:c.id,d,ab:1},c.ol?{ol:c.ol,ml:c.ml}:{},telPos()));TEL.cur=null;}
  // police chases
  const lvl=S.heat&&S.heat.level|0;if(lvl>0&&!TEL.heat)TEL.heat={t:now,e:st.escapes|0,b:st.busts|0};
- if(TEL.heat&&lvl===0){const h=TEL.heat,d=Math.round((now-h.t)/1000);if((st.escapes|0)>h.e)TEL.add('g',{m:'chase',d,w:1});else if((st.busts|0)>h.b)TEL.add('g',{m:'chase',d,w:0});TEL.heat=null;}
+ if(TEL.heat&&lvl===0){const h=TEL.heat,d=Math.round((now-h.t)/1000);if((st.escapes|0)>h.e)TEL.add('g',Object.assign({m:'chase',d,w:1},telPos()));else if((st.busts|0)>h.b)TEL.add('g',Object.assign({m:'chase',d,w:0},telPos()));TEL.heat=null;}
  // deliveries
  if(S.deliv&&!TEL.deliv)TEL.deliv={t:now,c:SAVE.cash};
- if(!S.deliv&&TEL.deliv){const j=TEL.deliv,d=Math.round((now-j.t)/1000);TEL.add('g',{m:'job',d,w:SAVE.cash>j.c?1:0,ab:SAVE.cash>j.c?0:1});TEL.deliv=null;}
+ if(!S.deliv&&TEL.deliv){const j=TEL.deliv,d=Math.round((now-j.t)/1000);TEL.add('g',Object.assign({m:'job',d,w:SAVE.cash>j.c?1:0,ab:SAVE.cash>j.c?0:1},telPos()));TEL.deliv=null;}
  // player-made courses
  if(S.crun&&!TEL.crun)TEL.crun={t:now};if(!S.crun&&TEL.crun){const d=Math.round((now-TEL.crun.t)/1000);TEL.add('g',{m:'course',d,w:$('modalCard')&&/FINISHED|TERMIN|FINITO/.test($('modalCard').innerText)?1:0});TEL.crun=null;}
  // sponsor billboards seen while driving or walking
@@ -5670,6 +5672,17 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
   try{if(SAVE){if(typeof CARS!=='undefined'&&CARS[SAVE.current])o.car=CARS[SAVE.current].name;o.lv=levelOf(SAVE.xp);o.cash=SAVE.cash|0;}}catch(e){}
   try{if(typeof NET!=='undefined'&&NET){o.on=NET.connected?1:0;if(NET.room)o.rm=NET.cityName||S.city||'';o.nb=NET.remotes?Object.keys(NET.remotes).length:0;}}catch(e){}
   return o;}catch(e){return null;}};})();
+// ---- trouble map, features, last activity (owner dashboard v2.0) ----
+(function(){let lastCr=0,nCr=0;
+ const _sp=sparks;sparks=function(c){try{if(c===player&&S.state==='play'&&nCr<80&&Date.now()-lastCr>4000){lastCr=Date.now();nCr++;const L=TEL.live&&TEL.live();TEL.add('cr',Object.assign({a:L?L.a:''},telPos()));}}catch(e){}return _sp.apply(this,arguments);};
+ const _bu=busted;busted=function(){try{TEL.add('bust',Object.assign({h:S.heat&&S.heat.level|0},telPos()));}catch(e){}return _bu.apply(this,arguments);};
+ const FEAT={openGarage:'garage',openCreator:'avatar',openBuilder:'builder',publish:'publish',startCourse:'course_play',openCourses:'courses',openCrate:'crate',openCollection:'collection',openFriends:'friends',addFriend:'friend_add',enterLounge:'lounge',emote:'emote',meetEmote:'emote',collectFest:'fest',showDaily:'daily'};
+ const seen={};const feat=n=>{const now=Date.now();if(seen[n]&&now-seen[n]<20000)return;seen[n]=now;TEL.add('f',{n});};TEL.feat=feat;
+ for(const fn in FEAT){if(typeof window[fn]!=='function')continue;const orig=window[fn];window[fn]=function(){try{if(SAVE)feat(FEAT[fn]);}catch(e){}return orig.apply(this,arguments);};}
+ let pv=null;setInterval(()=>{try{if(!SAVE||!SAVE.inv)return;const iv=SAVE.inv,cur={p:(iv.pets||[]).length,e:iv.pet||'',it:(iv.items||[]).length};
+  if(pv){if(cur.p>pv.p)feat('pet_hatch');if(cur.e&&cur.e!==pv.e)feat('pet_out');if(cur.it>pv.it)feat('item_new');}pv=cur;}catch(e){}},3000);
+ let byeAt=0;const bye=()=>{if(!SAVE||Date.now()-byeAt<15000)return;byeAt=Date.now();try{const L=TEL.live&&TEL.live();TEL.add('bye',Object.assign({a:L?L.a:'',s:Math.round((Date.now()-(TEL.t0||Date.now()))/1000)},telPos()));}catch(e){}};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)bye();});addEventListener('pagehide',bye);})();
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 </script>
@@ -5726,7 +5739,7 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
   try{await ref().child('ev').update(up);}catch(e){TEL.unshift(q);}telBusy=false;}
  function telStart(){if(telStarted)return;telStarted=true;TEL.flush=()=>{if(!telTimer)telTimer=setTimeout(()=>{telTimer=null;telFlush();},20000);};setTimeout(telFlush,4000);
   setInterval(()=>{if(!P.user||P.super||document.hidden||typeof S==='undefined'||S.state!=='play')return;ref().child('act/'+dayK(Date.now())).transaction(v=>(v||0)+1).catch(()=>{});},60000);
-  let liveSig='',liveAt=0,liveOn=false;const liveSend=force=>{if(!P.user||P.super||!window.TEL||!TEL.live)return;if(document.hidden){if(liveOn){liveOn=false;ref().child('live').remove().catch(()=>{});}return;}const o=TEL.live();if(!o)return;const sig=o.c+'|'+o.a+'|'+o.d+'|'+o.rm;const now=Date.now();if(!force&&sig===liveSig&&now-liveAt<25000)return;if(now-liveAt<4000&&!force)return;liveSig=sig;liveAt=now;if(!liveOn){liveOn=true;try{ref().child('live').onDisconnect().remove();}catch(e){}}ref().child('live').set(o).catch(()=>{});};
+  let liveSig='',liveAt=0,liveOn=false;const liveSend=force=>{if(!P.user||P.super||!window.TEL||!TEL.live)return;if(document.hidden){if(liveOn){liveOn=false;ref().child('live').remove().catch(()=>{});}return;}const o=TEL.live();if(!o)return;const sig=o.c+'|'+o.a+'|'+o.d+'|'+o.rm;const now=Date.now();if(!force&&sig===liveSig&&now-liveAt<25000)return;if(now-liveAt<4000&&!force)return;liveSig=sig;liveAt=now;if(!liveOn){liveOn=true;try{ref().child('live').onDisconnect().remove();}catch(e){}}ref().update({live:o,last:o}).catch(()=>{});};
   setTimeout(()=>liveSend(true),2500);setInterval(()=>liveSend(false),5000);document.addEventListener('visibilitychange',()=>liveSend(true));
   addEventListener('pagehide',()=>{telFlush();try{ref().child('live').remove();}catch(e){}});document.addEventListener('visibilitychange',()=>{if(document.hidden)telFlush();});}
  const withT=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),ms))]);
