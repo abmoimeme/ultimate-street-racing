@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 :root{--bg:#07060f;--card:#12101f;--line:#ffffff1a;--ink:#f4f2ff;--mute:#a8a3c4;--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--red:#ff5470}
 *{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif;min-height:100vh;-webkit-text-size-adjust:100%}
@@ -54,7 +55,7 @@ td{padding:8px;border-bottom:1px solid #ffffff0d;white-space:nowrap}tr.click{cur
 <body>
 <div id="app"></div>
 <script>
-const CFG={databaseURL:"https://ultimate-street-racing-default-rtdb.firebaseio.com"};
+const CFG={databaseURL:"https://ultimate-street-racing-default-rtdb.firebaseio.com",apiKey:"AIzaSyDa6Ml0X9dZFmZgmsCbWWF2Su3qmqLJN9Q",authDomain:"ultimate-street-racing.firebaseapp.com",projectId:"ultimate-street-racing",appId:"1:756616787847:web:5371aab9cb2dd767bf8522"};
 firebase.initializeApp(CFG);const db=firebase.database();
 const S1='usr-save-7f3a',S2='usr-net-b91c',SUPER_NET='200b30764f8b8a5e8b5590bc',DK='usr_dash_v1';
 const SPN={jollof:'Jollof Ventures',jvh:'Jollof Ventures',pah:'Planet Auto Hub',spark:'Elite Global Travel',farm:'Nioro Farms',all:'All sponsors (start screen)'};
@@ -72,16 +73,32 @@ const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—',dur=s=>!s?'—':s<60?Math.round
 const levelOf=xp=>Math.min(999,1+Math.floor(Math.pow((xp||0)/120,1/1.5)));
 const ST={admin:null,codes:{},P:[],tab:'overview',range:7,reveal:false,q:{},sel:null,loading:false,when:0,exp:{}};
 // ---------- sign-in (one account: the owner) ----------
-function renderLogin(err){document.body.classList.remove('reveal');$('app').innerHTML=`<div class="login"><h1>USR ADMIN</h1><div class="mute">Private owner page · Ultimate Street Racing</div>
- <input type="password" id="pw" placeholder="Password" autocomplete="current-password"><label class="tiny" style="display:flex;gap:6px;align-items:center;margin:10px 0"><input type="checkbox" id="rem" checked> Keep me signed in on this device</label>
- <button class="btn" id="go" style="width:100%;padding:12px">SIGN IN</button>${err?`<div class="err">${esc(err)}</div>`:''}<div class="tiny" style="margin-top:14px">Your password is your ABMOIMEME super-user code.</div></div>`;
- $('go').onclick=()=>signIn($('pw').value,$('rem').checked);$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('pw').focus();}
-async function signIn(raw,rem){const c=normCode(raw);if(!c){renderLogin('Wrong password.');return;}const save=await sha(S1+c),net=await sha(S2+c);if(net!==SUPER_NET){renderLogin('Wrong password.');return;}
- let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){renderLogin('Could not reach the database.');return;}
- ST.admin={save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}await importNames();load();}
+const AUTH=firebase.auth?firebase.auth():null;
+function renderLogin(err,showCode){document.body.classList.remove('reveal');$('app').innerHTML=`<div class="login"><h1>USR ADMIN</h1><div class="mute">Private owner page · Ultimate Street Racing</div>
+ <button class="btn" id="gg" style="width:100%;padding:13px;margin-top:18px;background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px"><svg width="18" height="18" viewBox="0 0 48 48" style="display:inline;width:18px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>SIGN IN WITH GOOGLE</button>
+ ${err?`<div class="err">${esc(err)}</div>`:''}
+ <div style="margin-top:22px">${showCode?`<input type="password" id="pw" placeholder="Super-user code" autocomplete="current-password"><label class="tiny" style="display:flex;gap:6px;align-items:center;margin:10px 0"><input type="checkbox" id="rem" checked> Keep me signed in on this device</label><button class="btn alt" id="go" style="width:100%;padding:11px">SIGN IN WITH CODE</button>`:`<a href="#" id="usecode" class="tiny" style="color:var(--mute)">Backup: sign in with your super-user code</a>`}</div></div>`;
+ $('gg').onclick=googleIn;if($('usecode'))$('usecode').onclick=e=>{e.preventDefault();renderLogin(err,true);};
+ if($('go')){$('go').onclick=()=>signIn($('pw').value,$('rem').checked);$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('pw').focus();}}
+async function googleIn(){if(!AUTH){renderLogin('Google sign-in is not available.');return;}const pr=new firebase.auth.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
+ try{await AUTH.signInWithPopup(pr);}catch(e){if(e&&/popup-blocked|operation-not-supported/.test(e.code||''))return AUTH.signInWithRedirect(pr);if(e&&/popup-closed|cancelled-popup/.test(e.code||''))return;renderLogin('Google sign-in failed: '+(e&&e.message||e));}}
+async function afterGoogle(u){let adm=null;try{adm=(await db.ref('usr/admin').once('value')).val();}catch(e){await AUTH.signOut();renderLogin(`${u.email} isn't allowed into this dashboard.`);return;}
+ if(!adm||!adm.codes){renderLink(u);return;}
+ ST.admin={mode:'google',email:u.email,save:adm.sv||null};ST.codes=adm.codes||{};await importNames();load();}
+function renderLink(u,err){$('app').innerHTML=`<div class="login"><h1>ONE-TIME SETUP</h1><div class="mute">Signed in as ${esc(u.email)}. Enter your super-user code once to connect your player list to your Google account. You won't need it again.</div>
+ <input type="password" id="pw" placeholder="Super-user code"><button class="btn" id="go" style="width:100%;padding:12px;margin-top:12px">CONNECT</button>${err?`<div class="err">${esc(err)}</div>`:''}<div class="tiny" style="margin-top:14px"><a href="#" id="out2" style="color:var(--mute)">Use a different Google account</a></div></div>`;
+ $('out2').onclick=async e=>{e.preventDefault();await AUTH.signOut();renderLogin();};
+ $('go').onclick=async()=>{const c=normCode($('pw').value);if(!c)return renderLink(u,'Wrong code.');const save=await sha(S1+c),net=await sha(S2+c);if(net!==SUPER_NET)return renderLink(u,'Wrong code.');
+  let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){return renderLink(u,'Could not reach the database.');}
+  try{await db.ref('usr/admin').set({codes:(rec&&rec.codes)||{},sv:save,linked:Date.now()});}catch(e){return renderLink(u,'Could not save: '+(e.message||e));}
+  afterGoogle(u);};}
+async function signIn(raw,rem){const c=normCode(raw);if(!c){renderLogin('Wrong code.',true);return;}const save=await sha(S1+c),net=await sha(S2+c);if(net!==SUPER_NET){renderLogin('Wrong code.',true);return;}
+ let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){renderLogin('Could not reach the database.',true);return;}
+ ST.admin={mode:'code',save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}await importNames();load();}
+async function saveCodes(){const w=[];if(ST.admin.mode==='google')w.push(db.ref('usr/admin/codes').set(ST.codes));if(ST.admin.save)w.push(db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes).catch(e=>{if(ST.admin.mode!=='google')throw e;}));await Promise.all(w);}
 async function importNames(){const m=location.hash.match(/names=([^&]+)/);if(!m)return;let n=0;
  decodeURIComponent(m[1]).split(',').forEach(x=>{const i=x.indexOf(':');if(i<0)return;const code=x.slice(0,i).trim().toUpperCase(),who=x.slice(i+1).trim().slice(0,40);if(!ST.codes[code]||!who)return;ST.codes[code]=Object.assign({},ST.codes[code],{who});n++;});
- if(n)try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);ST.flash=`✅ Saved ${n} player name${n>1?'s':''}.`;ST.reveal=true;}catch(e){ST.flash='⚠️ Could not save the names.';}
+ if(n)try{await saveCodes();ST.flash=`✅ Saved ${n} player name${n>1?'s':''}.`;ST.reveal=true;}catch(e){ST.flash='⚠️ Could not save the names.';}
  history.replaceState(null,'',location.pathname+location.search);}
 // ---------- data ----------
 async function load(){ST.loading=true;draw();const out=[];
@@ -293,11 +310,11 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  <div class="bar2"><div class="seg">${[[1,'Today'],[7,'7 days'],[30,'30 days']].map(([d,l])=>`<button class="${ST.range===d?'on':''}" data-r="${d}">${l}</button>`).join('')}</div><span class="sp"></span>
  <span class="tiny">${ST.loading?'Loading…':'Updated '+ago(ST.when)}</span><button class="btn alt sm" id="rf" title="Refresh">↻</button><button class="btn alt sm" id="ex">⬇ Export</button></div>
  ${ST.flash?`<div class="card" style="margin-bottom:10px;border-color:var(--green);color:var(--green);font-weight:700">${esc(ST.flash)}</div>`:''}${ST.loading&&!ST.P.length?'<div class="card mute">Loading players…</div>':V[ST.tab]()}
- <div class="tiny" style="margin-top:22px;display:flex;justify-content:space-between"><span>Private owner page · players never see it</span><a href="#" id="out" style="color:var(--mute)">Sign out</a></div></div>`;
+ <div class="tiny" style="margin-top:22px;display:flex;justify-content:space-between"><span>Private owner page · ${ST.admin&&ST.admin.mode==='google'?'signed in as '+esc(ST.admin.email):'signed in with code'}</span><a href="#" id="out" style="color:var(--mute)">Sign out</a></div></div>`;
  $('tog').onclick=()=>{ST.reveal=!ST.reveal;ST.flash='';draw();};
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.tab;ST.sel=null;draw();scrollTo(0,0);});
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ST.range=+b.dataset.r;draw();});
- $('rf').onclick=load;$('out').onclick=e=>{e.preventDefault();try{localStorage.removeItem(DK);}catch(x){}ST.admin=null;ST.P=[];renderLogin();};$('ex').onclick=exportTab;
+ $('rf').onclick=load;$('out').onclick=async e=>{e.preventDefault();try{localStorage.removeItem(DK);}catch(x){}ST.admin=null;ST.P=[];try{if(AUTH&&AUTH.currentUser)await AUTH.signOut();}catch(x){}renderLogin();};$('ex').onclick=exportTab;
  document.querySelectorAll('[data-q]').forEach(el=>el.oninput=()=>{ST.q[el.dataset.q]=el.value;draw();});
  if(qid){const el=document.querySelector(`[data-q="${qid}"]`);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
  document.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>{if(!r.dataset.open)return;ST.tab='players';ST.sel=r.dataset.open;draw();scrollTo(0,0);});
@@ -306,7 +323,7 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ST.sel=null;draw();});
  document.querySelectorAll('[data-who]').forEach(el=>el.onclick=e=>e.stopPropagation());
  document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});const p=ST.P.find(x=>x.code===c);if(p)p.who=ST.codes[c].who;
-  try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
+  try{await saveCodes();el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const p=ST.P.find(x=>x.code===b.dataset.c),a=b.dataset.a,ref=db.ref('usr/players/'+p.save);b.disabled=true;
   try{if(a==='lock')await ref.update({lock:1});if(a==='unlock')await ref.update({lock:0});if(a==='reset')await ref.update({devs:''});if(a==='plus')await ref.update({lock:1,devMax:3});p.rec=(await ref.once('value')).val();}catch(e){alert('Could not update.');}draw();});}
 function exportTab(){const k={map:'hot',features:'feat',login:'login',first:'first',games:'games',online:'online',sponsors:'sponsors',players:ST.sel?'timeline':'players',errors:'errors'}[ST.tab];
@@ -319,7 +336,9 @@ async function pollLive(){if(!ST.admin||ST.loading||!ST.P.length||document.hidde
  ST.lastLive=Date.now();const ae=document.activeElement;if(ch&&!(ae&&/INPUT|TEXTAREA/.test(ae.tagName)))draw();else{const el=document.getElementById('livestamp');if(el)el.textContent='checked '+ago(ST.lastLive);}}
 setInterval(pollLive,15000);
 setInterval(()=>{const ae=document.activeElement;if(ST.admin&&!ST.loading&&!document.hidden&&!(ae&&/INPUT|TEXTAREA/.test(ae.tagName)))load();},120000);
-(async()=>{let c=null;try{c=localStorage.getItem(DK);}catch(e){}if(c)signIn(c,true);else renderLogin();})();
+(async()=>{let c=null;try{c=localStorage.getItem(DK);}catch(e){}if(c){signIn(c,true);return;}
+ if(!AUTH){renderLogin();return;}$('app').innerHTML='<div class="login mute">Loading…</div>';try{await AUTH.getRedirectResult();}catch(e){}
+ let first=true;AUTH.onAuthStateChanged(u=>{if(u){if(!ST.admin)afterGoogle(u);}else if(first||ST.admin){ST.admin=null;ST.P=[];renderLogin();}first=false;});})();
 </script>
 </body>
 </html>
