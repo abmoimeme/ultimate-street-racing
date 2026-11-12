@@ -74,7 +74,11 @@ function renderLogin(err){document.body.classList.remove('reveal');$('app').inne
  $('go').onclick=()=>signIn($('pw').value,$('rem').checked);$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('pw').focus();}
 async function signIn(raw,rem){const c=normCode(raw);if(!c){renderLogin('Wrong password.');return;}const save=await sha(S1+c),net=await sha(S2+c);if(net!==SUPER_NET){renderLogin('Wrong password.');return;}
  let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){renderLogin('Could not reach the database.');return;}
- ST.admin={save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}load();}
+ ST.admin={save,rec};ST.codes=(rec&&rec.codes)||{};if(rem)try{localStorage.setItem(DK,c);}catch(e){}await importNames();load();}
+async function importNames(){const m=location.hash.match(/names=([^&]+)/);if(!m)return;let n=0;
+ decodeURIComponent(m[1]).split(',').forEach(x=>{const i=x.indexOf(':');if(i<0)return;const code=x.slice(0,i).trim().toUpperCase(),who=x.slice(i+1).trim().slice(0,40);if(!ST.codes[code]||!who)return;ST.codes[code]=Object.assign({},ST.codes[code],{who});n++;});
+ if(n)try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);ST.flash=`✅ Saved ${n} player name${n>1?'s':''}.`;ST.reveal=true;}catch(e){ST.flash='⚠️ Could not save the names.';}
+ history.replaceState(null,'',location.pathname+location.search);}
 // ---------- data ----------
 async function load(){ST.loading=true;draw();const out=[];
  await Promise.all(Object.keys(ST.codes).map(async code=>{const save=await sha(S1+code),net=await sha(S2+code);let rec=null;try{rec=(await db.ref('usr/players/'+save).once('value')).val();}catch(e){}
@@ -88,8 +92,8 @@ function allEv(f){const r=[];for(const p of ST.P)for(const e of p.ev)if(!f||f(e)
 function days(n){const out=[];const d=new Date();d.setHours(12,0,0,0);for(let i=n-1;i>=0;i--)out.push(dayK(d.getTime()-i*DAY));return out;}
 const chartDays=()=>days(Math.max(ST.range,7));
 function activeOn(p,k){if((p.act[k]|0)>0)return true;return p.ev.some(e=>e.k!=='open'&&e.k!=='sv'&&dayK(e.t)===k);}
-function nm(p){return ST.reveal?`<span class="real">${esc(p.who||p.tag||'?')}</span> <span class="tiny">${esc(p.tag&&p.tag!==p.who?p.tag+' · ':'')}${esc(p.code)}</span>`:`<span class="pcode">${p.pc}</span>`;}
-const nmTxt=p=>ST.reveal?[p.who,p.tag,p.code].filter(Boolean).join(' · '):p.pc;
+function nm(p){return ST.reveal?(p.who?`<span class="real">${esc(p.who)}</span>`:'<span class="tiny">No name yet</span>')+` <span class="pcode">${p.pc}</span>`:`<span class="pcode">${p.pc}</span>`;}
+const nmTxt=p=>ST.reveal?[p.who||'No name yet',p.pc,p.tag,p.code].filter(Boolean).join(' · '):p.pc;
 // ---------- charts ----------
 function bars(rows,opt={}){const W=600,H=opt.h||150,pad=24,n=rows.length,max=Math.max(1,...rows.map(r=>(r.v||0)+(r.v2||0))),bw=(W-pad)/n;
  let s=`<svg viewBox="0 0 ${W} ${H+18}" role="img">`;for(let i=0;i<=2;i++){const y=6+(H-12)*(1-i/2);s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#ffffff12"/><text x="0" y="${y+3}">${Math.round(max*i/2)}</text>`;}
@@ -156,11 +160,12 @@ function vSponsors(){const D=chartDays(),V=allEv(e=>e.k==='sv'&&inR(e)),C=allEv(
  <h2>Views and taps per day</h2><div class="card">${line([{n:'Views',c:'#05d9e8',d:D.map(k=>VA.filter(e=>dayK(e.t)===k).reduce((a,e)=>a+(e.p==='start'?brands.length:1),0))},{n:'Taps',c:'#ff2a6d',d:D.map(k=>CA.filter(e=>dayK(e.t)===k).length)}],D.map(short))}</div>
  <div class="grid2"><div><h2>By sponsor</h2>${table('sponsors',[{h:'Sponsor'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsS.map(r=>({s:SPN[r.k],c:[SPN[r.k],r.v,r.c,ctr(r.c,r.v)]})))}</div>
  <div><h2>By position</h2>${table('spos',[{h:'Position'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsP.map(r=>({s:POS[r.p],c:[POS[r.p],r.v,r.c,ctr(r.c,r.v)]})))}</div></div>
- <div class="tiny" style="margin-top:8px">A billboard counts once per board per visit when a player drives or walks within 30 m. The start-screen strip shows all four sponsors together, so each start-screen view counts for every sponsor. Logos don't open links yet, so a tap shows interest only.</div>`;}
+ <div class="tiny" style="margin-top:8px">A billboard counts once per board per visit when a player drives or walks within 30 m. The start-screen strip shows all four sponsors together, so each start-screen view counts for every sponsor. Tapping a logo on a screen opens that sponsor's Instagram (Elite Global Travel has no link yet). City billboards can't be tapped.</div>`;}
 function vPlayers(){if(ST.sel)return vPlayer(ST.P.find(p=>p.code===ST.sel));const R=days(ST.range);
- return table('players',[{h:'Player'},{h:'Last active'},{h:'Days active',n:1},{h:'Minutes',n:1},{h:'Games',n:1},{h:'Level',n:1},{h:'Device lock'}],ST.P.map(p=>{const da=R.filter(k=>activeOn(p,k)).length,mn=R.reduce((a,k)=>a+(p.act[k]|0),0),g=p.ev.filter(e=>e.k==='g'&&inR(e)).length;
+ const lead=ST.reveal?[{h:'Given to'},{h:'Gamer tag'},{h:'Code'}]:[{h:'Player'}];
+ return table('players',[...lead,{h:'Last active'},{h:'Days active',n:1},{h:'Minutes',n:1},{h:'Games',n:1},{h:'Level',n:1},{h:'Device lock'}],ST.P.map(p=>{const da=R.filter(k=>activeOn(p,k)).length,mn=R.reduce((a,k)=>a+(p.act[k]|0),0),g=p.ev.filter(e=>e.k==='g'&&inR(e)).length;
   const dv=p.rec?String(p.rec.devs||'').split(',').filter(Boolean).length:0,lk=p.rec?(p.rec.lock!==0?`<span class="pill y">🔒 ${dv}/${p.rec.devMax||2}</span>`:'<span class="pill">🔓 open</span>'):'<span class="tiny">unused</span>';
-  return{s:(ST.reveal?nmTxt(p):'')+' '+p.pc,c:[nm(p),p.rec?ago(p.last):'—',da,mn,g,p.sv?levelOf(p.sv.xp):'—',lk],click:p.code};}),{search:ST.reveal?'Search by name, gamer tag or code':'Search by player code, e.g. P-A4F2'});}
+  return{s:(ST.reveal?nmTxt(p):'')+' '+p.pc,c:[...(ST.reveal?[`<input class="who" data-who="${p.code}" value="${esc(p.who)}" placeholder="type a name" style="width:140px">`,esc(p.tag||'—'),`<span class="tiny">${esc(p.code)}</span> <span class="pcode">${p.pc}</span>`]:[nm(p)]),p.rec?ago(p.last):'—',da,mn,g,p.sv?levelOf(p.sv.xp):'—',lk],click:p.code};}),{search:ST.reveal?'Search by name, gamer tag or code':'Search by player code, e.g. P-A4F2'})+(ST.reveal?'<div class="tiny" style="margin-top:8px">Type a name in “Given to” and tap away — it saves straight away. Tap any other part of a row to open that player.</div>':'');}
 const EVT={open:'📱 Opened the game',sin:'✅ Signed in',sfail:'❌ Sign-in failed',new:'🆕 Created their driver',join:'🌐 Joined online room',joinf:'⚠️ Online room join failed',drop:'📶 Connection dropped',rec:'🔁 Reconnected',sv:'👀 Saw sponsor',sc:'👆 Tapped sponsor',err:'🐞 Error'};
 function evTxt(e){if(e.k==='g')return`${e.ab?'🚪 Left':e.w?'🏆 Won':'🏁 Finished'} · ${MODES[e.m]||e.m}${e.d?' · '+dur(e.d):''}`;let t=EVT[e.k]||e.k;
  if(e.k==='sfail')t+=' · '+({wrong:'wrong code',locked:'locked to other devices',net:'no internet'}[e.r]||e.r);if(e.k==='sc')t+=' · '+esc(SPN[e.s]||e.s||'');if(e.k==='err')t+=' · '+esc(e.m);if(e.k==='join'||e.k==='joinf')t+=' · '+esc(e.c||'');if(e.k==='sin'&&e.auto)t+=' (remembered)';return t;}
@@ -188,9 +193,9 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  <div class="banner">🔓 REAL NAMES VISIBLE · switch off when you're done</div><nav>${TABS.map(([k,l])=>`<button class="${ST.tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</nav></header>
  <div class="bar2"><div class="seg">${[[1,'Today'],[7,'7 days'],[30,'30 days']].map(([d,l])=>`<button class="${ST.range===d?'on':''}" data-r="${d}">${l}</button>`).join('')}</div><span class="sp"></span>
  <span class="tiny">${ST.loading?'Loading…':'Updated '+ago(ST.when)}</span><button class="btn alt sm" id="rf" title="Refresh">↻</button><button class="btn alt sm" id="ex">⬇ Export</button></div>
- ${ST.loading&&!ST.P.length?'<div class="card mute">Loading players…</div>':V[ST.tab]()}
+ ${ST.flash?`<div class="card" style="margin-bottom:10px;border-color:var(--green);color:var(--green);font-weight:700">${esc(ST.flash)}</div>`:''}${ST.loading&&!ST.P.length?'<div class="card mute">Loading players…</div>':V[ST.tab]()}
  <div class="tiny" style="margin-top:22px;display:flex;justify-content:space-between"><span>Private owner page · players never see it</span><a href="#" id="out" style="color:var(--mute)">Sign out</a></div></div>`;
- $('tog').onclick=()=>{ST.reveal=!ST.reveal;draw();};
+ $('tog').onclick=()=>{ST.reveal=!ST.reveal;ST.flash='';draw();};
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.tab;ST.sel=null;draw();scrollTo(0,0);});
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ST.range=+b.dataset.r;draw();});
  $('rf').onclick=load;$('out').onclick=e=>{e.preventDefault();try{localStorage.removeItem(DK);}catch(x){}ST.admin=null;ST.P=[];renderLogin();};$('ex').onclick=exportTab;
@@ -198,6 +203,7 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  if(qid){const el=document.querySelector(`[data-q="${qid}"]`);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
  document.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>{if(!r.dataset.open)return;ST.tab='players';ST.sel=r.dataset.open;draw();scrollTo(0,0);});
  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ST.sel=null;draw();});
+ document.querySelectorAll('[data-who]').forEach(el=>el.onclick=e=>e.stopPropagation());
  document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});const p=ST.P.find(x=>x.code===c);if(p)p.who=ST.codes[c].who;
   try{await db.ref('usr/players/'+ST.admin.save+'/codes').set(ST.codes);el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const p=ST.P.find(x=>x.code===b.dataset.c),a=b.dataset.a,ref=db.ref('usr/players/'+p.save);b.disabled=true;
