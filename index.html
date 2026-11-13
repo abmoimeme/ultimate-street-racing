@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo × Dakar · Playable prototype v1.9 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.1 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.0'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.1'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5691,10 +5691,12 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
 
 
 
+
+
 // ---------- REAL STREETS (beta): OpenStreetMap-based Tokyo Shibuya & Dakar Plateau ----------
 CITY.paris=Object.assign({},CITY.dakar,{name:'PARIS',sub:'Tour Eiffel & Arc de Triomphe',desc:'Real streets · Seine bridges · drives on the right',drive:'right',night:false,fog:.0016,hmin:15,hmax:30,real:true});
 CITY.nyc=Object.assign({},CITY.tokyo,{name:'NEW YORK',sub:'Midtown · Times Square',desc:'Real streets · neon night · drives on the right',drive:'right',night:true,fog:.0026,real:true});
-var REAL=(function(){const R={on:false,data:{},loading:{},mask:null,lms:[],labels:[],v:2,only:['paris','nyc']};
+var REAL=(function(){const R={on:false,data:{},loading:{},mask:null,lms:[],labels:[],v:3,only:['paris','nyc']};
  try{R.on=localStorage.getItem('usr_realmap')==='1';}catch(e){}
  R.url=k=>'maps/'+k+'_real.json?v='+R.v;
  R.load=function(k){if(R.data[k])return Promise.resolve(R.data[k]);if(R.loading[k])return R.loading[k];
@@ -5808,7 +5810,9 @@ function buildRealCity(key){
  S.city=key;SAVE.city=key;save();
  $('cityl').textContent=(SAVE.profile?SAVE.profile.name+(SAVE.profile.crew?' · '+SAVE.profile.crew:'')+' · ':'')+C.name+' · real streets · map © OpenStreetMap';
  mergeStatic(STATIC,world,BLOCK*4);applyGrade();
- traffic.forEach(t=>world.remove(t.mesh));traffic=[];
+ REAL.G=realGraph(M);
+ try{spawnTraffic();if(!dk){const cols=key==='nyc'?[0xf7c600,0xf7c600,0xf7c600]:null;for(let k=0;k<18;k++){const t=makeEnt(null,{top:30,accel:8,grip:.9},1.3);t.kind='car';t.traffic=true;t.mesh=buildCarMesh(TDEF,cols&&k<12?0xf7c600:pick(TRAFFIC_COLS));world.add(t.mesh);resetTraffic(t,true);traffic.push(t);}
+   if(key==='nyc')traffic.forEach((t,k)=>{if(!t.patrol&&k%3===0&&!t.len){world.remove(t.mesh);t.mesh=buildCarMesh(TDEF,0xf7c600);world.add(t.mesh);}});}}catch(e){console.warn('traffic',e);traffic.forEach(t=>world.remove(t.mesh));traffic=[];}
  return true;
 }
 function realSnap(x,z,minW){let best=null;(REAL.roads||[]).forEach(r=>{if(r.elev||r.w<(minW||0))return;for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],L2=dx*dx+dz*dz||1;let t=((x-a[0])*dx+(z-a[1])*dz)/L2;t=Math.max(0,Math.min(1,t));const px=a[0]+dx*t,pz=a[1]+dz*t,d=Math.hypot(x-px,z-pz);if(!best||d<best.d)best={d,x:px,z:pz,h:Math.atan2(dx,dz),r};}});return best||{x,z,h:0};}
@@ -5940,6 +5944,27 @@ function realNYCLandmarks(M,STATIC,night){
   const lm=[0xff2a2a,0xffd23d,0x3aa0ff,0x39ff9f];for(let k=0;k<40;k++){const a=k*2.4,y=3+k*.55,r=8.5*(1-y/30);const b=new THREE.Mesh(new THREE.SphereGeometry(.45,6,6),new THREE.MeshBasicMaterial({color:lm[k%4]}));b.position.set(Math.cos(a)*r,y,Math.sin(a)*r);tree.add(b);}
   const star=new THREE.Mesh(new THREE.OctahedronGeometry(1.6),new THREE.MeshBasicMaterial({color:0xfff2a0}));star.position.y=29;tree.add(star);tree.position.set(rx,0,rz-14);world.add(tree);realBox([rx,rz-14,0,3,3],30);rk.h=60;}
 }
+// ---- real-streets traffic (follows the OpenStreetMap road network) ----
+function realGraph(M){const E=[],adj=M.nodes.map(()=>[]);
+ M.edges.forEach((e,i)=>{const [a,b,len,t,w,o,c]=e;if(!c||t>=8||len<3)return;const pts=realPts(c);const cum=[0];for(let k=1;k<pts.length;k++)cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));
+  const ed={a,b,len:cum[cum.length-1],t,w,o,pts,cum,i:E.length};E.push(ed);if(o!==-1)adj[a].push({e:ed,fwd:true});if(o!==1)adj[b].push({e:ed,fwd:false});});
+ return{E,adj,nodes:M.nodes};}
+function realEdgePos(ed,fwd,d){d=Math.max(0,Math.min(ed.len,fwd?d:ed.len-d));let k=1;while(k<ed.cum.length-1&&ed.cum[k]<d)k++;const a=ed.pts[k-1],b=ed.pts[k],seg=(ed.cum[k]-ed.cum[k-1])||1,f=(d-ed.cum[k-1])/seg;
+ const x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;let dx=b[0]-a[0],dz=b[1]-a[1];if(!fwd){dx=-dx;dz=-dz;}const l=Math.hypot(dx,dz)||1;return{x,z,dx:dx/l,dz:dz/l};}
+function realPickNext(t){const G=REAL.G,ed=G.E[t.re],node=t.fwd?ed.b:ed.a;let opts=G.adj[node].filter(o=>o.e!==ed);if(!opts.length)opts=G.adj[node];if(!opts.length)return false;
+ const cur=realEdgePos(ed,t.fwd,ed.len-.5);let tot=0;const ws=opts.map(o=>{const n=realEdgePos(o.e,o.fwd,Math.min(6,o.e.len));const dot=cur.dx*n.dx+cur.dz*n.dz;let w=(o.e.t<=5?1:.25)*(1.2+dot)+.05;if(o.e.t<=3&&t.spd>12)w*=1.5;tot+=w;return w;});
+ let r=Math.random()*tot,k=0;for(;k<opts.length-1;k++){r-=ws[k];if(r<=0)break;}const o=opts[k];t.re=o.e.i;t.fwd=o.fwd;realLane(t);return true;}
+function realLane(t){const ed=REAL.G.E[t.re];const left=CITY[S.city].drive==='left';const two=ed.o===0;let off;if(two)off=Math.max(1.4,ed.w/4);else off=ed.w>=10?(t.laneR?1:-1)*ed.w/4:0;t.lane=left&&two?-off:off;}
+function realResetTraffic(t,anywhere){const G=REAL.G;t.crashed=false;t.crashT=0;t.health=100;t.y=0;t.air=false;t.vy=0;t.dir=1;t.laneR=Math.random()<.5;
+ const px=player?player.x:REAL.data[S.city].spawn[0],pz=player?player.z:REAL.data[S.city].spawn[1];const minD=anywhere?35:140,maxD=anywhere?520:600;let ed=null;
+ for(let tries=0;tries<60;tries++){const c=G.E[Math.floor(Math.random()*G.E.length)];if(c.t>5&&Math.random()<.8)continue;const m=c.pts[Math.floor(c.pts.length/2)];const d=Math.hypot(m[0]-px,m[1]-pz);if(d>=minD&&d<=maxD){ed=c;break;}if(!ed&&tries>40)ed=c;}
+ if(!ed)ed=G.E[0];t.re=ed.i;t.fwd=ed.o===-1?false:ed.o===1?true:Math.random()<.5;t.along=Math.random()*ed.len;realLane(t);
+ const base=ed.t<=2?15:ed.t<=4?12.5:9;t.spd=base+Math.random()*2.5;if(t.patrol)t.spd=12;if(t.kind==='cart')t.spd=4.5;else if(t.kind==='rapide'||t.kind==='ndiaga'||t.kind==='ddd'||t.kind==='tata'||t.kind==='brt')t.spd=Math.min(t.spd,10.5);if(TWO_WHEEL[t.kind])t.spd=t.kind==='bike'?6:Math.min(16,t.spd+2);t.cur=t.spd;realPosTraffic(t);}
+function realPosTraffic(t){const G=REAL.G;let ed=G.E[t.re];let guard=0;while(t.along>ed.len&&guard++<6){t.along-=ed.len;if(!realPickNext(t)){t.along=0;t.fwd=!t.fwd;realLane(t);}ed=G.E[t.re];
+  if(player&&Math.hypot(t.x-player.x,t.z-player.z)>720&&!t.patrol){realResetTraffic(t,false);return;}}
+ if(t.along<0)t.along=0;const p=realEdgePos(ed,t.fwd,t.along);const nx=-p.dz,nz=p.dx;// right-hand normal (x,z)->(−dz,dx) points right of travel? flip for our axes
+ t.x=p.x+nx*t.lane;t.z=p.z+nz*t.lane;const hh=Math.atan2(p.dx,p.dz);t.h=hh;t.vx=p.dx*t.cur;t.vz=p.dz*t.cur;
+ if(t.re!==t._le){t._le=t.re;const ed2=G.E[t.re];const tgt=(ed2.t<=2?15:ed2.t<=4?12.5:9)+((t.i7=(t.i7||Math.random()*2.5)));if(!t.patrol&&!t.len&&t.kind!=='cart'&&!TWO_WHEEL[t.kind])t.spd=tgt;}}
 // ---- wiring into the game ----
 (function(){
  const _bc=buildCity;buildCity=function(key){if(REAL.wants(key)&&REAL.data[key]){if(buildRealCity(key))return;}
@@ -5963,6 +5988,9 @@ function realNYCLandmarks(M,STATIC,night){
  // no grid lounge / police / rentals in real streets (yet)
  if(typeof inLounge==='function'){const _il=inLounge;inLounge=function(x,z){return S.real?false:_il(x,z);};}
  if(typeof festChip==='function'){const _fc=festChip;festChip=function(){if(S.real){const el=$('festChip');if(el)el.classList.add('hidden');return;}return _fc.apply(this,arguments);};}
+ const _rt=resetTraffic;resetTraffic=function(t,any){if(S.real&&REAL.G)return realResetTraffic(t,any);return _rt.apply(this,arguments);};
+ const _pt=posTraffic;posTraffic=function(t){if(S.real&&REAL.G)return realPosTraffic(t);return _pt.apply(this,arguments);};
+ if(typeof startPursuit==='function'){const _sp=startPursuit;startPursuit=function(){if(S.real)return;return _sp.apply(this,arguments);};}
  const _hu=heatUp;heatUp=function(){if(S.real)return;return _hu.apply(this,arguments);};
  // keep cars out of the sea (Dakar)
  const _up=update;let last=null;update=function(dt){const r=_up.apply(this,arguments);try{if(S.real&&player&&REAL.mask&&S.state==='play'){if(!realOnLand(player.x,player.z)){if(last){player.x=last[0];player.z=last[1];}player.vx*=-.25;player.vz*=-.25;}else last=[player.x,player.z];}}catch(e){}return r;};
