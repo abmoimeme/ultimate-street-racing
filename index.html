@@ -5683,6 +5683,224 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
   if(pv){if(cur.p>pv.p)feat('pet_hatch');if(cur.e&&cur.e!==pv.e)feat('pet_out');if(cur.it>pv.it)feat('item_new');}pv=cur;}catch(e){}},3000);
  let byeAt=0;const bye=()=>{if(!SAVE||Date.now()-byeAt<15000)return;byeAt=Date.now();try{const L=TEL.live&&TEL.live();TEL.add('bye',Object.assign({a:L?L.a:'',s:Math.round((Date.now()-(TEL.t0||Date.now()))/1000)},telPos()));}catch(e){}};
  document.addEventListener('visibilitychange',()=>{if(document.hidden)bye();});addEventListener('pagehide',bye);})();
+
+
+
+
+
+// ---------- REAL STREETS (beta): OpenStreetMap-based Tokyo Shibuya & Dakar Plateau ----------
+var REAL=(function(){const R={on:false,data:{},loading:{},mask:null,lms:[],labels:[],v:1};
+ try{R.on=localStorage.getItem('usr_realmap')==='1';}catch(e){}
+ R.url=k=>'maps/'+k+'_real.json?v='+R.v;
+ R.load=function(k){if(R.data[k])return Promise.resolve(R.data[k]);if(R.loading[k])return R.loading[k];
+  R.loading[k]=fetch(R.url(k)).then(r=>{if(!r.ok)throw new Error('map '+r.status);return r.json();}).then(d=>{R.data[k]=d;return d;}).catch(e=>{R.loading[k]=null;throw e;});return R.loading[k];};
+ R.active=()=>!!(R.on&&S.real);
+ return R;})();
+
+function realPts(a){const o=[];for(let i=0;i+1<a.length;i+=2)o.push([a[i],a[i+1]]);return o;}
+function realGeo(pos,uv,idx){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));if(uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));if(idx)g.setIndex(idx);g.computeVertexNormals();return g;}
+function realRibbon(pts,w,y,P,U,I,uvScale){// flat strip along polyline with mitred joints
+ const n=pts.length;if(n<2)return;const hw=w/2;let dist=0;const base=P.length/3;
+ for(let i=0;i<n;i++){const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(n-1,i+1)];let dx=b[0]-a[0],dz=b[1]-a[1];const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+  let nx=-dz,nz=dx,m=1;if(i>0&&i<n-1){const d1x=p[0]-a[0],d1z=p[1]-a[1],l1=Math.hypot(d1x,d1z)||1;const c=(-d1z/l1)*nx+(d1x/l1)*nz;m=1/Math.max(.45,c);}
+  if(i>0)dist+=Math.hypot(p[0]-pts[i-1][0],p[1]-pts[i-1][1]);
+  P.push(p[0]+nx*hw*m,y,p[1]+nz*hw*m,p[0]-nx*hw*m,y,p[1]-nz*hw*m);U.push(0,dist/(uvScale||8),1,dist/(uvScale||8));
+  if(i>0){const k=base+(i-1)*2;I.push(k,k+2,k+1,k+1,k+2,k+3);}}}
+function realPolyFill(ring,y,P,U,I,uvs){// flat polygon fill (earcut via ShapeUtils)
+ const pts=ring.map(p=>new THREE.Vector2(p[0],p[1]));if(THREE.ShapeUtils.isClockWise(pts))pts.reverse();
+ const tris=THREE.ShapeUtils.triangulateShape(pts,[]);const base=P.length/3;pts.forEach(p=>{P.push(p.x,y,p.y);U.push(p.x/(uvs||10),p.y/(uvs||10));});tris.forEach(t=>I.push(base+t[0],base+t[2],base+t[1]));}
+
+function buildRealCity(key){
+ const M=REAL.data[key];if(!M)return false;
+ if(world){scene.remove(world);disposeTree(world);}
+ const C=CITY[key],night=C.night,rng=mulberry(key==='tokyo'?1337:2024),dk=key==='dakar';S.real=true;
+ const [bx0,bz0,bx1,bz1]=M.b,ext=Math.max(-bx0,bx1,-bz0,bz1)+20;setGrid({block:100,road:6,n:Math.ceil(2*ext/100)});HALF=N*BLOCK/2;LIM=ext;
+ EVENTS=[];if(typeof FEST!=='undefined')FEST=[];logoTexCache={};MEET=null;RIDERS=[];PEOPLE=[];CARTS=[];BOATS=[];PMAT={};BLDS=[];S.ball=null;
+ world=new THREE.Group();scene.add(world);makeEnv(night);
+ BCELL=[];for(let i=0;i<N;i++){BCELL.push([]);for(let j=0;j<N;j++)BCELL[i].push([]);}
+ RAMPS=[];TRAMPS=[];ZONES=[];COINS=[];MARKERS=[];if(typeof BOOST!=='undefined'){BOOST.items=[];BOOST.smoke=0;}
+ S.screens=[];S.expressCars=null;S.tl=null;S.skyMesh=null;S.tip=null;
+ if(night){scene.background=new THREE.Color(0x07040f);scene.fog=new THREE.FogExp2(0x1c1024,C.fog*.55);S.skyMesh=makeNightSky();world.add(S.skyMesh);S.sunDir=null;}
+ else{scene.background=new THREE.Color(0xa9c9e6);scene.fog=new THREE.FogExp2(0xa8c3da,C.fog*.45);S.skyMesh=makeDaySky();if(S.skyMesh)world.add(S.skyMesh);}
+ if(night){hemi.color.set(0x5c6488);hemi.groundColor.set(0x14121a);hemi.intensity=.42;sun.color.set(0x9db4ff);sun.intensity=.45;renderer.toneMappingExposure=1.05;}
+ else{hemi.color.set(0xdfefff);hemi.groundColor.set(0x8a7355);hemi.intensity=.5;sun.color.set(0xffe9c8);sun.intensity=1.9;renderer.toneMappingExposure=.92;}
+ const STATIC=[];const add=m=>{world.add(m);return m;};
+ // ---- sea + land ----
+ const groundCol=dk?(night?0x403a32:0x8f8268):(night?0x2b2a31:0x8c8c92);
+ const gtex=canvasTex(256,256,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);const r=mulberry(dk?5:6);for(let i=0;i<2600;i++){const v=200+Math.floor(r()*55);g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(r()*w,r()*h,1+r()*3,1+r()*3);}g.strokeStyle='rgba(0,0,0,.06)';for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*64,0);g.lineTo(i*64,h);g.stroke();g.beginPath();g.moveTo(0,i*64);g.lineTo(w,i*64);g.stroke();}},true);
+ const landMat=new THREE.MeshStandardMaterial({side:THREE.DoubleSide,color:groundCol,map:gtex,roughness:.95});
+ if(M.land){const sea=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),seaMat());sea.rotation.x=-Math.PI/2;sea.position.y=-.25;add(sea);S.sea=sea;
+  const P=[],U=[],I=[];M.land.forEach(l=>realPolyFill(realPts(l),0,P,U,I,6));const lg=realGeo(P,U,I);const lm=new THREE.Mesh(lg,landMat);lm.receiveShadow=true;add(lm);
+  // beach rim
+  const BP=[],BU=[],BI=[];M.land.forEach(l=>{const pts=realPts(l);pts.push(pts[0]);realRibbon(pts,7,.01,BP,BU,BI,6);});add(new THREE.Mesh(realGeo(BP,BU,BI),new THREE.MeshStandardMaterial({color:0xe7d3a4,roughness:1,side:THREE.DoubleSide})));
+  REAL.mask=realMask(M);}
+ else{const g=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),landMat);g.rotation.x=-Math.PI/2;g.receiveShadow=true;add(g);S.sea=null;REAL.mask=null;}
+ // ---- parks ----
+ {const cols=[night?0x1f3a24:0x5f9a4c,night?0x24402a:0x4f8f3f,0xe7d3a4,0x2f6f9f];const G={};M.parks.forEach(([k,n,p])=>{(G[k]=G[k]||{P:[],U:[],I:[]});realPolyFill(realPts(p),.02+k*.002,G[k].P,G[k].U,G[k].I,4);});
+  for(const k in G){const m=new THREE.Mesh(realGeo(G[k].P,G[k].U,G[k].I),new THREE.MeshStandardMaterial({side:THREE.DoubleSide,color:cols[k],roughness:1,polygonOffset:true,polygonOffsetFactor:-1}));m.receiveShadow=true;add(m);}}
+ // ---- roads ----
+ const AS=asphaltSet(dk,night);[AS.map,AS.normalMap,AS.roughnessMap].forEach(t=>{if(t){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,1);}});
+ const roadMat=new THREE.MeshStandardMaterial({side:THREE.DoubleSide,map:AS.map,normalMap:AS.normalMap,normalScale:new THREE.Vector2(.5,.5),roughnessMap:AS.roughnessMap,roughness:night?.6:1,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const RP=[],RU=[],RI=[],EP=[],EU=[],EI=[],dashes=[];REAL.roads=[];
+ M.roads.forEach(([t,w,o,ni,elev,c])=>{const pts=realPts(c);if(elev){EP.length;realRibbon(pts,w,10,EP,EU,EI,12);REAL.roads.push({t,w,o,n:M.names[ni]||'',pts,elev:1});return;}
+  realRibbon(pts,w,.04,RP,RU,RI,w);REAL.roads.push({t,w,o,n:M.names[ni]||'',pts});
+  if(t<=4&&w>=10&&!o){for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let s=4;s<L-2;s+=8){const f=s/L;dashes.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,Math.atan2(b[0]-a[0],b[1]-a[1])]);}}}});
+ // junction discs
+ const deg={};M.edges.forEach(e=>{deg[e[0]]=(deg[e[0]]||0)+1;deg[e[1]]=(deg[e[1]]||0)+1;});
+ const nodeW={};M.roads.forEach(r=>{if(r[4])return;const c=r[5];[[c[0],c[1]],[c[c.length-2],c[c.length-1]]].forEach(p=>{const k=p[0]+','+p[1];nodeW[k]=Math.max(nodeW[k]||0,r[1]);});});
+ M.nodes.forEach((p,i)=>{const w=nodeW[p[0]+','+p[1]];if(!w)return;const r=w/2*1.02,base=RP.length/3;RP.push(p[0],.041,p[1]);RU.push(.5,.5);for(let q=0;q<=12;q++){const a=q/12*Math.PI*2;RP.push(p[0]+Math.cos(a)*r,.041,p[1]+Math.sin(a)*r);RU.push(.5+Math.cos(a)*.5,.5+Math.sin(a)*.5);if(q)RI.push(base,base+q+1,base+q);}});
+ const rm=new THREE.Mesh(realGeo(RP,RU,RI),roadMat);rm.receiveShadow=true;add(rm);
+ if(dashes.length){const dm=new THREE.InstancedMesh(new THREE.PlaneGeometry(.3,3.2),new THREE.MeshStandardMaterial({color:dk?0xf2efe6:0xe8e8ee,roughness:.6,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}),dashes.length);const tmp=new THREE.Object3D();
+  dashes.forEach((d,k)=>{tmp.position.set(d[0],.06,d[1]);tmp.rotation.set(-Math.PI/2,0,d[2]);tmp.updateMatrix();dm.setMatrixAt(k,tmp.matrix);});add(dm);}
+ // elevated expressway (scenery)
+ if(EP.length){const em=new THREE.Mesh(realGeo(EP,EU,EI),new THREE.MeshStandardMaterial({color:night?0x3a3a44:0x9a9aa2,roughness:.8,side:THREE.DoubleSide}));em.castShadow=true;add(em);
+  const pm=new THREE.MeshStandardMaterial({color:night?0x4a4a54:0xb0b0b6,roughness:.85});REAL.roads.filter(r=>r.elev).forEach(r=>{for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let s=0;s<L;s+=30){const f=s/L;const x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;const p=new THREE.Mesh(GEO.box,pm);p.scale.set(2.2,10,2.2);p.position.set(x,5,z);world.add(p);STATIC.push(p);}}});}
+ // ---- railways (elevated viaducts, scenery) ----
+ if(M.rails&&M.rails.length){const P=[],U=[],I=[];M.rails.forEach(([b,c])=>realRibbon(realPts(c),5,7.5,P,U,I,5));const vm=new THREE.Mesh(realGeo(P,U,I),new THREE.MeshStandardMaterial({color:night?0x343440:0x8d8a84,roughness:.9,side:THREE.DoubleSide}));vm.castShadow=true;add(vm);
+  const pm=new THREE.MeshStandardMaterial({color:night?0x40404a:0xa7a39b,roughness:.9});M.rails.forEach(([b,c])=>{const pts=realPts(c);for(let i=1;i<pts.length;i++){const a=pts[i-1],q=pts[i],L=Math.hypot(q[0]-a[0],q[1]-a[1]);for(let s=0;s<L;s+=40){const f=s/L;const p=new THREE.Mesh(GEO.box,pm);p.scale.set(1.4,7.5,1.4);p.position.set(a[0]+(q[0]-a[0])*f,3.75,a[1]+(q[1]-a[1])*f);world.add(p);STATIC.push(p);}}});}
+ // ---- buildings ----
+ const glassTones=night?['#3a4a5c','#2f3d4f','#40485a','#2a3a44','#38404e']:['#5e7f9a','#4f7f86','#7d8fa0','#8a7a66','#5f86a8'];
+ const wallTones=night?['#3a3c44','#2e3038','#44464e','#34363d','#3d3a40']:['#efe9dc','#f6f3ec','#e4d3b4','#d9c3a0','#cfd8d2','#e8dccb','#c9b79a'];
+ const MATS=[];for(let q=0;q<4;q++){MATS.push(facadeMats('grid',night,wallTones[(q*3+1)%wallTones.length],q+40+(dk?10:0)));MATS.push(facadeMats('ribbon',night,wallTones[(q*2)%wallTones.length],q+20+(dk?10:0)));}
+ const tall=[];for(let q=0;q<3;q++)tall.push(facadeMats('curtain',night,glassTones[q],q+(dk?10:0)));
+ const roofMat=new THREE.MeshStandardMaterial({color:night?0x2a2b30:0xb9b2a4,roughness:.92,side:THREE.DoubleSide});
+ const special=new THREE.MeshStandardMaterial({color:night?0x8a8a90:0xf4f1ea,roughness:.7});
+ const BUCK=new Map();const bucket=m=>{let b=BUCK.get(m);if(!b)BUCK.set(m,b={P:[],U:[],I:[]});return b;};const roofB={P:[],U:[],I:[]};
+ const lmB={};M.lm.forEach(l=>{if(l.b>=0)lmB[l.b]=l;});
+ M.blds.forEach((b,bi)=>{let [h,mt,ni,obb,ring]=b;const pts=realPts(ring);const L=lmB[bi];if(L&&L.ty==='star')return;// star landmarks get custom models
+  const mat=mt?special:h>=60?tall[bi%3]:MATS[(bi*7)%MATS.length];const B=bucket(mat);let dist=0;
+  let sa=0;for(let i=0;i<pts.length;i++){const a=pts[i],c=pts[(i+1)%pts.length];sa+=a[0]*c[1]-c[0]*a[1];}const ccw=sa>0;
+  for(let i=0;i<pts.length;i++){const a=pts[i],c=pts[(i+1)%pts.length];const L2=Math.hypot(c[0]-a[0],c[1]-a[1]);const base=B.P.length/3;
+   B.P.push(a[0],0,a[1],c[0],0,c[1],c[0],h,c[1],a[0],h,a[1]);const u0=dist/16,u1=(dist+L2)/16,v=h/14;B.U.push(u0,0,u1,0,u1,v,u0,v);
+   if(ccw)B.I.push(base,base+2,base+1,base,base+3,base+2);else B.I.push(base,base+1,base+2,base,base+2,base+3);dist+=L2;}
+  realPolyFill(pts,h,roofB.P,roofB.U,roofB.I,8);
+  realBox(obb,h);});
+ BUCK.forEach((b,m)=>{const g=realGeo(b.P,b.U,b.I);const ms=new THREE.Mesh(g,m);ms.castShadow=ms.receiveShadow=true;add(ms);});
+ {const rf=new THREE.Mesh(realGeo(roofB.P,roofB.U,roofB.I),roofMat);rf.receiveShadow=true;rf.castShadow=true;add(rf);}
+ // ---- landmarks ----
+ REAL.lms=M.lm.map(l=>Object.assign({},l));REAL.labels=[];
+ const blds=M.blds;
+ if(dk)realDakarLandmarks(M,STATIC,night);else realTokyoLandmarks(M,STATIC,night);
+ REAL.lms.forEach(l=>{if(l.ty!=='star')return;const lab=labelSprite(l.n.toUpperCase(),dk?'#ffc23d':'#ff2a6d');lab.position.set(l.x,(l.h||20)+14,l.z);lab.scale.multiplyScalar(1.1);world.add(lab);REAL.labels.push(lab);});
+ // ---- beacon, rain, heli (same as classic) ----
+ beacon=new THREE.Mesh(new THREE.CylinderGeometry(7,7,60,28,1,true),new THREE.MeshBasicMaterial({color:0xffd000,map:softTex,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));beacon.visible=false;world.add(beacon);
+ const RN=2600,rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(RN*6),3));rain=new THREE.LineSegments(rg,new THREE.LineBasicMaterial({color:night?0x8fa8ff:0xcfd8e0,transparent:true,opacity:.45}));rain.frustumCulled=false;rain.visible=S.weather==='rain';rain.userData.seed=[];
+ for(let k=0;k<RN;k++)rain.userData.seed.push([rnd(-60,60),rnd(0,45),rnd(-60,60)]);world.add(rain);
+ heliMesh=new THREE.Group();{const hb=new THREE.MeshStandardMaterial({color:0x1a1f2a,metalness:.5,roughness:.4});const b=new THREE.Mesh(GEO.box,hb);b.scale.set(2.6,2.4,6);heliMesh.add(b);const rot=new THREE.Mesh(GEO.box,MAT.dark);rot.scale.set(13,.08,.5);rot.position.y=1.5;heliMesh.add(rot);heliMesh.userData.rot=rot;
+  const sp=new THREE.SpotLight(0xe8f0ff,night?6:2,140,.28,.5,1);sp.position.set(0,-1,0);heliMesh.add(sp);heliMesh.add(sp.target);heliMesh.userData.spot=sp;const cone=new THREE.Mesh(new THREE.ConeGeometry(9,45,24,1,true),new THREE.MeshBasicMaterial({color:0xdfe8ff,transparent:true,opacity:.05,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));cone.position.y=-22.5;heliMesh.add(cone);heliMesh.userData.cone=cone;}
+ heliMesh.visible=false;world.add(heliMesh);
+ // ---- minimap background (north up) ----
+ mapBG=document.createElement('canvas');mapBG.width=mapBG.height=190;const g=mapBG.getContext('2d');g.fillStyle=dk?'#1d6f9f':'#120d22';g.fillRect(0,0,190,190);
+ const mp=(x,z)=>[mx(x),my(z)];
+ if(M.land){g.fillStyle='#2a3a2a';M.land.forEach(l=>{const p=realPts(l);g.beginPath();p.forEach((q,i)=>{const [a,b]=mp(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b);});g.closePath();g.fill();});}
+ g.strokeStyle=dk?'#a89a7a':'#5a4f8a';g.lineCap='round';REAL.roads.forEach(r=>{if(r.elev)return;g.lineWidth=Math.max(.6,r.w*MSC*1.4);g.beginPath();r.pts.forEach((q,i)=>{const [a,b]=mp(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();});
+ g.fillStyle='#ffc23d';REAL.lms.filter(l=>l.ty==='star').forEach(l=>{const [a,b]=mp(l.x,l.z);g.beginPath();g.arc(a,b,2.6,0,7);g.fill();});
+ S.city=key;SAVE.city=key;save();
+ $('cityl').textContent=(SAVE.profile?SAVE.profile.name+(SAVE.profile.crew?' · '+SAVE.profile.crew:'')+' · ':'')+C.name+' · real streets · map © OpenStreetMap';
+ mergeStatic(STATIC,world,BLOCK*4);applyGrade();
+ traffic.forEach(t=>world.remove(t.mesh));traffic=[];
+ return true;
+}
+function realSnap(x,z,minW){let best=null;(REAL.roads||[]).forEach(r=>{if(r.elev||r.w<(minW||0))return;for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],L2=dx*dx+dz*dz||1;let t=((x-a[0])*dx+(z-a[1])*dz)/L2;t=Math.max(0,Math.min(1,t));const px=a[0]+dx*t,pz=a[1]+dz*t,d=Math.hypot(x-px,z-pz);if(!best||d<best.d)best={d,x:px,z:pz,h:Math.atan2(dx,dz),r};}});return best||{x,z,h:0};}
+function realBox(obb,h){const [cx,cz,ang,hx,hz]=obb;const c=Math.cos(ang),s=Math.sin(ang);const bx={o:1,cx,cz,c,s,hx,hz,h};
+ const ex=Math.abs(c)*hx+Math.abs(s)*hz+3,ez=Math.abs(s)*hx+Math.abs(c)*hz+3;
+ const i0=clamp(Math.floor((cx-ex+HALF)/BLOCK),0,N-1),i1=clamp(Math.floor((cx+ex+HALF)/BLOCK),0,N-1),j0=clamp(Math.floor((cz-ez+HALF)/BLOCK),0,N-1),j1=clamp(Math.floor((cz+ez+HALF)/BLOCK),0,N-1);
+ for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++)BCELL[i][j].push(bx);return bx;}
+function realMask(M){const [x0,z0,x1,z1]=M.b,cs=4,W=Math.ceil((x1-x0)/cs),H=Math.ceil((z1-z0)/cs);const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);g.fillStyle='#fff';
+ M.land.forEach(l=>{const p=realPts(l);g.beginPath();p.forEach((q,i)=>{const a=(q[0]-x0)/cs,b=(q[1]-z0)/cs;i?g.lineTo(a,b):g.moveTo(a,b);});g.closePath();g.fill();});
+ const d=g.getImageData(0,0,W,H).data,m=new Uint8Array(W*H);for(let i=0;i<W*H;i++)m[i]=d[i*4]>127?1:0;return{x0,z0,cs,W,H,m};}
+function realOnLand(x,z){const K=REAL.mask;if(!K)return true;const i=Math.floor((x-K.x0)/K.cs),j=Math.floor((z-K.z0)/K.cs);if(i<0||j<0||i>=K.W||j>=K.H)return false;return K.m[j*K.W+i]===1;}
+function realFootprint(M,l){return l.b>=0?M.blds[l.b]:null;}
+function realExtrude(ring,h,mat,STATIC,y0){const pts=ring.map(p=>new THREE.Vector2(p[0],-p[1]));const sh=new THREE.Shape(pts);const g=new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false});g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,mat);m.position.y=y0||0;m.castShadow=m.receiveShadow=true;world.add(m);STATIC.push(m);return m;}
+function realDakarLandmarks(M,STATIC,night){
+ const white=new THREE.MeshStandardMaterial({color:0xf7f4ec,roughness:.6}),cream=new THREE.MeshStandardMaterial({color:0xeadfc8,roughness:.7}),red=new THREE.MeshStandardMaterial({color:0xb5462e,roughness:.7}),green=new THREE.MeshStandardMaterial({color:night?0x1f3a24:0x4f8f3f,roughness:1});
+ const box=(m,w,h,d,x,y,z,ry)=>{const b=new THREE.Mesh(GEO.box,m);b.scale.set(w,h,d);b.position.set(x,y,z);if(ry)b.rotation.y=ry;b.castShadow=b.receiveShadow=true;world.add(b);STATIC.push(b);return b;};
+ REAL.lms.forEach(l=>{if(l.ty!=='star')return;const fp=realFootprint(M,l);
+  if(l.id==='palais'){// Palais de la République: white palace, gardens, flag, perimeter wall
+   const grounds=[[132,35],[266,79],[261,94],[300,123],[331,78],[355,-26],[358,-63],[361,-94],[350,-180],[222,-216],[169,-73]];
+   const P=[],U=[],I=[];realPolyFill(grounds,.05,P,U,I,4);green.side=THREE.DoubleSide;world.add(new THREE.Mesh(realGeo(P,U,I),green));
+   const ring=fp?realPts(fp[4]):[[231,-40],[239,-38],[247,-60],[270,-52],[250,3],[226,-6],[235,-31],[229,-34]];
+   realExtrude(ring,13,white,STATIC);if(fp)realBox(fp[3],13);
+   const cx=ring.reduce((a,p)=>a+p[0],0)/ring.length,cz=ring.reduce((a,p)=>a+p[1],0)/ring.length;
+   const dome=new THREE.Mesh(new THREE.SphereGeometry(5,20,12,0,Math.PI*2,0,Math.PI/2),white);dome.position.set(cx,13,cz);world.add(dome);
+   // portico columns facing the avenue (west)
+   for(let q=-3;q<=3;q++)box(white,.9,9,.9,cx-17,4.5,cz+q*3);box(white,4,1.2,22,cx-17,9.6,cz);
+   // flag of Senegal
+   box(MAT.dark,.25,16,.25,cx-26,8,cz);const fl=canvasTex(96,64,g=>{g.fillStyle='#00853f';g.fillRect(0,0,32,64);g.fillStyle='#fdef42';g.fillRect(32,0,32,64);g.fillStyle='#e31b23';g.fillRect(64,0,32,64);g.fillStyle='#00853f';g.font='bold 30px sans-serif';g.textAlign='center';g.fillText('★',48,44);});
+   const f=new THREE.Mesh(new THREE.PlaneGeometry(4.5,3),new THREE.MeshStandardMaterial({map:fl,side:THREE.DoubleSide}));f.position.set(cx-26,14.4,cz+2.3);f.rotation.y=Math.PI/2;world.add(f);
+   l.h=16;l.x=Math.round(cx);l.z=Math.round(cz);}
+  else if(l.id==='justice'){const ring=fp?realPts(fp[4]):null;if(ring){realExtrude(ring,16,white,STATIC);realBox(fp[3],16);const [cx,cz,ang,hx,hz]=fp[3];
+    // colonnade along the long side
+    const ax=hx>=hz?ang:ang+Math.PI/2,L=Math.max(hx,hz),W=Math.min(hx,hz);const ux=Math.cos(ax),uz=Math.sin(ax),vx=-uz,vz=ux;
+    for(let s=-L+3;s<=L-3;s+=4)box(white,1.1,14,1.1,cx+ux*s+vx*(W+1.6),7,cz+uz*s+vz*(W+1.6));box(cream,2*L,1.4,3.4,cx+vx*(W+1.6),14.6,cz+vz*(W+1.6),-ax);
+    l.h=18;l.x=Math.round(cx);l.z=Math.round(cz);}}
+  else if(l.id==='sorano'){const ring=fp?realPts(fp[4]):null;let cx=l.x,cz=l.z,h=14;if(ring){realExtrude(ring,h,cream,STATIC);realBox(fp[3],h);[cx,cz]=fp[3];}else{const b=box(cream,40,h,24,cx,h/2,cz);realBox([cx,cz,0,20,12],h);}
+   // modernist vertical fins + red band
+   for(let q=-5;q<=5;q++)box(red,.6,h-2,1.6,cx+q*3,(h-2)/2+1,cz+(ring?0:13));
+   const sign=new THREE.Mesh(new THREE.PlaneGeometry(22,3),new THREE.MeshBasicMaterial({map:canvasTex(512,72,g=>{g.fillStyle='#b5462e';g.fillRect(0,0,512,72);g.fillStyle='#fff';g.font='bold 40px sans-serif';g.textAlign='center';g.fillText('THÉÂTRE DANIEL SORANO',256,50);}),side:THREE.DoubleSide}));
+   sign.position.set(cx,h+2,cz);world.add(sign);REAL.labels.push(sign);l.h=h+4;l.x=Math.round(cx);l.z=Math.round(cz);}});
+}
+function realTokyoLandmarks(M,STATIC,night){
+ const L=id=>REAL.lms.find(l=>l.id===id);
+ // Scramble crossing stripes
+ const cr=L('crossing');if(cr){const sm=new THREE.MeshStandardMaterial({color:0xf2f2f2,roughness:.5,polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6});const n=[];
+  const zebra=(x,z,ang,len,wid)=>{for(let s=-len/2;s<=len/2;s+=1.6)n.push([x+Math.cos(ang)*s,z+Math.sin(ang)*s,ang,wid]);};
+  zebra(cr.x,cr.z-20,0,30,5);zebra(cr.x,cr.z+20,0,30,5);zebra(cr.x-20,cr.z,Math.PI/2,30,5);zebra(cr.x+20,cr.z,Math.PI/2,30,5);zebra(cr.x,cr.z,Math.PI/4,44,4.5);zebra(cr.x,cr.z,-Math.PI/4,44,4.5);
+  const im=new THREE.InstancedMesh(new THREE.PlaneGeometry(.8,1),sm,n.length);const tmp=new THREE.Object3D();n.forEach((q,k)=>{tmp.position.set(q[0],.07,q[1]);tmp.rotation.set(-Math.PI/2,0,-q[2]);tmp.scale.set(1,q[3],1);tmp.updateMatrix();im.setMatrixAt(k,tmp.matrix);});world.add(im);cr.h=8;}
+ // Hachiko statue
+ const hk=L('hachiko');if(hk){const br=new THREE.MeshStandardMaterial({color:0x6b4a2a,metalness:.6,roughness:.45});const st=new THREE.MeshStandardMaterial({color:0x9a968e,roughness:.8});
+  const g=new THREE.Group();const p=new THREE.Mesh(GEO.box,st);p.scale.set(2.2,1.6,3);p.position.y=.8;g.add(p);const body=new THREE.Mesh(new THREE.SphereGeometry(.7,12,10),br);body.scale.set(1,1,1.6);body.position.set(0,2.2,0);g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.45,12,10),br);head.position.set(0,3.1,.9);g.add(head);[-.25,.25].forEach(e=>{const ear=new THREE.Mesh(new THREE.ConeGeometry(.14,.35,6),br);ear.position.set(e,3.55,.85);g.add(ear);});
+  [[-.35,.7],[.35,.7],[-.35,-.7],[.35,-.7]].forEach(q=>{const lg=new THREE.Mesh(GEO.box,br);lg.scale.set(.22,.8,.22);lg.position.set(q[0],1.9,q[1]);g.add(lg);});
+  g.position.set(hk.x,0,hk.z);g.rotation.y=Math.PI;world.add(g);realBox([hk.x,hk.z,0,1.1,1.5],2);hk.h=4;}
+ // Shibuya 109 (silver cylinder tower)
+ const s1=L('s109');if(s1){const fp=realFootprint(M,s1);const silver=new THREE.MeshStandardMaterial({color:0xd8d8dc,metalness:.6,roughness:.35});
+  if(fp){realExtrude(realPts(fp[4]),fp[0]||34,silver,STATIC);realBox(fp[3],fp[0]||34);}
+  const cx=fp?fp[3][0]:s1.x,cz=fp?fp[3][1]:s1.z,h=(fp&&fp[0])||34;const cyl=new THREE.Mesh(new THREE.CylinderGeometry(6,6,h+10,24),silver);cyl.position.set(cx,(h+10)/2,cz);cyl.castShadow=true;world.add(cyl);
+  const t=canvasTex(256,96,g=>{g.fillStyle='#111';g.fillRect(0,0,256,96);g.fillStyle='#fff';g.font='bold 80px sans-serif';g.textAlign='center';g.fillText('109',128,80);});
+  const sg=new THREE.Mesh(new THREE.CylinderGeometry(6.1,6.1,6,24,1,true),new THREE.MeshBasicMaterial({map:t,toneMapped:false}));sg.position.set(cx,h+6,cz);world.add(sg);s1.h=h+12;s1.x=Math.round(cx);s1.z=Math.round(cz);}
+ // Giant screens facing the crossing
+ if(cr){const near=M.blds.map((b,i)=>({b,i,d:Math.hypot(b[3][0]-cr.x,b[3][1]-cr.z)})).filter(o=>o.d>25&&o.d<110&&o.b[0]>25).sort((a,b)=>a.d-b.d).slice(0,4);
+  near.forEach((o,k)=>{const [cx,cz,ang,hx,hz]=o.b[3];const dx=cr.x-cx,dz=cr.z-cz,dl=Math.hypot(dx,dz);const fx=dx/dl,fz=dz/dl;const off=Math.max(hx,hz)*.6;addScreen(cx+fx*off,o.b[0]*.62,cz+fz*off,Math.atan2(fx,fz),16,9,k*7);});}
+ // Tokyo Tower + Skytree on the skyline (real bearing, brought closer)
+ const tm=new THREE.MeshBasicMaterial({color:0xff5a1f,fog:false}),wm=new THREE.MeshBasicMaterial({color:night?0xbfd8ff:0xe8eef4,fog:false});
+ const tower=new THREE.Group();[[34,0,60],[22,60,50],[12,110,40],[6,150,40],[2,190,50]].forEach(([w,y,h])=>{const t=new THREE.Mesh(GEO.box,(y/50)%2<1?tm:wm);t.scale.set(w,h,w);t.position.set(0,y+h/2,0);tower.add(t);});
+ const ob=new THREE.Mesh(GEO.box,wm);ob.scale.set(16,8,16);ob.position.y=152;tower.add(ob);tower.position.set(1650,0,40);world.add(tower);
+ const sky=new THREE.Group();const sm2=new THREE.MeshBasicMaterial({color:night?0xdfe9ff:0xf2f5f8,fog:false});const s2=new THREE.Mesh(new THREE.CylinderGeometry(4,14,360,16),sm2);s2.position.y=180;sky.add(s2);
+ [[220,22],[300,16]].forEach(([y,r])=>{const d=new THREE.Mesh(new THREE.CylinderGeometry(r,r,8,20),new THREE.MeshBasicMaterial({color:night?0x7fb4ff:0xcfd8e0,fog:false}));d.position.y=y;sky.add(d);});
+ const ant=new THREE.Mesh(new THREE.CylinderGeometry(.8,2,80,8),sm2);ant.position.y=400;sky.add(ant);sky.position.set(1700,0,-960);world.add(sky);
+ REAL.lms.push({id:'ttower',n:'Tokyo Tower (skyline)',x:1650,z:40,ty:'far',h:200},{id:'skytree',n:'Tokyo Skytree (skyline)',x:1700,z:-960,ty:'far',h:440});
+}
+// ---- wiring into the game ----
+(function(){
+ const _bc=buildCity;buildCity=function(key){if(REAL.on&&REAL.data[key]){if(buildRealCity(key))return;}S.real=false;return _bc.apply(this,arguments);};
+ const _cp=createPlayer;createPlayer=function(){if(!S.real)return _cp.apply(this,arguments);const ev=EVENTS;EVENTS=[{id:'garage',i:0,j:0}];const tut=SAVE.tut;SAVE.tut=1;const old=player;
+  try{_cp.apply(this,arguments);}finally{EVENTS=ev;SAVE.tut=tut;}
+  if(!old){const sp=realSnap(REAL.data[S.city].spawn[0],REAL.data[S.city].spawn[1],8);placeOnRoad(player,sp.x,sp.z,sp.h);}};
+ // collision with rotated building boxes
+ const _cb=collideBoxes;collideBoxes=function(c,boxes){if(!boxes||!boxes.length||!boxes[0]||!S.real)return _cb(c,boxes);let hit=0;const plain=[];
+  for(const b of boxes){if(!b.o){plain.push(b);continue;}if(b.h&&c.y>b.h)continue;const dx0=c.x-b.cx,dz0=c.z-b.cz;const lx=dx0*b.c+dz0*b.s,lz=-dx0*b.s+dz0*b.c;
+   const px=clamp(lx,-b.hx,b.hx),pz=clamp(lz,-b.hz,b.hz);let dx=lx-px,dz=lz-pz;const d2=dx*dx+dz*dz,r=c.r;if(d2>=r*r)continue;let d=Math.sqrt(d2),nx,nz;
+   if(d<1e-4){const m1=lx+b.hx,m2=b.hx-lx,m3=lz+b.hz,m4=b.hz-lz,m=Math.min(m1,m2,m3,m4);if(m===m1){nx=-1;nz=0;}else if(m===m2){nx=1;nz=0;}else if(m===m3){nx=0;nz=-1;}else{nx=0;nz=1;}d=-m;}else{nx=dx/d;nz=dz/d;}
+   const wx=nx*b.c-nz*b.s,wz=nx*b.s+nz*b.c;c.x+=wx*(r-d);c.z+=wz*(r-d);const vn=c.vx*wx+c.vz*wz;if(vn<0){c.vx-=1.35*vn*wx;c.vz-=1.35*vn*wz;c.vx*=.88;c.vz*=.88;hit=Math.max(hit,-vn);}}
+  return plain.length?Math.max(hit,_cb(c,plain)):hit;};
+ // no grid lounge / police / rentals in real streets (yet)
+ if(typeof inLounge==='function'){const _il=inLounge;inLounge=function(x,z){return S.real?false:_il(x,z);};}
+ if(typeof festChip==='function'){const _fc=festChip;festChip=function(){if(S.real){const el=$('festChip');if(el)el.classList.add('hidden');return;}return _fc.apply(this,arguments);};}
+ const _hu=heatUp;heatUp=function(){if(S.real)return;return _hu.apply(this,arguments);};
+ // keep cars out of the sea (Dakar)
+ const _up=update;let last=null;update=function(dt){const r=_up.apply(this,arguments);try{if(S.real&&player&&REAL.mask&&S.state==='play'){if(!realOnLand(player.x,player.z)){if(last){player.x=last[0];player.z=last[1];}player.vx*=-.25;player.vz*=-.25;}else last=[player.x,player.z];}}catch(e){}return r;};
+ // switching the setting
+ REAL.set=function(on){REAL.on=!!on;try{localStorage.setItem('usr_realmap',on?'1':'0');}catch(e){}
+  const k=S.city||pickCity;if(on){REAL.load(k).then(()=>{if(S.state!=='play'){buildCity(k);}renderStart&&S.state!=='play'&&renderStart();}).catch(()=>{toast('Map not available','Check your internet connection','#ff8a00',2.4);REAL.on=false;});}
+  else if(S.real&&S.state!=='play'){buildCity(k);}};
+ // preload both cities when enabled
+ if(REAL.on){['tokyo','dakar'].forEach(k=>REAL.load(k).then(()=>{if(k===(S.city||pickCity)&&!S.real&&S.state!=='play'){buildCity(k);}}).catch(()=>{}));}
+ // start-screen toggle
+ const _rs=renderStart;renderStart=function(){const r=_rs.apply(this,arguments);try{const go=$('go');if(go&&!$('realmapRow')){const lab=document.createElement('label');lab.className='chk';lab.id='realmapRow';
+   lab.innerHTML=`<input type="checkbox" id="realmap" ${REAL.on?'checked':''}> 🗺️ Real streets (beta) — real Tokyo Shibuya & Dakar Plateau · map data © OpenStreetMap contributors`;go.parentNode.appendChild(lab);$('realmap').onchange=e=>{REAL.set(e.target.checked);if(e.target.checked)REAL.load('tokyo').catch(()=>{});REAL.load('dakar').catch(()=>{});};}}catch(e){}return r;};
+})();
+
 if(activeProfile())useProfile(PROF.active);
 applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
 </script>
