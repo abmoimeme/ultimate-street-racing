@@ -82,7 +82,7 @@ function renderLogin(err,showCode){document.body.classList.remove('reveal');$('a
  if($('go')){$('go').onclick=()=>signIn($('pw').value,$('rem').checked);$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click();};$('pw').focus();}}
 async function googleIn(){if(!AUTH){renderLogin('Google sign-in is not available.');return;}const pr=new firebase.auth.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
  try{await AUTH.signInWithPopup(pr);}catch(e){if(e&&/popup-blocked|operation-not-supported/.test(e.code||''))return AUTH.signInWithRedirect(pr);if(e&&/popup-closed|cancelled-popup/.test(e.code||''))return;renderLogin('Google sign-in failed: '+(e&&e.message||e));}}
-async function afterGoogle(u){let adm=null;try{adm=(await db.ref('usr/admin').once('value')).val();}catch(e){await AUTH.signOut();renderLogin(`${u.email} isn't allowed into this dashboard.`);return;}
+async function afterGoogle(u){let adm=null;try{adm=(await db.ref('usr/admin').once('value')).val();}catch(e){const perm=/permission/i.test((e&&(e.code||e.message))||'');await AUTH.signOut();renderLogin(perm?`${u.email} isn't allowed into this dashboard (the database said "permission denied"). Check that the admin rule is published.`:'Could not reach the database: '+((e&&e.message)||e));return;}
  if(!adm||!adm.codes){renderLink(u);return;}
  ST.admin={mode:'google',email:u.email,save:adm.sv||null};ST.codes=adm.codes||{};await importNames();load();}
 function renderLink(u,err){$('app').innerHTML=`<div class="login"><h1>ONE-TIME SETUP</h1><div class="mute">Signed in as ${esc(u.email)}. Enter your super-user code once to connect your player list to your Google account. You won't need it again.</div>
