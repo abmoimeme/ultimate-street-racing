@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.1'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.1.1'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5683,6 +5683,7 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
   if(pv){if(cur.p>pv.p)feat('pet_hatch');if(cur.e&&cur.e!==pv.e)feat('pet_out');if(cur.it>pv.it)feat('item_new');}pv=cur;}catch(e){}},3000);
  let byeAt=0;const bye=()=>{if(!SAVE||Date.now()-byeAt<15000)return;byeAt=Date.now();try{const L=TEL.live&&TEL.live();TEL.add('bye',Object.assign({a:L?L.a:'',s:Math.round((Date.now()-(TEL.t0||Date.now()))/1000)},telPos()));}catch(e){}};
  document.addEventListener('visibilitychange',()=>{if(document.hidden)bye();});addEventListener('pagehide',bye);})();
+
 
 
 
@@ -5991,6 +5992,12 @@ function realPosTraffic(t){const G=REAL.G;let ed=G.E[t.re];let guard=0;while(t.a
  const _rt=resetTraffic;resetTraffic=function(t,any){if(S.real&&REAL.G)return realResetTraffic(t,any);return _rt.apply(this,arguments);};
  const _pt=posTraffic;posTraffic=function(t){if(S.real&&REAL.G)return realPosTraffic(t);return _pt.apply(this,arguments);};
  if(typeof startPursuit==='function'){const _sp=startPursuit;startPursuit=function(){if(S.real)return;return _sp.apply(this,arguments);};}
+ if(typeof evPos==='function'){const _ep=evPos;evPos=function(id){if(!EVENTS.find(x=>x.id===id))return{x:null,z:null,e:null};return _ep.apply(this,arguments);};}
+ if(typeof objective==='function'){const _ob=objective;objective=function(){if(!S.real||!player||S.meet||S.race||S.deliv||(S.heat&&S.heat.level>0))return _ob.apply(this,arguments);
+   const L=(REAL.lms||[]).filter(l=>l.ty==='star');if(!L.length)return{t:'EXPLORE '+CITY[S.city].name,d:'Real streets · drive anywhere',x:null,col:'#ffc23d'};
+   const seen=REAL.seen||(REAL.seen={});let best=null,bd=1e9;L.forEach(l=>{const d=Math.hypot(l.x-player.x,l.z-player.z);if(d<60)seen[S.city+l.id]=1;if(seen[S.city+l.id])return;if(d<bd){bd=d;best=l;}});
+   if(!best){best=L[0];bd=Math.hypot(best.x-player.x,best.z-player.z);}
+   return{t:'EXPLORE '+CITY[S.city].name,d:'Drive to '+best.n+' · '+Math.round(bd)+' m',x:best.x,z:best.z,col:'#ffc23d'};};}
  const _hu=heatUp;heatUp=function(){if(S.real)return;return _hu.apply(this,arguments);};
  // keep cars out of the sea (Dakar)
  const _up=update;let last=null;update=function(dt){const r=_up.apply(this,arguments);try{if(S.real&&player&&REAL.mask&&S.state==='play'){if(!realOnLand(player.x,player.z)){if(last){player.x=last[0];player.z=last[1];}player.vx*=-.25;player.vz*=-.25;}else last=[player.x,player.z];}}catch(e){}return r;};
