@@ -5333,7 +5333,7 @@ function renderGarage(){const id=SAVE.current,cs=SAVE.cars[id],d=CARS[id];const 
   const tc=SAVE.treasures[S.city].length;body+=`<div class="item" style="margin-top:12px"><div><b>🪙 Treasure hunt</b><div class="d">${tc}/10 gold coins found in ${CITY[S.city].name}. Some are floating above ramps & trampolines!</div></div></div>`;}
  openModal(`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h1 style="font-size:36px">CREW GARAGE</h1><div class="presented" style="margin:6px 0 0"><span>Parts & service by</span><img src="${LOGO_SRC.pah}" style="height:30px;background:#fff;border-radius:6px;padding:3px 6px"></div></div><div class="orb" style="color:var(--green);font-size:22px">${fmt(SAVE.cash)}</div></div>
  <div class="tabs">${[['car','Cars & Repair'],['perf','Performance'],['style','Style'],['mods',"Muhammad's Mods"],['rules','Street Rules']].map(([k,v])=>`<div class="tab ${gTab===k?'on':''}" data-act="tab" data-v="${k}">${v}</div>`).join('')}</div>
- <div style="max-height:58vh;overflow:auto;padding-right:6px">${body}</div><div class="actions"><button class="btn" data-act="close">BACK TO THE STREETS</button><button class="btn alt" data-act="travel">TRAVEL TO ${S.city==='tokyo'?'DAKAR':'TOKYO'}</button></div>`,true);}
+ <div style="max-height:58vh;overflow:auto;padding-right:6px">${body}</div><div class="actions"><button class="btn" data-act="close">BACK TO THE STREETS</button><button class="btn alt" data-act="travel">TRAVEL 🌍</button></div>`,true);}
 function handleAct(act,v){const id=SAVE.current,cs=SAVE.cars[id];
  if(act==='close'){closeModal();return;}
  if(act==='tab'){gTab=v;renderGarage();return;}
@@ -5369,7 +5369,7 @@ function pauseMenu(){openModal(`<h1>PAUSED</h1><div class="sub">${CITY[S.city].n
  ${SAVE.tut<3?'<div class="tutbox">You are in the intro. <button class="btn sm alt" data-act="skiptut" style="margin-left:8px">SKIP INTRO</button></div>':''}
  <h3>STREET RULES</h3><div class="rules"> <div><b>🔧 Damage</b>Crashes lower your top speed until you repair here ($25 per 1%). At 0% your car is towed to the garage for a $1,000 fee.</div> <div><b>🚓 Busted</b>If you stop next to a cop for about 3 seconds you are busted: you lose 10% of your cash (min $500) and 60 REP.</div> <div><b>🚫 Impound</b>3 busts in the same car and it gets impounded. Release it here for $5,000, or drive another car you own.</div> <div><b>🔥 Heat</b>Higher heat brings faster units, roadblocks and a helicopter. Escape by breaking line of sight until the green bar fills.</div> <div><b>💸 Low on cash?</b>Pizza Rush and Parts Run pay $1–3k a job, and the crew will patch your car to 60% for free when you are broke.</div></div>
  <h3>GAME POLICIES (ONLINE)</h3><div class="note" style="opacity:.85;line-height:1.6">No bullying: 1 day – 1 week ban, permanent for repeat offenses · No exploiting: 5 weeks – permanent · Marketplace bots: 1–5 day ban · Game-breaking mods online: permanent ban · Unverified mods: mod-usage ban · Mods allowed offline / private servers only.</div>
- <div class="actions"><button class="btn" data-act="resume">RESUME</button><button class="btn alt" data-act="travel">TRAVEL TO ${S.city==='tokyo'?'DAKAR':'TOKYO'}</button><span id="rst"><button class="btn alt" data-act="reset">RESET PROGRESS</button></span></div><h3>PRESENTED BY</h3>${sponsorStrip(30)}`);}
+ <div class="actions"><button class="btn" data-act="resume">RESUME</button><button class="btn alt" data-act="travel">TRAVEL 🌍</button><span id="rst"><button class="btn alt" data-act="reset">RESET PROGRESS</button></span></div><h3>PRESENTED BY</h3>${sponsorStrip(30)}`);}
 
 /* ---------- INPUT ---------- */
 const K={};
@@ -5578,7 +5578,7 @@ function renderStart(){let h='';const prof=activeProfile();
  else if(START.step==='pick'){h+=`<h3>CHOOSE YOUR PROFILE</h3><div class="pcards">${PROF.list.map(p=>{const me=p.id===PROF.active;return`<div class="opt pcard ${me?'sel':''}" data-prof="${p.id}"><div class="nm">${p.name}</div><div class="tg">${p.crew||'No crew yet'}</div>${me&&SAVE.current?`<div class="tg">Level ${levelOf(SAVE.xp)} · ${fmt(SAVE.cash)} · ${CARS[SAVE.current].name}</div>`:me?'<div class="tg">New driver</div>':''}
    ${me?`<div style="margin-top:8px">${START.confirmDel===p.id?`<button class="btn sm pink" data-del2="${p.id}">CONFIRM DELETE</button>`:`<button class="btn sm alt" data-del="${p.id}">Delete</button>`}</div>`:''}</div>`;}).join('')}
    <div class="opt pcard" id="pfNew" style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">+ NEW PROFILE</div></div>`;
-  if(prof){h+=`<h3>CHOOSE YOUR CITY</h3><div class="grid">${Object.entries(CITY).map(([k,c])=>`<div class="opt ${pickCity===k?'sel':''}" data-city="${k}"><div class="nm">${c.name}</div><div class="tg">${c.sub} · ${c.night?'Neon night, drives on the left':'Sunny coast, drives on the right'}</div></div>`).join('')}</div>
+  if(prof){h+=`<h3>CHOOSE YOUR CITY</h3><div class="grid">${Object.entries(CITY).map(([k,c])=>`<div class="opt ${pickCity===k?'sel':''}" data-city="${k}"><div class="nm">${c.name}</div><div class="tg">${c.sub} · ${c.desc||(c.night?'Neon night, drives on the left':'Sunny coast, drives on the right')}</div></div>`).join('')}</div>
    <div class="actions"><button class="btn" id="go">${SAVE.current?'CONTINUE':'PICK YOUR CAR →'}</button><button class="btn alt" id="pfChar">👕 EDIT CHARACTER</button>${SAVE.tut<3&&SAVE.current?`<label class="chk"><input type="checkbox" id="skip"> Skip the intro</label>`:''}</div>`;}}
  else{h+=`<h3>CHOOSE YOUR STARTER CAR</h3><div class="grid">${Object.entries(CARS).filter(([k,c])=>c.starter).map(([k,c])=>`<div class="opt ${pickCar===k?'sel':''}" data-car="${k}"><div class="nm">${c.name}</div><div class="tg">${c.tag}</div>${bars(c)}<div class="feel">${c.feel}</div></div>`).join('')}</div>
   <h3>CHOOSE YOUR CITY</h3><div class="grid">${Object.entries(CITY).map(([k,c])=>`<div class="opt ${pickCity===k?'sel':''}" data-city="${k}"><div class="nm">${c.name}</div><div class="tg">${c.sub}</div></div>`).join('')}</div>
@@ -5688,13 +5688,18 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
 
 
 
+
+
+
 // ---------- REAL STREETS (beta): OpenStreetMap-based Tokyo Shibuya & Dakar Plateau ----------
-var REAL=(function(){const R={on:false,data:{},loading:{},mask:null,lms:[],labels:[],v:1};
+CITY.paris=Object.assign({},CITY.dakar,{name:'PARIS',sub:'Tour Eiffel & Arc de Triomphe',desc:'Real streets · Seine bridges · drives on the right',drive:'right',night:false,fog:.0016,hmin:15,hmax:30,real:true});
+CITY.nyc=Object.assign({},CITY.tokyo,{name:'NEW YORK',sub:'Midtown · Times Square',desc:'Real streets · neon night · drives on the right',drive:'right',night:true,fog:.0026,real:true});
+var REAL=(function(){const R={on:false,data:{},loading:{},mask:null,lms:[],labels:[],v:2,only:['paris','nyc']};
  try{R.on=localStorage.getItem('usr_realmap')==='1';}catch(e){}
  R.url=k=>'maps/'+k+'_real.json?v='+R.v;
  R.load=function(k){if(R.data[k])return Promise.resolve(R.data[k]);if(R.loading[k])return R.loading[k];
   R.loading[k]=fetch(R.url(k)).then(r=>{if(!r.ok)throw new Error('map '+r.status);return r.json();}).then(d=>{R.data[k]=d;return d;}).catch(e=>{R.loading[k]=null;throw e;});return R.loading[k];};
- R.active=()=>!!(R.on&&S.real);
+ R.active=()=>!!S.real;R.wants=k=>R.on||R.only.includes(k);
  return R;})();
 
 function realPts(a){const o=[];for(let i=0;i+1<a.length;i+=2)o.push([a[i],a[i+1]]);return o;}
@@ -5726,15 +5731,18 @@ function buildRealCity(key){
  else{hemi.color.set(0xdfefff);hemi.groundColor.set(0x8a7355);hemi.intensity=.5;sun.color.set(0xffe9c8);sun.intensity=1.9;renderer.toneMappingExposure=.92;}
  const STATIC=[];const add=m=>{world.add(m);return m;};
  // ---- sea + land ----
- const groundCol=dk?(night?0x403a32:0x8f8268):(night?0x2b2a31:0x8c8c92);
+ const groundCol=dk?(night?0x403a32:0x8f8268):key==='paris'?0x5e5a54:(night?0x2b2a31:0x8c8c92);
  const gtex=canvasTex(256,256,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);const r=mulberry(dk?5:6);for(let i=0;i<2600;i++){const v=200+Math.floor(r()*55);g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(r()*w,r()*h,1+r()*3,1+r()*3);}g.strokeStyle='rgba(0,0,0,.06)';for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*64,0);g.lineTo(i*64,h);g.stroke();g.beginPath();g.moveTo(0,i*64);g.lineTo(w,i*64);g.stroke();}},true);
  const landMat=new THREE.MeshStandardMaterial({side:THREE.DoubleSide,color:groundCol,map:gtex,roughness:.95});
  if(M.land){const sea=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),seaMat());sea.rotation.x=-Math.PI/2;sea.position.y=-.25;add(sea);S.sea=sea;
   const P=[],U=[],I=[];M.land.forEach(l=>realPolyFill(realPts(l),0,P,U,I,6));const lg=realGeo(P,U,I);const lm=new THREE.Mesh(lg,landMat);lm.receiveShadow=true;add(lm);
   // beach rim
   const BP=[],BU=[],BI=[];M.land.forEach(l=>{const pts=realPts(l);pts.push(pts[0]);realRibbon(pts,7,.01,BP,BU,BI,6);});add(new THREE.Mesh(realGeo(BP,BU,BI),new THREE.MeshStandardMaterial({color:0xe7d3a4,roughness:1,side:THREE.DoubleSide})));
-  REAL.mask=realMask(M);}
+}
  else{const g=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),landMat);g.rotation.x=-Math.PI/2;g.receiveShadow=true;add(g);S.sea=null;REAL.mask=null;}
+ if(M.water&&M.water.length){const P=[],U=[],I=[];M.water.forEach(l=>realPolyFill(realPts(l),.03,P,U,I,20));const sm=seaMat();sm.side=THREE.DoubleSide;sm.polygonOffset=true;sm.polygonOffsetFactor=-1;const wm=new THREE.Mesh(realGeo(P,U,I),sm);add(wm);S.sea=S.sea||wm;
+  const QP=[],QU=[],QI=[];M.water.forEach(l=>{const pts=realPts(l);pts.push(pts[0]);realRibbon(pts,2.4,.5,QP,QU,QI,4);});add(new THREE.Mesh(realGeo(QP,QU,QI),new THREE.MeshStandardMaterial({color:0xc9bfa8,roughness:.9,side:THREE.DoubleSide})));}
+ if(M.land||(M.water&&M.water.length))REAL.mask=realMask(M);
  // ---- parks ----
  {const cols=[night?0x1f3a24:0x5f9a4c,night?0x24402a:0x4f8f3f,0xe7d3a4,0x2f6f9f];const G={};M.parks.forEach(([k,n,p])=>{(G[k]=G[k]||{P:[],U:[],I:[]});realPolyFill(realPts(p),.02+k*.002,G[k].P,G[k].U,G[k].I,4);});
   for(const k in G){const m=new THREE.Mesh(realGeo(G[k].P,G[k].U,G[k].I),new THREE.MeshStandardMaterial({side:THREE.DoubleSide,color:cols[k],roughness:1,polygonOffset:true,polygonOffsetFactor:-1}));m.receiveShadow=true;add(m);}}
@@ -5767,7 +5775,8 @@ function buildRealCity(key){
  const special=new THREE.MeshStandardMaterial({color:night?0x8a8a90:0xf4f1ea,roughness:.7});
  const BUCK=new Map();const bucket=m=>{let b=BUCK.get(m);if(!b)BUCK.set(m,b={P:[],U:[],I:[]});return b;};const roofB={P:[],U:[],I:[]};
  const lmB={};M.lm.forEach(l=>{if(l.b>=0)lmB[l.b]=l;});
- M.blds.forEach((b,bi)=>{let [h,mt,ni,obb,ring]=b;const pts=realPts(ring);const L=lmB[bi];if(L&&L.ty==='star')return;// star landmarks get custom models
+ const CLEAR={eiffel:80,arc:30};const clearZ=M.lm.filter(l=>CLEAR[l.id]).map(l=>[l.x,l.z,CLEAR[l.id]]);const KEEP={empire:1,chrysler:1,rock:1,times:1,chaillot:1,palais:0};
+ M.blds.forEach((b,bi)=>{let [h,mt,ni,obb,ring]=b;const pts=realPts(ring);const L=lmB[bi];if(L&&L.ty==='star'&&!KEEP[L.id])return;if(clearZ.length&&clearZ.some(c=>Math.hypot(obb[0]-c[0],obb[1]-c[1])<c[2]))return;// star landmarks get custom models
   const mat=mt?special:h>=60?tall[bi%3]:MATS[(bi*7)%MATS.length];const B=bucket(mat);let dist=0;
   let sa=0;for(let i=0;i<pts.length;i++){const a=pts[i],c=pts[(i+1)%pts.length];sa+=a[0]*c[1]-c[0]*a[1];}const ccw=sa>0;
   for(let i=0;i<pts.length;i++){const a=pts[i],c=pts[(i+1)%pts.length];const L2=Math.hypot(c[0]-a[0],c[1]-a[1]);const base=B.P.length/3;
@@ -5780,8 +5789,8 @@ function buildRealCity(key){
  // ---- landmarks ----
  REAL.lms=M.lm.map(l=>Object.assign({},l));REAL.labels=[];
  const blds=M.blds;
- if(dk)realDakarLandmarks(M,STATIC,night);else realTokyoLandmarks(M,STATIC,night);
- REAL.lms.forEach(l=>{if(l.ty!=='star')return;const lab=labelSprite(l.n.toUpperCase(),dk?'#ffc23d':'#ff2a6d');lab.position.set(l.x,(l.h||20)+14,l.z);lab.scale.multiplyScalar(1.1);world.add(lab);REAL.labels.push(lab);});
+ if(dk)realDakarLandmarks(M,STATIC,night);else if(key==='paris')realParisLandmarks(M,STATIC,night);else if(key==='nyc')realNYCLandmarks(M,STATIC,night);else realTokyoLandmarks(M,STATIC,night);
+ REAL.lms.forEach(l=>{if(l.ty!=='star')return;const lab=labelSprite(l.n.toUpperCase(),dk||key==='paris'?'#ffc23d':'#ff2a6d');lab.position.set(l.x,(l.h||20)+14,l.z);lab.scale.multiplyScalar(1.1);world.add(lab);REAL.labels.push(lab);});
  // ---- beacon, rain, heli (same as classic) ----
  beacon=new THREE.Mesh(new THREE.CylinderGeometry(7,7,60,28,1,true),new THREE.MeshBasicMaterial({color:0xffd000,map:softTex,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));beacon.visible=false;world.add(beacon);
  const RN=2600,rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(RN*6),3));rain=new THREE.LineSegments(rg,new THREE.LineBasicMaterial({color:night?0x8fa8ff:0xcfd8e0,transparent:true,opacity:.45}));rain.frustumCulled=false;rain.visible=S.weather==='rain';rain.userData.seed=[];
@@ -5790,10 +5799,11 @@ function buildRealCity(key){
   const sp=new THREE.SpotLight(0xe8f0ff,night?6:2,140,.28,.5,1);sp.position.set(0,-1,0);heliMesh.add(sp);heliMesh.add(sp.target);heliMesh.userData.spot=sp;const cone=new THREE.Mesh(new THREE.ConeGeometry(9,45,24,1,true),new THREE.MeshBasicMaterial({color:0xdfe8ff,transparent:true,opacity:.05,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));cone.position.y=-22.5;heliMesh.add(cone);heliMesh.userData.cone=cone;}
  heliMesh.visible=false;world.add(heliMesh);
  // ---- minimap background (north up) ----
- mapBG=document.createElement('canvas');mapBG.width=mapBG.height=190;const g=mapBG.getContext('2d');g.fillStyle=dk?'#1d6f9f':'#120d22';g.fillRect(0,0,190,190);
+ mapBG=document.createElement('canvas');mapBG.width=mapBG.height=190;const g=mapBG.getContext('2d');g.fillStyle=dk?'#1d6f9f':night?'#120d22':'#3a3d44';g.fillRect(0,0,190,190);
+ (M.water||[]).forEach(l=>{const p=realPts(l);g.fillStyle='#1d6f9f';g.beginPath();p.forEach((q,i)=>{i?g.lineTo(mx(q[0]),my(q[1])):g.moveTo(mx(q[0]),my(q[1]));});g.closePath();g.fill();});
  const mp=(x,z)=>[mx(x),my(z)];
  if(M.land){g.fillStyle='#2a3a2a';M.land.forEach(l=>{const p=realPts(l);g.beginPath();p.forEach((q,i)=>{const [a,b]=mp(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b);});g.closePath();g.fill();});}
- g.strokeStyle=dk?'#a89a7a':'#5a4f8a';g.lineCap='round';REAL.roads.forEach(r=>{if(r.elev)return;g.lineWidth=Math.max(.6,r.w*MSC*1.4);g.beginPath();r.pts.forEach((q,i)=>{const [a,b]=mp(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();});
+ g.strokeStyle=dk||key==='paris'?'#a89a7a':'#5a4f8a';g.lineCap='round';REAL.roads.forEach(r=>{if(r.elev)return;g.lineWidth=Math.max(.6,r.w*MSC*1.4);g.beginPath();r.pts.forEach((q,i)=>{const [a,b]=mp(q[0],q[1]);i?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();});
  g.fillStyle='#ffc23d';REAL.lms.filter(l=>l.ty==='star').forEach(l=>{const [a,b]=mp(l.x,l.z);g.beginPath();g.arc(a,b,2.6,0,7);g.fill();});
  S.city=key;SAVE.city=key;save();
  $('cityl').textContent=(SAVE.profile?SAVE.profile.name+(SAVE.profile.crew?' · '+SAVE.profile.crew:'')+' · ':'')+C.name+' · real streets · map © OpenStreetMap';
@@ -5806,8 +5816,11 @@ function realBox(obb,h){const [cx,cz,ang,hx,hz]=obb;const c=Math.cos(ang),s=Math
  const ex=Math.abs(c)*hx+Math.abs(s)*hz+3,ez=Math.abs(s)*hx+Math.abs(c)*hz+3;
  const i0=clamp(Math.floor((cx-ex+HALF)/BLOCK),0,N-1),i1=clamp(Math.floor((cx+ex+HALF)/BLOCK),0,N-1),j0=clamp(Math.floor((cz-ez+HALF)/BLOCK),0,N-1),j1=clamp(Math.floor((cz+ez+HALF)/BLOCK),0,N-1);
  for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++)BCELL[i][j].push(bx);return bx;}
-function realMask(M){const [x0,z0,x1,z1]=M.b,cs=4,W=Math.ceil((x1-x0)/cs),H=Math.ceil((z1-z0)/cs);const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);g.fillStyle='#fff';
- M.land.forEach(l=>{const p=realPts(l);g.beginPath();p.forEach((q,i)=>{const a=(q[0]-x0)/cs,b=(q[1]-z0)/cs;i?g.lineTo(a,b):g.moveTo(a,b);});g.closePath();g.fill();});
+function realMask(M){const [x0,z0,x1,z1]=M.b,cs=4,W=Math.ceil((x1-x0)/cs),H=Math.ceil((z1-z0)/cs);const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+ const poly=(l,col)=>{const p=realPts(l);g.fillStyle=col;g.beginPath();p.forEach((q,i)=>{const a=(q[0]-x0)/cs,b=(q[1]-z0)/cs;i?g.lineTo(a,b):g.moveTo(a,b);});g.closePath();g.fill();};
+ if(M.land){g.fillStyle='#000';g.fillRect(0,0,W,H);M.land.forEach(l=>poly(l,'#fff'));}else{g.fillStyle='#fff';g.fillRect(0,0,W,H);}
+ (M.water||[]).forEach(l=>poly(l,'#000'));
+ g.strokeStyle='#fff';g.lineCap='round';g.lineJoin='round';M.roads.forEach(r=>{if(r[4])return;const p=realPts(r[5]);g.lineWidth=Math.max(1,r[1]/cs);g.beginPath();p.forEach((q,i)=>{const a=(q[0]-x0)/cs,b=(q[1]-z0)/cs;i?g.lineTo(a,b):g.moveTo(a,b);});g.stroke();});
  const d=g.getImageData(0,0,W,H).data,m=new Uint8Array(W*H);for(let i=0;i<W*H;i++)m[i]=d[i*4]>127?1:0;return{x0,z0,cs,W,H,m};}
 function realOnLand(x,z){const K=REAL.mask;if(!K)return true;const i=Math.floor((x-K.x0)/K.cs),j=Math.floor((z-K.z0)/K.cs);if(i<0||j<0||i>=K.W||j>=K.H)return false;return K.m[j*K.W+i]===1;}
 function realFootprint(M,l){return l.b>=0?M.blds[l.b]:null;}
@@ -5871,9 +5884,72 @@ function realTokyoLandmarks(M,STATIC,night){
  const ant=new THREE.Mesh(new THREE.CylinderGeometry(.8,2,80,8),sm2);ant.position.y=400;sky.add(ant);sky.position.set(1700,0,-960);world.add(sky);
  REAL.lms.push({id:'ttower',n:'Tokyo Tower (skyline)',x:1650,z:40,ty:'far',h:200},{id:'skytree',n:'Tokyo Skytree (skyline)',x:1700,z:-960,ty:'far',h:440});
 }
+function realBeam(mat,a,b,t,STATIC){const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],L=Math.hypot(dx,dy,dz);const m=new THREE.Mesh(GEO.box,mat);m.scale.set(t,L,t);m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);
+ m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx/L,dy/L,dz/L));m.castShadow=true;world.add(m);if(STATIC)STATIC.push(m);return m;}
+function realLattice(col){return canvasTex(64,64,g=>{g.clearRect(0,0,64,64);g.strokeStyle=col;g.lineWidth=7;g.strokeRect(3,3,58,58);g.lineWidth=4;g.beginPath();g.moveTo(0,0);g.lineTo(64,64);g.moveTo(64,0);g.lineTo(0,64);g.stroke();},true);}
+function realParisLandmarks(M,STATIC,night){
+ const L=id=>REAL.lms.find(l=>l.id===id);
+ // --- Tour Eiffel (drive between the legs) ---
+ const ef=L('eiffel');if(ef){const cx=ef.x,cz=ef.z;const cm=L('champmars');const ax=cm?Math.atan2(cm.z-cz,cm.x-cx):0.8;const ca=Math.cos(ax+Math.PI/4),sa=Math.sin(ax+Math.PI/4);
+  const R2=(u,v)=>[cx+u*ca-v*sa,cz+u*sa+v*ca];const tex=realLattice('#5a4632');tex.repeat.set(4,10);
+  const mat=new THREE.MeshStandardMaterial({color:0x8a6e52,map:tex,alphaTest:.45,side:THREE.DoubleSide,metalness:.3,roughness:.6}),solid=new THREE.MeshStandardMaterial({color:0x7a6248,metalness:.3,roughness:.6});
+  const lvl=[[0,62],[57,36],[115,19],[276,5]];
+  for(const [su,sv] of [[1,1],[1,-1],[-1,1],[-1,-1]]){const g0=R2(su*lvl[0][1],sv*lvl[0][1]),g1=R2(su*lvl[1][1],sv*lvl[1][1]),g2=R2(su*lvl[2][1],sv*lvl[2][1]);
+   const leg=realBeam(mat,[g0[0],0,g0[1]],[g1[0],57,g1[1]],13,STATIC);leg.material=mat;realBeam(mat,[g1[0],57,g1[1]],[g2[0],115,g2[1]],8,STATIC);realBox([g0[0],g0[1],0,6,6],60);}
+  // arches between legs
+  for(let q=0;q<4;q++){const a1=[[1,1],[1,-1],[-1,-1],[-1,1]][q],a2=[[1,-1],[-1,-1],[-1,1],[1,1]][q];for(let k=0;k<=8;k++){const f=k/8,u=a1[0]+(a2[0]-a1[0])*f,v=a1[1]+(a2[1]-a1[1])*f;const p=R2(u*48,v*48);const y=40-Math.sin(f*Math.PI)*18;const b=new THREE.Mesh(GEO.box,solid);b.scale.set(3,2,3);b.position.set(p[0],y,p[1]);world.add(b);STATIC.push(b);}}
+  const plat=(y,w,h)=>{const b=new THREE.Mesh(GEO.box,solid);b.scale.set(w,h,w);b.position.set(cx,y,cz);b.rotation.y=-(ax+Math.PI/4);b.castShadow=true;world.add(b);STATIC.push(b);};
+  plat(58,78,5);plat(116,44,4);
+  const top=new THREE.Mesh(new THREE.CylinderGeometry(lvl[3][1]*1.41,lvl[2][1]*1.41,161,4,1,true),mat);top.position.set(cx,115+80.5,cz);top.rotation.y=-(ax+Math.PI/4)+Math.PI/4;top.castShadow=true;world.add(top);
+  plat(278,14,6);const sp=new THREE.Mesh(new THREE.CylinderGeometry(.6,1.6,52,8),solid);sp.position.set(cx,307,cz);world.add(sp);
+  const bl=new THREE.Mesh(new THREE.SphereGeometry(1.6,8,8),new THREE.MeshBasicMaterial({color:0xffe9a0}));bl.position.set(cx,334,cz);world.add(bl);S.tip=bl;ef.h=60;}
+ // --- Arc de Triomphe (drive through the arch) ---
+ const ar=L('arc');if(ar){let ang=0;const ch=(REAL.roads||[]).filter(r=>/Champs-Élysées/.test(r.n));if(ch.length){let far=null,fd=0;ch.forEach(r=>r.pts.forEach(p=>{const d=Math.hypot(p[0]-ar.x,p[1]-ar.z);if(d>fd){fd=d;far=p;}}));if(far)ang=Math.atan2(far[0]-ar.x,far[1]-ar.z);}
+  const stone=new THREE.MeshStandardMaterial({color:0xe6dcc4,roughness:.85});const ux=Math.cos(ang),uz=-Math.sin(ang);// across-axis unit
+  const box=(w,h,d,ox,y)=>{const b=new THREE.Mesh(GEO.box,stone);b.scale.set(w,h,d);b.position.set(ar.x+ux*ox,y,ar.z+uz*ox);b.rotation.y=ang;b.castShadow=b.receiveShadow=true;world.add(b);STATIC.push(b);return b;};
+  const vx=Math.sin(ang),vz=Math.cos(ang);const box2=(w,h,d,ox,oz,y)=>{const b=new THREE.Mesh(GEO.box,stone);b.scale.set(w,h,d);b.position.set(ar.x+ux*ox+vx*oz,y,ar.z+uz*ox+vz*oz);b.rotation.y=ang;b.castShadow=b.receiveShadow=true;world.add(b);STATIC.push(b);};
+  for(const sx of[-14.9,14.9]){box2(15.2,29,6.8,sx,-7.6,14.5);box2(15.2,29,6.8,sx,7.6,14.5);box2(15.2,10.3,8.4,sx,0,23.85);}
+  box(45,21,22,0,39.5);box(47,1.5,24,0,50.5);box(46,2,23,0,29.8);
+  // side arches (along the axis)
+  realBox([ar.x+ux*-14.9,ar.z+uz*-14.9,-ang,7.6,11],29);realBox([ar.x+ux*14.9,ar.z+uz*14.9,-ang,7.6,11],29);
+  const fl=canvasTex(96,64,g=>{g.fillStyle='#002395';g.fillRect(0,0,32,64);g.fillStyle='#fff';g.fillRect(32,0,32,64);g.fillStyle='#ed2939';g.fillRect(64,0,32,64);});
+  const f=new THREE.Mesh(new THREE.PlaneGeometry(10,6.6),new THREE.MeshStandardMaterial({map:fl,side:THREE.DoubleSide}));f.position.set(ar.x,22,ar.z);f.rotation.y=ang+Math.PI/2;world.add(f);ar.h=52;}
+ // --- Trocadéro fountains ---
+ const tr=L('chaillot'),ie=L('iena');if(tr&&ie){const mx2=(tr.x*2+ie.x)/3,mz2=(tr.z*2+ie.z)/3,a=Math.atan2(ie.x-tr.x,ie.z-tr.z);const sm=seaMat();const w=new THREE.Mesh(new THREE.PlaneGeometry(40,120),sm);w.rotation.x=-Math.PI/2;w.rotation.z=a;w.position.set(mx2,.15,mz2);world.add(w);
+  const jet=new THREE.MeshBasicMaterial({color:0xeaf6ff,transparent:true,opacity:.7});for(let k=-4;k<=4;k++){const j=new THREE.Mesh(new THREE.CylinderGeometry(.3,.8,10,6),jet);j.position.set(mx2+Math.sin(a)*k*12,5,mz2+Math.cos(a)*k*12);world.add(j);}tr.h=30;}
+}
+function realNYCLandmarks(M,STATIC,night){
+ const L=id=>REAL.lms.find(l=>l.id===id);const fpOf=l=>l&&l.b>=0?M.blds[l.b]:null;
+ // --- Times Square screens ---
+ const ts=L('times');if(ts){const near=M.blds.map((b,i)=>({b,i,d:Math.hypot(b[3][0]-ts.x,b[3][1]-ts.z)})).filter(o=>o.d>18&&o.d<160&&o.b[0]>24).sort((a,b)=>a.d-b.d).slice(0,12);
+  near.forEach((o,k)=>{const [cx,cz,ang,hx,hz]=o.b[3];const dx=ts.x-cx,dz=ts.z-cz,dl=Math.hypot(dx,dz);const fx=dx/dl,fz=dz/dl;const off=Math.min(hx,hz)+.6;const w=12+(k%3)*4;
+   addScreen(cx+fx*off,12+(k%2)*10,cz+fz*off,Math.atan2(fx,fz),w,w*.6,k*5);if(o.b[0]>60)addScreen(cx+fx*off,34+(k%3)*6,cz+fz*off,Math.atan2(fx,fz),w*.8,w*1.1,k*5+3);});
+  const ny=canvasTex(512,128,g=>{g.fillStyle='#000';g.fillRect(0,0,512,128);g.fillStyle='#ff2a2a';g.font='bold 86px sans-serif';g.textAlign='center';g.fillText('TIMES SQ',256,100);});
+  const sg=new THREE.Mesh(new THREE.PlaneGeometry(26,6.5),new THREE.MeshBasicMaterial({map:ny,toneMapped:false,side:THREE.DoubleSide}));sg.position.set(ts.x,30,ts.z);world.add(sg);REAL.labels.push(sg);ts.h=40;}
+ // --- Empire State spire ---
+ const es=L('empire'),ef=fpOf(es);if(es&&ef){const [cx,cz]=ef[3];const top=Math.min(ef[0],381);const lt=new THREE.MeshStandardMaterial({color:0xe9e1cf,emissive:night?0xffe6a8:0,emissiveIntensity:night?.6:0});
+  const c1=new THREE.Mesh(new THREE.CylinderGeometry(6,9,24,8),lt);c1.position.set(cx,top+12,cz);world.add(c1);const ant=new THREE.Mesh(new THREE.CylinderGeometry(.7,2.2,60,8),new THREE.MeshStandardMaterial({color:0xbfc3c8,metalness:.7,roughness:.3}));ant.position.set(cx,top+54,cz);world.add(ant);
+  const tip=new THREE.Mesh(new THREE.SphereGeometry(1.4,8,8),new THREE.MeshBasicMaterial({color:0xff2020}));tip.position.set(cx,top+85,cz);world.add(tip);S.tip=tip;es.h=top+60;es.x=Math.round(cx);es.z=Math.round(cz);}
+ // --- Chrysler crown ---
+ const chl=L('chrysler'),cf=fpOf(chl);if(chl&&cf){const [cx,cz,ang]=cf[3];const h=cf[0]||282;const st=new THREE.MeshStandardMaterial({color:0xd7dbe0,metalness:.85,roughness:.22,emissive:night?0x9fc8ff:0,emissiveIntensity:night?.25:0});
+  let y=h,r=13;for(let k=0;k<7;k++){const seg=new THREE.Mesh(new THREE.CylinderGeometry(r*.78,r,9,4),st);seg.position.set(cx,y+4.5,cz);seg.rotation.y=-ang+Math.PI/4;world.add(seg);y+=9;r*=.78;}
+  const sp=new THREE.Mesh(new THREE.ConeGeometry(1.6,38,8),st);sp.position.set(cx,y+19,cz);world.add(sp);chl.h=y+20;chl.x=Math.round(cx);chl.z=Math.round(cz);}
+ // --- Rockefeller Center: rink + tree ---
+ const rk=L('rock');if(rk){const rx=388,rz=-295;const ice=new THREE.Mesh(new THREE.PlaneGeometry(30,18),new THREE.MeshStandardMaterial({color:0xe8f4ff,roughness:.15,metalness:.1}));ice.rotation.x=-Math.PI/2;ice.position.set(rx,.12,rz);world.add(ice);
+  const tree=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0x1d5a2a,roughness:.9});[[9,10,6],[7,9,13],[5,8,19],[3,7,24]].forEach(([r,h,y])=>{const c=new THREE.Mesh(new THREE.ConeGeometry(r,h,10),gm);c.position.y=y;tree.add(c);});
+  const lm=[0xff2a2a,0xffd23d,0x3aa0ff,0x39ff9f];for(let k=0;k<40;k++){const a=k*2.4,y=3+k*.55,r=8.5*(1-y/30);const b=new THREE.Mesh(new THREE.SphereGeometry(.45,6,6),new THREE.MeshBasicMaterial({color:lm[k%4]}));b.position.set(Math.cos(a)*r,y,Math.sin(a)*r);tree.add(b);}
+  const star=new THREE.Mesh(new THREE.OctahedronGeometry(1.6),new THREE.MeshBasicMaterial({color:0xfff2a0}));star.position.y=29;tree.add(star);tree.position.set(rx,0,rz-14);world.add(tree);realBox([rx,rz-14,0,3,3],30);rk.h=60;}
+}
 // ---- wiring into the game ----
 (function(){
- const _bc=buildCity;buildCity=function(key){if(REAL.on&&REAL.data[key]){if(buildRealCity(key))return;}S.real=false;return _bc.apply(this,arguments);};
+ const _bc=buildCity;buildCity=function(key){if(REAL.wants(key)&&REAL.data[key]){if(buildRealCity(key))return;}
+  if(REAL.only.includes(key)){toast('Loading '+CITY[key].name+'…','Downloading real streets','#05d9e8',2);REAL.load(key).then(()=>{if(pickCity===key||S.city===key||S.travelTo===key){S.travelTo=null;buildCity(key);if(S.state==='play'){const keep=player;player&&world.remove(player.mesh);player=null;createPlayer();}else renderStart();}}).catch(()=>toast('Could not load '+CITY[key].name,'Check your internet connection','#ff8a00',2.6));return;}
+  S.real=false;return _bc.apply(this,arguments);};
+ REAL.only.forEach(k=>setTimeout(()=>REAL.load(k).catch(()=>{}),1500));
+ if(typeof handleAct==='function'){const _ha=handleAct;handleAct=function(act,v,el){
+  if(act==='travel'){openModal(`<h1>TRAVEL</h1><div class="sub">Pick a city</div><div class="grid" style="margin-top:12px">${Object.entries(CITY).filter(([k])=>k!==S.city).map(([k,c])=>`<div class="opt" data-act="travelto" data-v="${k}" style="cursor:pointer"><div class="nm">${c.name}</div><div class="tg">${c.sub}${c.real?' · real streets':''}</div></div>`).join('')}</div><div class="actions" style="margin-top:14px"><button class="btn alt" data-act="close">BACK</button></div>`);return;}
+  if(act==='travelto'){closeModal();if(REAL.only.includes(v)&&!REAL.data[v]){S.travelTo=v;}travel(v);return;}
+  return _ha.apply(this,arguments);};}
  const _cp=createPlayer;createPlayer=function(){if(!S.real)return _cp.apply(this,arguments);const ev=EVENTS;EVENTS=[{id:'garage',i:0,j:0}];const tut=SAVE.tut;SAVE.tut=1;const old=player;
   try{_cp.apply(this,arguments);}finally{EVENTS=ev;SAVE.tut=tut;}
   if(!old){const sp=realSnap(REAL.data[S.city].spawn[0],REAL.data[S.city].spawn[1],8);placeOnRoad(player,sp.x,sp.z,sp.h);}};
