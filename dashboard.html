@@ -58,7 +58,7 @@ td{padding:8px;border-bottom:1px solid #ffffff0d;white-space:nowrap}tr.click{cur
 const CFG={databaseURL:"https://ultimate-street-racing-default-rtdb.firebaseio.com",apiKey:"AIzaSyDa6Ml0X9dZFmZgmsCbWWF2Su3qmqLJN9Q",authDomain:"ultimate-street-racing.firebaseapp.com",projectId:"ultimate-street-racing",appId:"1:756616787847:web:5371aab9cb2dd767bf8522"};
 firebase.initializeApp(CFG);const db=firebase.database();
 const S1='usr-save-7f3a',S2='usr-net-b91c',SUPER_NET='200b30764f8b8a5e8b5590bc',DK='usr_dash_v1';
-const SPN={jollof:'Jollof Ventures',jvh:'Jollof Ventures',pah:'Planet Auto Hub',spark:'Elite Global Travel',farm:'Nioro Farms',all:'All sponsors (start screen)'};
+const SPN={jollof:'Jollof Ventures',jvh:'Jollof Ventures',pah:'Planet Auto Hub',spark:'Elite Global Travel',farm:'Nioro Farms',fasa:'Fasa',superior:'SUPERIOR',all:'All sponsors (start screen)'};
 const ACT={menu:'🏠 On the start screen',race:'🏁 Street race',drag:'🚦 Stoplight duel',duel:'⚔️ Online duel',chase:'🚨 Police chase',job:'📦 Delivery job',course:'🛣️ Player course',build:'🧱 Building a course',photo:'📸 Photo mode',garage:'🔧 In the crew garage',showroom:'🚗 In the car showroom',menus:'📋 In the menus',paused:'⏸️ Paused',foot:'🚶 Walking around',meet:'🤝 At a car meet',lounge:'🛋️ In the lounge',drive:'🚗 Free driving'};
 const CITY={tokyo:'🇯🇵 Tokyo',dakar:'🇸🇳 Dakar'},LANGN={en:'English',fr:'French',it:'Italian'},LIVE_MS=75000;
 const MODES={race:'Street race',drag:'Stoplight duel',duel:'Online duel',chase:'Police chase',job:'Delivery job',course:'Player course'};
@@ -261,7 +261,7 @@ function vOnline(){const D=chartDays(),f=k=>allEv(e=>e.k===k&&inR(e)),a=k=>allEv
 function vSponsors(){const D=chartDays(),V=allEv(e=>e.k==='sv'&&inR(e)),C=allEv(e=>e.k==='sc'&&inR(e)),VA=allEv(e=>e.k==='sv'),CA=allEv(e=>e.k==='sc');
  const sk=e=>{const s=e.s||'';for(const k in SPN)if(s===k||SPN[k]===s)return k==='jvh'?'jollof':k;return s||'other';};
  const POS={start:'Start screen',board:'City billboards',race:'Race intro screen',garage:'Crew garage',menu:'Menus'};
- const brands=['jollof','pah','spark','farm'],startV=V.filter(e=>e.p==='start').length;
+ const brands=['jollof','pah','spark','farm','fasa','superior'],startV=V.filter(e=>e.p==='start').length;
  const rowsS=brands.map(k=>{const v=V.filter(e=>e.p!=='start'&&sk(e)===k).length+startV,c=C.filter(e=>sk(e)===k).length;return{k,v,c};}).sort((a,b)=>b.v-a.v);
  const rowsP=Object.keys(POS).map(p=>{const v=V.filter(e=>e.p===p).length*(p==='start'?brands.length:1),c=C.filter(e=>e.p===p).length;return{p,v,c};}).filter(r=>r.v||r.c).sort((a,b)=>(b.c/(b.v||1))-(a.c/(a.v||1))||b.v-a.v);
  const tv=rowsS.reduce((a,r)=>a+r.v,0),tc=C.length,best=rowsP.find(r=>r.v>0&&r.c>0)||rowsP[0];const ctr=(c,v)=>v?(c/v*100).toFixed(1)+'%':'—';
