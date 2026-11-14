@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.5 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.6 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5244,7 +5244,7 @@ function progressOf(c){const R=S.race;if(!R)return 0;const n=R.wps.length,tg=R.w
 function clearNear(x,z,r){traffic.forEach(t=>{if(Math.hypot(t.x-x,t.z-z)<r)resetTraffic(t);});}
 function startRace(ev){if(S.heat.level>0){toast('LOSE THE COPS FIRST','','#ff8a00',1.8);return;}
  const C=CITY[S.city];let wps,laps,n;
- if(ev.type==='race'){wps=C.routes[ev.route].map(([i,j])=>({x:roadC(i),z:roadC(j)}));laps=ev.laps;n=ev.rivals;}
+ if(ev.type==='race'){wps=ev.rw?ev.rw.map(q=>({x:q[0],z:q[1]})):C.routes[ev.route].map(([i,j])=>({x:roadC(i),z:roadC(j)}));laps=ev.laps;n=ev.rivals;}
  else{const dg=C.drag;wps=[{x:roadC(dg.i0)+22,z:roadC(dg.j)},{x:roadC(dg.i1),z:roadC(dg.j)}];laps=1;n=1;}
  const R={type:ev.type,ev,wps,laps,count:3.6,t:0,finish:[],total:ev.type==='race'?wps.length*laps:1};S.race=R;S.mode='race';
  const d={x:wps[1].x-wps[0].x,z:wps[1].z-wps[0].z},dl=Math.hypot(d.x,d.z);d.x/=dl;d.z/=dl;const lat={x:-d.z,z:d.x};const h=Math.atan2(d.x,d.z);
@@ -5277,7 +5277,7 @@ function updateRace(dt){const R=S.race;if(!R)return;const n=R.wps.length;
  if(R.wait!=null){R.wait+=dt;const g=racers[0];if(g&&(g.done||g.dnf||R.wait>20)){finishRace();return;}}
  for(const c of[player,...racers]){if(c.done)continue;const tg=R.wps[(c.prog+1)%n];if(Math.hypot(tg.x-c.x,tg.z-c.z)<(R.type==='drag'?ROAD:15)){c.prog++;if(c===player&&!c.done)noiseHit(.12,3000);
    if(c.prog>=R.total||(R.type==='drag'&&c.prog>=1)){if(c.ghost&&c.done)continue;c.done=true;c.ft=c.ghost&&Number.isFinite(c.ft)?c.ft:R.t;R.finish.push(c);if(c===player){if(R.online){onlineDuelFinish(c.ft);const g=racers[0];if(!(g.done||g.dnf)){R.wait=0;feed('Finished! Waiting for '+g.name+'…');continue;}}finishRace();return;}}}
-  if(c!==player&&!c.ghost){const v=Math.hypot(c.vx,c.vz);if(v<2){c.stuck+=dt;if(c.stuck>3){const lp=R.wps[c.prog%n],nt=R.wps[(c.prog+1)%n];placeOnRoad(c,lp.x,lp.z,Math.atan2(nt.x-lp.x,nt.z-lp.z));c.stuck=0;}}else c.stuck=0;}}
+  if(c!==player&&!c.ghost){const v=Math.hypot(c.vx,c.vz);if(v<2){c.stuck+=dt;if(c.stuck>3){c.unst=(c.unst||0)+1;const k2=c.unst>1?1:0;const lp=R.wps[(c.prog+k2)%n],nt=R.wps[(c.prog+k2+1)%n],hh=Math.atan2(nt.x-lp.x,nt.z-lp.z),ri=racers.indexOf(c),lo=(ri-1)*2.2;placeOnRoad(c,lp.x+Math.cos(hh)*lo,lp.z-Math.sin(hh)*lo,hh);if(k2)c.prog+=0;c.stuck=0;}}else c.stuck=0;}}
  const tg=R.wps[(player.prog+1)%n];beacon.visible=true;beacon.position.set(tg.x,30,tg.z);beacon.material.color.set(player.prog+1>=R.total||R.type==='drag'?0x39ff9f:0xffd000);
  const all=[player,...racers].sort((a,b)=>progressOf(b)-progressOf(a));const pos=all.indexOf(player)+1;
  S.objExtra=R.type==='race'?`POS <span style="color:var(--cyan)">${pos}/${all.length}</span> · LAP ${Math.min(R.laps,Math.floor(player.prog/n)+1)}/${R.laps} · ${R.t.toFixed(1)}s`:`STOPLIGHT DUEL · ${pos===1?'<span style="color:var(--green)">LEADING</span>':'<span style="color:var(--pink)">BEHIND</span>'} · ${R.t.toFixed(2)}s`;
@@ -5507,7 +5507,7 @@ function render(dt){
 const mapCtx=$('map').getContext('2d');
 function hint(html,dur){$('hint').innerHTML=html;$('hint').classList.remove('hidden');S.hintT=dur||6;}
 function nearestEvent(){let best=null,bd=1e9;for(const m of MARKERS){if(m.ev.type==='garage')continue;const d=Math.hypot(m.x-player.x,m.z-player.z);if(d<bd){bd=d;best=m;}}return best;}
-function evPos(id){const e=EVENTS.find(x=>x.id===id);return{x:roadC(e.i),z:roadC(e.j),e};}
+function evPos(id){const e=EVENTS.find(x=>x.id===id);if(e&&e.x!=null)return{x:e.x,z:e.z,e};return{x:roadC(e.i),z:roadC(e.j),e};}
 function objective(){const p=player;if(S.meet&&S.meet.free)return{t:'ON FOOT',d:'Walk to a vehicle and press F to ride · 🛵 RIDE stands have motorcycles, scooters and bikes · walk up to players to chat or race',x:null,col:'#39ff9f'};if(S.meet)return{t:'CAR MEET',d:'Walk around · E to check out builds · E at your car to drive off',x:null,col:'#05d9e8'};
  if(S.race){const R=S.race,n=R.wps.length,tg=R.wps[(p.prog+1)%n];return{t:R.type==='drag'?'STOPLIGHT DUEL':R.ev.name.toUpperCase(),d:S.objExtra||'',x:tg.x,z:tg.z,col:'#ffd000'};}
  if(S.deliv){const D=S.deliv;return{t:D.cargo==='pizza'?'🍕 DELIVER THE PIZZA':'🔧 DELIVER THE PARTS',d:S.objExtra||'',x:D.x,z:D.z,col:D.cargo==='pizza'?'#39ff7a':'#ff8a00'};}
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.5'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.6'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5909,6 +5909,7 @@ const _crcRA=creatorClick;creatorClick=function(e){const t=e.target.closest('[da
 .ravCard{background:#1b1830;border:2px solid transparent;border-radius:10px;padding:0;overflow:hidden;cursor:pointer;color:#fff;font:600 11px system-ui;display:flex;flex-direction:column}
 .ravCard img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:#15122a}.ravCard span{padding:4px 0}.ravCard.on{border-color:#ff2a6d;box-shadow:0 0 10px #ff2a6d88}`;document.head.appendChild(st);})();
 // ---------- END REAL PEOPLE
+
 // ---------- REAL STREETS (beta): OpenStreetMap-based Tokyo Shibuya & Dakar Plateau ----------
 CITY.paris=Object.assign({},CITY.dakar,{name:'PARIS',sub:'Tour Eiffel & Arc de Triomphe',desc:'Real streets · Seine bridges · drives on the right',drive:'right',night:false,fog:.0016,hmin:15,hmax:30,real:true});
 CITY.nyc=Object.assign({},CITY.tokyo,{name:'NEW YORK',sub:'Midtown · Times Square',desc:'Real streets · neon night · drives on the right',drive:'right',night:true,fog:.0026,real:true});
@@ -6201,19 +6202,17 @@ function realPosTraffic(t){const G=REAL.G;let ed=G.E[t.re];let guard=0;while(t.a
    if(d<1e-4){const m1=lx+b.hx,m2=b.hx-lx,m3=lz+b.hz,m4=b.hz-lz,m=Math.min(m1,m2,m3,m4);if(m===m1){nx=-1;nz=0;}else if(m===m2){nx=1;nz=0;}else if(m===m3){nx=0;nz=-1;}else{nx=0;nz=1;}d=-m;}else{nx=dx/d;nz=dz/d;}
    const wx=nx*b.c-nz*b.s,wz=nx*b.s+nz*b.c;c.x+=wx*(r-d);c.z+=wz*(r-d);const vn=c.vx*wx+c.vz*wz;if(vn<0){c.vx-=1.35*vn*wx;c.vz-=1.35*vn*wz;c.vx*=.88;c.vz*=.88;hit=Math.max(hit,-vn);}}
   return plain.length?Math.max(hit,_cb(c,plain)):hit;};
- // no grid lounge / police / rentals in real streets (yet)
+ // no grid lounge / rentals in real streets (police: see REAL PLAY)
  if(typeof inLounge==='function'){const _il=inLounge;inLounge=function(x,z){return S.real?false:_il(x,z);};}
  if(typeof festChip==='function'){const _fc=festChip;festChip=function(){if(S.real){const el=$('festChip');if(el)el.classList.add('hidden');return;}return _fc.apply(this,arguments);};}
  const _rt=resetTraffic;resetTraffic=function(t,any){if(S.real&&REAL.G)return realResetTraffic(t,any);return _rt.apply(this,arguments);};
  const _pt=posTraffic;posTraffic=function(t){if(S.real&&REAL.G)return realPosTraffic(t);return _pt.apply(this,arguments);};
- if(typeof startPursuit==='function'){const _sp=startPursuit;startPursuit=function(){if(S.real)return;return _sp.apply(this,arguments);};}
  if(typeof evPos==='function'){const _ep=evPos;evPos=function(id){if(!EVENTS.find(x=>x.id===id))return{x:null,z:null,e:null};return _ep.apply(this,arguments);};}
  if(typeof objective==='function'){const _ob=objective;objective=function(){if(!S.real||!player||S.meet||S.race||S.deliv||(S.heat&&S.heat.level>0))return _ob.apply(this,arguments);
    const L=(REAL.lms||[]).filter(l=>l.ty==='star');if(!L.length)return{t:'EXPLORE '+CITY[S.city].name,d:'Real streets · drive anywhere',x:null,col:'#ffc23d'};
    const seen=REAL.seen||(REAL.seen={});let best=null,bd=1e9;L.forEach(l=>{const d=Math.hypot(l.x-player.x,l.z-player.z);if(d<60)seen[S.city+l.id]=1;if(seen[S.city+l.id])return;if(d<bd){bd=d;best=l;}});
    if(!best){best=L[0];bd=Math.hypot(best.x-player.x,best.z-player.z);}
    return{t:'EXPLORE '+CITY[S.city].name,d:'Drive to '+best.n+' · '+Math.round(bd)+' m',x:best.x,z:best.z,col:'#ffc23d'};};}
- const _hu=heatUp;heatUp=function(){if(S.real)return;return _hu.apply(this,arguments);};
  // keep cars out of the sea (Dakar)
  const _up=update;let last=null;update=function(dt){const r=_up.apply(this,arguments);try{if(S.real&&player&&REAL.mask&&S.state==='play'){if(!realOnLand(player.x,player.z)){if(last){player.x=last[0];player.z=last[1];}player.vx*=-.25;player.vz*=-.25;}else last=[player.x,player.z];}}catch(e){}return r;};
  // switching the setting
@@ -6227,7 +6226,120 @@ function realPosTraffic(t){const G=REAL.G;let ed=G.E[t.re];let guard=0;while(t.a
    lab.innerHTML=`<input type="checkbox" id="realmap" ${REAL.on?'checked':''}> 🗺️ Real streets (beta) — real Tokyo Shibuya & Dakar Plateau · map data © OpenStreetMap contributors`;go.parentNode.appendChild(lab);$('realmap').onchange=e=>{REAL.set(e.target.checked);if(e.target.checked)REAL.load('tokyo').catch(()=>{});REAL.load('dakar').catch(()=>{});};}}catch(e){}return r;};
 })();
 
-
+// ---------- REAL PLAY (v2.6): police chases, street races and delivery jobs on OpenStreetMap streets ----------
+var RP=(function(){
+ const R={};
+ function heapPush(h,n,d){h.push([d,n]);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][0]<=h[i][0])break;[h[p],h[i]]=[h[i],h[p]];i=p;}}
+ function heapPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m;}}return top;}
+ // per-city prep: undirected adjacency, edge spatial hash, road mask
+ R.prep=function(){const G=REAL.G;if(!G||G._rp)return G;const n=G.nodes.length,U=Array.from({length:n},()=>[]);
+  G.E.forEach(e=>{U[e.a].push({e,to:e.b,fwd:true});U[e.b].push({e,to:e.a,fwd:false});});
+  const H=new Map(),cell=40,key=(x,z)=>Math.floor(x/cell)+','+Math.floor(z/cell);
+  G.E.forEach(e=>{for(let d=0;d<=e.len;d+=15){const p=realEdgePos(e,true,d),k=key(p.x,p.z);let L=H.get(k);if(!L)H.set(k,L=[]);if(L[L.length-1]!==e)L.push(e);}});
+  const b=REAL.data[S.city].b,cs=2,W=Math.ceil((b[2]-b[0])/cs),Hh=Math.ceil((b[3]-b[1])/cs),mask=new Uint8Array(W*Hh);
+  (REAL.roads||[]).forEach(r=>{if(r.elev)return;const rad=Math.max(2,r.w/2);for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],c=r.pts[i],L=Math.hypot(c[0]-a[0],c[1]-a[1]);
+   for(let s=0;s<=L;s+=1.5){const x=a[0]+(c[0]-a[0])*s/L,z=a[1]+(c[1]-a[1])*s/L;const i0=Math.floor((x-rad-b[0])/cs),i1=Math.floor((x+rad-b[0])/cs),j0=Math.floor((z-rad-b[1])/cs),j1=Math.floor((z+rad-b[1])/cs);
+    for(let ii=i0;ii<=i1;ii++)for(let jj=j0;jj<=j1;jj++)if(ii>=0&&jj>=0&&ii<W&&jj<Hh)mask[jj*W+ii]=1;}}});
+  G._rp={U,H,cell,key,mask,W,Hh,b,cs,D:null,Dt:0};
+  // building boxes that sit on top of a road (oversized footprints) get shrunk so cars can pass
+  const seen=new Set(),hitRoad=(bx,f)=>{const hx=bx.hx*f-2,hz=bx.hz*f-2;if(hx<=0||hz<=0)return false;for(let u=-hx;u<=hx;u+=2)for(let v=-hz;v<=hz;v+=2){const x=bx.cx+u*bx.c-v*bx.s,z=bx.cz+u*bx.s+v*bx.c;if(R.onRoad(x,z))return true;}return false;};
+  let fixed=0;for(const row of BCELL)for(const cellL of row)for(const bx of cellL){if(!bx.o||seen.has(bx))continue;seen.add(bx);if(!hitRoad(bx,1))continue;let f=1;while(f>.45&&hitRoad(bx,f))f-=.1;if(f<=.45){bx.hx=bx.hz=0.01;bx.h=0;}else{bx.hx*=f;bx.hz*=f;}fixed++;}
+  G._rp.fixed=fixed;return G;};
+ R.onRoad=(x,z)=>{const G=REAL.G,P=G&&G._rp;if(!P)return true;const i=Math.floor((x-P.b[0])/P.cs),j=Math.floor((z-P.b[1])/P.cs);return i>=0&&j>=0&&i<P.W&&j<P.Hh&&P.mask[j*P.W+i]===1;};
+ R.los=(x0,z0,x1,z1)=>{for(let k=1;k<10;k++){const t=k/10;if(!R.onRoad(x0+(x1-x0)*t,z0+(z1-z0)*t))return false;}return true;};
+ // nearest graph edge + distance along it
+ R.near=function(x,z){const G=REAL.G,P=G._rp;let best=null;for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const L=P.H.get((Math.floor(x/P.cell)+di)+','+(Math.floor(z/P.cell)+dj));if(!L)continue;
+   for(const e of L)for(let k=1;k<e.pts.length;k++){const a=e.pts[k-1],c=e.pts[k],dx=c[0]-a[0],dz=c[1]-a[1],L2=dx*dx+dz*dz||1;let t=((x-a[0])*dx+(z-a[1])*dz)/L2;t=Math.max(0,Math.min(1,t));
+    const px=a[0]+dx*t,pz=a[1]+dz*t,d=Math.hypot(x-px,z-pz);if(!best||d<best.d)best={d,e,along:e.cum[k-1]+(e.cum[k]-e.cum[k-1])*t,x:px,z:pz};}}
+  return best;};
+ // shortest-path distances to a target point (undirected; police ignore one-ways)
+ R.field=function(x,z,wfn){const G=REAL.G,P=G._rp,n=G.nodes.length,D=new Float64Array(n).fill(1e12),h=[];const nr=R.near(x,z);if(!nr)return D;
+  const w=wfn||(e=>e.len);D[nr.e.a]=nr.along;D[nr.e.b]=nr.e.len-nr.along;heapPush(h,nr.e.a,D[nr.e.a]);heapPush(h,nr.e.b,D[nr.e.b]);
+  while(h.length){const [d,u]=heapPop(h);if(d>D[u])continue;for(const o of P.U[u]){const nd=d+w(o.e);if(nd<D[o.to]){D[o.to]=nd;heapPush(h,o.to,nd);}}}return D;};
+ R.path=function(ax,az,bx,bz,wfn){const G=REAL.G,P=G._rp,D=R.field(bx,bz,wfn),s=R.near(ax,az),t=R.near(bx,bz);if(!s||!t)return null;const w=wfn||(e=>e.len);
+  const pts=[];let node=D[s.e.a]+s.along<D[s.e.b]+(s.e.len-s.along)?s.e.a:s.e.b;// walk from start edge toward the cheaper end
+  const fwd0=node===s.e.b;for(let d=s.along;fwd0?d<=s.e.len:d>=0;d+=fwd0?10:-10){const p=realEdgePos(s.e,true,d);pts.push([p.x,p.z]);}
+  let guard=0;while(guard++<4000){if(node===t.e.a||node===t.e.b)break;let best=null;for(const o of P.U[node]){const c=w(o.e)+D[o.to];if(!best||c<best.c)best={o,c};}if(!best||D[best.o.to]>=D[node])break;
+   const e=best.o.e;for(let d=0;d<=e.len;d+=10){const p=realEdgePos(e,best.o.fwd,d);pts.push([p.x,p.z]);}node=best.o.to;}
+  const ft=node===t.e.b;for(let d=ft?t.e.len:0;ft?d>=t.along:d<=t.along;d+=ft?-10:10){const p=realEdgePos(t.e,true,d);pts.push([p.x,p.z]);}pts.push([t.x,t.z]);return pts;};
+ R.nodePath=function(sn,tn,wfn){const G=REAL.G,P=G._rp,n=G.nodes.length,D=new Float64Array(n).fill(1e12),h=[],w=wfn||(e=>e.len);D[tn]=0;heapPush(h,tn,0);
+  while(h.length){const [d,u]=heapPop(h);if(d>D[u])continue;for(const o of P.U[u]){const nd=d+w(o.e);if(nd<D[o.to]){D[o.to]=nd;heapPush(h,o.to,nd);}}}
+  if(D[sn]>=1e12)return null;const pts=[];let node=sn,guard=0;while(node!==tn&&guard++<5000){let best=null;for(const o of P.U[node]){const c=w(o.e)+D[o.to];if(!best||c<best.c)best={o,c};}if(!best)return null;
+   const e=best.o.e;const st=Math.max(1,Math.ceil(e.len/8));for(let k=0;k<=st;k++){const p=realEdgePos(e,best.o.fwd,e.len*k/st);pts.push([p.x,p.z]);}node=best.o.to;}return pts;};
+ // drop out-and-back spurs where path pieces meet
+ R.unspur=function(pts){const st=[];for(const q of pts){while(st.length>=2){const a=st[st.length-2],b=st[st.length-1],ux=b[0]-a[0],uz=b[1]-a[1],vx=q[0]-b[0],vz=q[1]-b[1],lu=Math.hypot(ux,uz),lv=Math.hypot(vx,vz);if(lu<.5){st.pop();continue;}if(lv>.01&&(ux*vx+uz*vz)/(lu*lv)<-.6)st.pop();else break;}if(!st.length||Math.hypot(q[0]-st[st.length-1][0],q[1]-st[st.length-1][1])>.5)st.push(q);}return st;};
+ R.resample=function(pts,step){const out=[pts[0]];let acc=0;for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];let L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(!L)continue;let s=0;
+   while(acc+L-s>=step){s+=step-acc;acc=0;const f=s/L;out.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);}acc+=L-s;}return out;};
+ // ----- police -----
+ R.spawnCop=function(){const G=REAL.G,p=player;R.prep();for(let t=0;t<60;t++){const e=G.E[Math.floor(Math.random()*G.E.length)];if(e.t>5)continue;const m=realEdgePos(e,true,e.len/2),d=Math.hypot(m.x-p.x,m.z-p.z);
+   if(d>110&&d<240){const L=S.heat.level;const pool=L>=8?COPS:COPS.filter(c=>c.lvl===L||c.lvl===L-1);const def=pick(pool.length?pool:COPS);
+    const mesh=buildCarMesh(def,def.armored?0x1b2230:0x111111,{cop:true});world.add(mesh);const c=makeEnt(mesh,{top:def.top,accel:14+def.top*.08,grip:.95},def.mass);c.cop=true;c.def=def;c.r=def.armored?3:2.3;
+    placeOnRoad(c,m.x,m.z,Math.atan2(p.x-m.x,p.z-m.z));S.heat.cops.push(c);return c;}}return null;};
+ R.copTarget=function(c,dt){const G=R.prep(),P=G._rp,p=player;P.Dt-=dt/Math.max(1,S.heat.cops.length);if(!P.D||P.Dt<=0){P.D=R.field(p.x,p.z);P.Dt=1;}const D=P.D;
+  c.rnT=(c.rnT||0)-dt;if(!c.rn||c.rnT<=0||Math.hypot(c.rn.x-c.x,c.rn.z-c.z)>18){const nr=R.near(c.x,c.z);if(!nr)return null;c.rnT=2;
+   const ga=D[nr.e.a]+nr.along,gb=D[nr.e.b]+nr.e.len-nr.along;c.rn={e:nr.e,fwd:gb<ga,along:gb<ga?nr.along:nr.e.len-nr.along,x:nr.x,z:nr.z};}
+  const rn=c.rn;// advance along the current edge by projecting the car onto it
+  const pos=realEdgePos(rn.e,rn.fwd,rn.along);const adv=(c.x-pos.x)*pos.dx+(c.z-pos.z)*pos.dz;rn.along=Math.max(0,Math.min(rn.e.len,rn.along+Math.max(-2,adv)));
+  if(rn.along>=rn.e.len-5){const node=rn.fwd?rn.e.b:rn.e.a;let best=null;for(const o of P.U[node]){if(o.e===rn.e&&P.U[node].length>1)continue;const cst=o.e.len+D[o.to];if(!best||cst<best.c)best={o,c:cst};}
+   if(best){rn.e=best.o.e;rn.fwd=best.o.fwd;rn.along=0;}}
+  const tg=realEdgePos(rn.e,rn.fwd,Math.min(rn.e.len,rn.along+14));rn.x=pos.x;rn.z=pos.z;return tg;};
+ R.roadblock=function(){const p=player,H=S.heat,fx=Math.sin(p.h),fz=Math.cos(p.h);R.prep();const nr=R.near(p.x+fx*78,p.z+fz*78);if(!nr||nr.d>12)return;
+  const pos=realEdgePos(nr.e,true,nr.along),h=Math.atan2(pos.dx,pos.dz),wid=Math.max(8,nr.e.w||10);
+  const big=H.level>=5,def=big?BEARCAT:CROWNVIC,n=H.level>=4?4:3,gap=Math.floor(Math.random()*n),blk={meshes:[],boxes:[],t:22},lx=Math.cos(h),lz=-Math.sin(h);
+  for(let k=0;k<n;k++){if(k===gap&&H.level<6)continue;const off=(k-(n-1)/2)*(wid/n);const x=pos.x+lx*off,z=pos.z+lz*off;const m=buildCarMesh(def,big?0x1b2230:0x111111,{cop:true});
+   m.position.set(x,0,z);m.rotation.y=h+Math.PI/2;world.add(m);blk.meshes.push(m);blk.boxes.push(realBox([x,z,-h,def.L/2*.9,def.W/2],2.5));}
+  H.blocks.push(blk);feed(big?'🚧 Bearcat roadblock ahead!':'🚧 Roadblock ahead!');};
+ R.boostChase=function(){const p=player,fx=Math.sin(p.h),fz=Math.cos(p.h);R.prep();for(let t=0;t<6;t++){const d=70+Math.random()*60,nr=R.near(p.x+fx*d,p.z+fz*d);if(!nr||nr.d>14)continue;
+   if(BOOST.items.some(b=>Math.hypot(b.x-nr.x,b.z-nr.z)<25))continue;boostAdd(boostPick(BOOST_CHASE),nr.x,nr.z,'chase',false);return true;}return false;};
+ // ----- events: race loops and delivery jobs built from the road graph -----
+ const NAMES={paris:['Grand Boulevard Loop','Champs Night Run'],nyc:['Midtown Grand Prix','Avenue Sprint Loop'],dakar:['Plateau Circuit','Corniche Run'],tokyo:['Shibuya Night Loop','Neon Avenue Run']};
+ R.events=function(key){const G=R.prep(),M=REAL.data[key],rnd2=mulberry(key.length*97+13);const major=G.E.filter(e=>e.t<=4&&e.len>40);if(major.length<6)return[];
+  const sp=M.spawn,cx=sp[0],cz=sp[1],out=[];const wfn=e=>e.len*(e.t<=3?1:e.t<=5?1.5:4);
+  const P=G._rp,junc=[];G.nodes.forEach((nd,i)=>{const m=P.U[i].filter(o=>o.e.t<=4).length;if(m>=3)junc.push(i);});
+  const nearJ=(x,z)=>{let b=-1,bd=1e9;for(const i of junc){const nd=G.nodes[i],d=Math.hypot(nd[0]-x,nd[1]-z);if(d<bd){bd=d;b=i;}}return b;};
+  const mk=(id,name,radius,laps,rivals,col)=>{let best=null;for(let tr=0;tr<12;tr++){const a0=rnd2()*Math.PI*2,an=[];
+     for(let q=0;q<4;q++){const a=a0+q*Math.PI/2+(rnd2()-.5)*.5,r=radius*(.8+rnd2()*.4);const j=nearJ(cx+Math.sin(a)*r,cz+Math.cos(a)*r);if(j>=0&&!an.includes(j))an.push(j);}
+     if(an.length<3)continue;const pts=[];let ok=true;for(let q=0;q<an.length;q++){const seg=R.nodePath(an[q],an[(q+1)%an.length],wfn);if(!seg||seg.length<2){ok=false;break;}pts.push(...seg);}
+     if(!ok)continue;const cl=R.unspur(pts),wps=R.resample(cl,15);let len=0;for(let i=1;i<cl.length;i++)len+=Math.hypot(cl[i][0]-cl[i-1][0],cl[i][1]-cl[i-1][1]);
+     const off=wps.filter(q=>!R.onRoad(q[0],q[1])).length;if(off>wps.length*.05)continue;
+     if(len>radius*3&&(!best||Math.abs(len-radius*6)<Math.abs(best.len-radius*6)))best={wps,len};}
+   if(!best)return;const s0=best.wps[0];out.push({id,type:'race',name,laps,rivals,color:col,x:s0[0],z:s0[1],rw:best.wps,len:best.len});};
+  const nm=NAMES[key]||['City Loop','City Run'];mk('rraceA',nm[0],240,2,3,0xff2a55);mk('rraceB',nm[1],420,1,3,0xb967ff);
+  // delivery job near spawn
+  const jn=R.near(cx+60,cz+40);if(jn)out.push({id:'rdeliv',type:'deliv',cargo:key==='dakar'?'parts':'pizza',name:key==='dakar'?'Car Parts Run':'Pizza Rush',color:0x39ff7a,x:jn.x,z:jn.z});
+  return out;};
+ R.markers=function(evs){const night=CITY[S.city].night;evs.forEach(ev=>{const x=ev.x,z=ev.z,col=new THREE.Color(ev.color);
+   const cyl=new THREE.Mesh(new THREE.CylinderGeometry(5,5,26,28,1,true),new THREE.MeshBasicMaterial({color:col,map:softTex,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));cyl.position.set(x,13,z);world.add(cyl);
+   const ring=new THREE.Mesh(new THREE.RingGeometry(4.6,5.6,40),new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(x,.08,z);world.add(ring);
+   const lab=labelSprite(ev.name.toUpperCase(),'#'+col.getHexString());lab.position.set(x,29,z);world.add(lab);MARKERS.push({ev,x,z,cyl});});};
+ return R;})();
+// ---- wiring ----
+(function(){
+ const _brc=buildRealCity;buildRealCity=function(key){const ok=_brc.apply(this,arguments);if(ok&&S.real&&REAL.G){try{RP.prep();const evs=RP.events(key);EVENTS.push(...evs);RP.markers(evs);}catch(e){console.warn('realplay',e);}}return ok;};
+ const _sp=startPursuit;startPursuit=function(){if(S.real&&!REAL.G)return;return _sp.apply(this,arguments);};
+ const _sc=spawnCop;spawnCop=function(){return S.real&&REAL.G?RP.spawnCop():_sc.apply(this,arguments);};
+ const _rb=spawnRoadblock;spawnRoadblock=function(){return S.real&&REAL.G?RP.roadblock():_rb.apply(this,arguments);};
+ const _bc=boostSpawnChase;boostSpawnChase=function(){return S.real&&REAL.G?RP.boostChase():_bc.apply(this,arguments);};
+ const _los=los;los=function(a,b,c,d){return S.real&&REAL.G&&REAL.G._rp?RP.los(a,b,c,d):_los(a,b,c,d);};
+ const _ci=copInput;copInput=function(c,dt){if(!(S.real&&REAL.G))return _ci(c,dt);const p=player,d=Math.hypot(p.x-c.x,p.z-c.z);
+  if(d<45||RP.los(c.x,c.z,p.x,p.z)){c.nav=null;return _ci(c,dt);}// direct chase: original logic
+  const tg=RP.copTarget(c,dt);if(!tg)return _ci(c,dt);let{steer,diff}=steerTo(c,tg.x,tg.z);const v=Math.hypot(c.vx,c.vz);let thr=1,br=0;
+  if(Math.abs(diff)>1&&v>14){thr=0;br=1;}else if(Math.abs(diff)>.5&&v>22)thr=.3;
+  if(c.rev>0){c.rev-=dt;return{throttle:0,brake:1,steer:-steer};}
+  if(v<1.5){c.stk=(c.stk||0)+dt;if(c.stk>1.6){c.rev=1;c.stk=0;c.rn=null;}}else c.stk=0;
+  return{throttle:thr,brake:br,steer,nitro:false,hand:false};};
+ const _st=startRace;startRace=function(ev){_st.apply(this,arguments);const R=S.race;if(!(S.real&&R&&ev.rw))return;
+  // start grid follows the road behind the start line (real streets bend)
+  const w=R.wps,n=w.length,back=d=>{let left=d,i=0;let a=w[0];for(let k=1;k<n;k++){const b=w[(n-k)%n],L=Math.hypot(b.x-a.x,b.z-a.z);if(left<=L){const f=left/L;return{x:a.x+(b.x-a.x)*f,z:a.z+(b.z-a.z)*f,h:Math.atan2(a.x-b.x,a.z-b.z)};}left-=L;a=b;}return{x:w[0].x,z:w[0].z,h:0};};
+  const slots=[[-1.8,6],[1.8,6],[-1.8,14],[1.8,14]];[player,...racers].forEach((c,k)=>{const s=slots[k]||slots[3],q=back(s[1]),lx=Math.cos(q.h),lz=-Math.sin(q.h);placeOnRoad(c,q.x+lx*s[0],q.z+lz*s[0],q.h);});
+  racers.forEach(r=>r.off=rnd(-.8,.8));};
+ // races and jobs: real waypoints / destinations
+ const _nl=nextLeg;nextLeg=function(){if(!(S.real&&REAL.G))return _nl.apply(this,arguments);const D=S.deliv,p=player,G=RP.prep();let x=p.x,z=p.z;
+  for(let k=0;k<80;k++){const e=G.E[Math.floor(Math.random()*G.E.length)];if(e.t>6)continue;const m=realEdgePos(e,true,e.len/2);const d=Math.hypot(m.x-p.x,m.z-p.z);if(d>260&&d<700){x=m.x;z=m.z;break;}}
+  D.x=x;D.z=z;D.time=Math.round(Math.hypot(x-p.x,z-p.z)/20+14);D.hp=p.health;S.mode='deliv';
+  feed(D.cargo==='pizza'?`🍕 Deliver pizza ${D.leg+1}/${D.legs} — ${D.time}s on the clock!`:`🔧 Deliver car parts ${D.leg+1}/${D.legs} — fragile cargo, don't crash!`);};
+})();
+// ---------- END REAL PLAY
 
 // ---------- NFX: street-racer graphics pack (wet-road reflections, live car reflections, light trails, headlight beams, NFS-style grade) ----------
 var NFX=(function(){
