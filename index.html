@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.7 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.8 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5459,7 +5459,7 @@ function update(dt){S.time+=dt;const p=player;if(S.meet){if(S.meet.free)updateFo
  for(const c of COINS){if(c.got)continue;if(Math.hypot(c.m.position.x-p.x,c.m.position.z-p.z)<3.6&&Math.abs(c.m.position.y-(p.y+1))<3.2){c.got=true;c.m.visible=false;SAVE.treasures[S.city].push(c.k);reward(500,100,10);toast('🪙 TREASURE!',`${SAVE.treasures[S.city].length}/10 coins found · +$500`,'#ffc23d',1.8);chime(true);}}
  // markers
  S.interact=null;if(!S.race&&!S.deliv&&!S.meet){for(const m of MARKERS){if(Math.hypot(m.x-p.x,m.z-p.z)<7&&sp<11){S.interact=m.ev;break;}}}
- const pr=$('prompt');if(S.meet){}else if(S.interact){const ev=S.interact;const lab={meet:'Join the Car Meet',race:'Start Street Race',drag:'Start Stoplight Race',deliv:'Start Job',garage:'Enter Garage'}[ev.type];const warn=S.heat.level>0&&ev.type!=='garage'?' <span style="color:var(--pink)">(lose the cops first)</span>':(ev.type==='race'||ev.type==='drag')&&p.health<45?` <span style="color:#ffc23d">(car at ${Math.round(p.health)}% — repair first?)</span>`:'';pr.innerHTML=`<b>${document.body.classList.contains('touchui')?'TAP E':'E'}</b> &nbsp;${lab}: ${ev.name}${warn}`;pr.classList.remove('hidden');}else pr.classList.add('hidden');
+ const pr=$('prompt');if(S.meet){}else if(S.interact){const ev=S.interact;const lab={meet:'Join the Car Meet',race:'Start Street Race',drag:'Start Stoplight Race',deliv:ev.cargo==='tour'?'Start Taxi Tour':'Start Job',garage:'Enter Garage',photo:'Take a Photo 📸'}[ev.type];const warn=S.heat.level>0&&ev.type!=='garage'?' <span style="color:var(--pink)">(lose the cops first)</span>':(ev.type==='race'||ev.type==='drag')&&p.health<45?` <span style="color:#ffc23d">(car at ${Math.round(p.health)}% — repair first?)</span>`:'';pr.innerHTML=`<b>${document.body.classList.contains('touchui')?'TAP E':'E'}</b> &nbsp;${lab}: ${ev.name}${warn}`;pr.classList.remove('hidden');}else pr.classList.add('hidden');
  updateRace(dt);updateDeliv(dt);updateHeat(dt);updatePeople(dt);updateRiders(dt);boostUpdate(dt);cheatUpdate(dt);if(S.race&&CHEAT.moon>0)S.race.cheated=true;
 }
 function sparks(c){for(let i=0;i<6;i++)spawnPart(c.x+rnd(-1,1),c.y+.8,c.z+rnd(-1,1),rnd(-6,6),rnd(1,5),rnd(-6,6),0xffc040,.35,.35,0,true,1);}
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.7'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.8'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -6438,7 +6438,7 @@ var GPS=(function(){
  G.items=[];
  G.list=function(){const L=document.getElementById('gpsList');const items=[];
   (S.real?REAL.lms.filter(l=>!/skyline/i.test(l.n)):[]).forEach(l=>items.push({x:l.x,z:l.z,n:l.n,k:l.ty==='star'?'⭐':'📍',grp:'PLACES'}));
-  MARKERS.forEach(m=>items.push({x:m.x,z:m.z,n:m.ev.name,k:{race:'🏁',drag:'🚦',deliv:'📦',garage:'🔧',meet:'🚗'}[m.ev.type]||'•',grp:'EVENTS',ev:m.ev}));
+  MARKERS.forEach(m=>items.push({x:m.x,z:m.z,n:m.ev.name,k:m.ev.cargo==='tour'?'🚕':{race:'🏁',drag:'🚦',deliv:'📦',garage:'🔧',meet:'🚗',photo:'📸'}[m.ev.type]||'•',grp:'EVENTS',ev:m.ev}));
   G.items=items;let h='',grp='';items.forEach((it,i)=>{if(it.grp!==grp){grp=it.grp;h+=`<div class="h">${grp}</div>`;}h+=`<button data-go="${i}">${it.k} ${esc(it.n)}</button>`;});
   if(S.gps2||S.gps)h+=`<button data-g="clear">✖ Clear GPS</button>`;L.innerHTML=h;
   $('gpsSel').textContent=S.gps2?'GPS → '+S.gps2.name:S.gps?'GPS → '+S.gps.name:'';};
@@ -6481,6 +6481,63 @@ var GPS=(function(){
  const _tv=travel;travel=function(){S.gps2=null;GPS.route=null;GPS.close();return _tv.apply(this,arguments);};
 })();
 // ---------- END GPS
+
+// ---------- CITY TOURS + PHOTO SPOTS (v2.8): drive visitors to real landmarks; stop at photo spots for postcards ----------
+var FUN=(function(){
+ const F={};
+ const lms=()=>(REAL.lms||[]).filter(l=>!/skyline/i.test(l.n));
+ F.events=function(key){if(!REAL.G)return[];RP.prep();const out=[],sp=REAL.data[key].spawn;
+  // photo spot on the nearest road to each star landmark
+  lms().filter(l=>l.ty==='star').forEach(l=>{const nr=RP.near(l.x,l.z);if(!nr)return;out.push({id:'photo_'+l.id,type:'photo',name:'Photo · '+l.n,color:0x4aa3ff,x:nr.x,z:nr.z,lm:l});});
+  // city tour start near spawn
+  const nr=RP.near(sp[0]-70,sp[1]+50);if(nr)out.push({id:'tour',type:'deliv',cargo:'tour',name:key==='dakar'?'Taxi Tour of Dakar':key==='tokyo'?'Tokyo Taxi Tour':key==='nyc'?'NYC Taxi Tour':'Paris Taxi Tour',color:0xffc23d,x:nr.x,z:nr.z});
+  return out;};
+ // ----- tours -----
+ F.nextStop=function(){const D=S.deliv,p=player;const L=lms().filter(l=>!D.done.includes(l.id));let pool=L.filter(l=>{const d=Math.hypot(l.x-p.x,l.z-p.z);return d>180&&d<1100;});if(!pool.length)pool=L;if(!pool.length)return false;
+  const l=pick(pool),nr=RP.near(l.x,l.z);D.done.push(l.id);D.lm=l;D.x=nr?nr.x:l.x;D.z=nr?nr.z:l.z;
+  let len=0;try{const pts=RP.path(p.x,p.z,D.x,D.z);for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);}catch(e){len=Math.hypot(D.x-p.x,D.z-p.z)*1.4;}
+  D.time=Math.round(len/15+15);D.hp=p.health;S.mode='deliv';feed(`🚕 Stop ${D.leg+1}/${D.legs}: take the visitors to ${l.n} — ${D.time}s`);return true;};
+ F.updateTour=function(dt){const D=S.deliv,p=player;D.time-=dt;beacon.visible=true;beacon.position.set(D.x,30,D.z);beacon.material.color.set(0xffc23d);
+  S.objExtra=`${D.leg+1}/${D.legs} · <span style="color:${D.time<10?'var(--pink)':'var(--green)'}">${Math.max(0,D.time).toFixed(1)}s</span> · ${Math.round(Math.hypot(D.x-p.x,D.z-p.z))}m`;
+  if(Math.hypot(D.x-p.x,D.z-p.z)<12){const pay=700+Math.round(D.time*30);reward(pay,100,20,null,null);toast('📍 '+D.lm.n.toUpperCase(),`The visitors loved it! +${fmt(pay)}`,'#ffc23d',2.4);chime(true);D.leg++;
+   if(D.leg>=D.legs){setTimeout(()=>toast('TOUR COMPLETE','5-star review from your passengers ⭐⭐⭐⭐⭐','#39ff9f',2.6),2200);S.deliv=null;S.mode='free';beacon.visible=false;S.objExtra='';reward(1200,180,40);SAVE.stats.tours=(SAVE.stats.tours||0)+1;}
+   else F.nextStop();return;}
+  if(D.time<=0){toast('TOO LATE','The visitors missed their photo stop','#ff2a6d',2.2);chime(false);S.deliv=null;S.mode='free';beacon.visible=false;S.objExtra='';}};
+ // ----- photo spots -----
+ F.photo=function(ev){const p=player,l=ev.lm;if(Math.hypot(p.vx,p.vz)>3){toast('STOP FIRST','Park at the photo spot to take a picture','#ff8a00',1.6);return;}
+  const h=l.h||30,dx=p.x-l.x,dz=p.z-l.z,d=Math.hypot(dx,dz)||1,ux=dx/d,uz=dz/d;
+  const cam=camera,old={pos:cam.position.clone(),fov:cam.fov};cam.fov=62;cam.updateProjectionMatrix();
+  const back=9.5;cam.position.set(p.x+ux*back-uz*2.2,2.4,p.z+uz*back+ux*2.2);
+  const k=Math.min(1,40/d),tx=p.x+(l.x-p.x)*k,tz=p.z+(l.z-p.z)*k;cam.lookAt(tx,Math.min(9,2+h*.04),tz);
+  try{syncMesh(player,0);}catch(e){}const was=S.photo;S.photo=true;renderFrame(1/60);renderFrame(1/60);S.photo=was;
+  const src=renderer.domElement,W=960,H=Math.round(W*src.height/src.width),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(src,0,0,W,H);
+  // postcard frame
+  g.fillStyle='rgba(0,0,0,.45)';g.fillRect(0,H-74,W,74);g.fillStyle='#ffc23d';g.font='900 30px Orbitron, system-ui';g.textAlign='left';g.fillText('GREETINGS FROM '+CITY[S.city].name,22,H-38);
+  g.fillStyle='#fff';g.font='600 18px system-ui';g.fillText(l.n+' · '+CARS[SAVE.current].name+' · '+(SAVE.profile&&SAVE.profile.name||'Driver'),22,H-14);
+  g.strokeStyle='#fff';g.lineWidth=10;g.strokeRect(5,5,W-10,H-10);
+  const url=c.toDataURL('image/jpeg',.82);cam.position.copy(old.pos);cam.fov=old.fov;cam.updateProjectionMatrix();
+  // keep a small thumbnail album (local only)
+  try{const t=document.createElement('canvas');t.width=320;t.height=Math.round(320*H/W);t.getContext('2d').drawImage(c,0,0,t.width,t.height);const th=t.toDataURL('image/jpeg',.6);
+   const A=JSON.parse(localStorage.getItem('usr_album')||'[]');A.unshift({t:Date.now(),c:S.city,n:l.n,i:th});localStorage.setItem('usr_album',JSON.stringify(A.slice(0,12)));}catch(e){}
+  SAVE.photos=SAVE.photos||{};const first=!SAVE.photos[S.city+l.id];SAVE.photos[S.city+l.id]=1;if(first)reward(500,60,40,null,null);save();try{TEL.feat&&TEL.feat('photo');}catch(e){}
+  chime(true);openModal(`<h1>📸 POSTCARD</h1><div class="sub">${esc(l.n)} · ${CITY[S.city].name}${first?' · first visit +$500 +40 REP':''}</div><img src="${url}" style="width:100%;max-height:58vh;object-fit:contain;border-radius:12px;margin-top:10px;display:block">
+   <div class="actions" style="margin-top:12px"><a class="btn alt" href="${url}" download="${esc(CITY[S.city].name+'-'+l.n).replace(/[^\w-]+/g,'_')}.jpg">⬇ SAVE PHOTO</a><button class="btn alt" data-act="album">🖼️ ALBUM</button><span style="flex:1"></span><button class="btn" data-act="close">CONTINUE</button></div>`);};
+ F.album=function(){let A=[];try{A=JSON.parse(localStorage.getItem('usr_album')||'[]');}catch(e){}
+  openModal(`<h1>🖼️ PHOTO ALBUM</h1><div class="sub">${A.length?'Your latest postcards (saved on this device)':'No photos yet. Stop at a 📸 photo spot next to a landmark and press E.'}</div>
+   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px">${A.map(a=>`<figure style="margin:0"><img src="${a.i}" style="width:100%;border-radius:8px;display:block"><figcaption style="font:600 11px system-ui;color:#cfd3e6;margin-top:3px">${esc(a.n)} · ${esc((CITY[a.c]||{}).name||'')}</figcaption></figure>`).join('')}</div>
+   <div class="actions" style="margin-top:14px"><span style="flex:1"></span><button class="btn" data-act="close">CLOSE</button></div>`);};
+ return F;})();
+// ---- wiring ----
+(function(){
+ MAPICON.photo='C';MAPICON.deliv=MAPICON.deliv||'J';
+ const _brc=buildRealCity;buildRealCity=function(key){const ok=_brc.apply(this,arguments);if(ok&&S.real&&REAL.G){try{const evs=FUN.events(key);EVENTS.push(...evs);RP.markers(evs);}catch(e){console.warn('fun',e);}}return ok;};
+ const _nl=nextLeg;nextLeg=function(){const D=S.deliv;if(D&&D.cargo==='tour'&&S.real){D.done=D.done||[];if(!FUN.nextStop()){S.deliv=null;S.mode='free';}return;}return _nl.apply(this,arguments);};
+ const _ud=updateDeliv;updateDeliv=function(dt){if(S.deliv&&S.deliv.cargo==='tour')return FUN.updateTour(dt);return _ud(dt);};
+ const _ob=objective;objective=function(){if(S.deliv&&S.deliv.cargo==='tour'&&!(S.heat&&S.heat.level>0)){const D=S.deliv;return{t:'🚕 TAXI TOUR · '+(D.lm?D.lm.n.toUpperCase():''),d:S.objExtra||'',x:D.x,z:D.z,col:'#ffc23d'};}return _ob.apply(this,arguments);};
+ const _ia=interact;interact=function(){if(S.interact&&S.interact.type==='photo'&&!S.paused&&!S.meet){FUN.photo(S.interact);return;}return _ia.apply(this,arguments);};
+ const _ha=handleAct;handleAct=function(act,v,el){if(act==='album'){FUN.album();return;}return _ha.apply(this,arguments);};
+})();
+// ---------- END FUN
 
 // ---------- NFX: street-racer graphics pack (wet-road reflections, live car reflections, light trails, headlight beams, NFS-style grade) ----------
 var NFX=(function(){
