@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.1 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.3 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.2'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.3'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5695,6 +5695,64 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
 
 
 
+// ---------- REAL PEOPLE avatars (v2.3): realistic rigged humans from the VALID library (UCF & Google Research, MIT licence) ----------
+// Files live next to the game: avatars/<id>.glb (meshopt-compressed, ~0.5 MB) and avatars/thumbs/<id>.jpg. Loaded only when used.
+var RAV=(function(){
+ const L=[['Black_M_1','Moussa'],['Black_F_1','Awa'],['Black_M_2','Cheikh'],['Black_F_2','Fatou'],['Black_M_3','Ibrahima'],['Black_F_3','Aminata'],
+  ['MENA_M_1','Omar'],['MENA_F_1','Yasmine'],['MENA_M_2','Karim'],['MENA_F_2','Leila'],['MENA_M_3','Samir'],['X_MENA_F_1','Nour'],
+  ['Asian_M_1','Kenji'],['Asian_F_1','Yuki'],['Asian_M_2','Hiro'],['Asian_F_2','Mei'],['Asian_M_3','Jun'],['Asian_F_3','Hana'],
+  ['White_M_1','Hugo'],['White_F_1','Léa'],['White_M_2','Lucas'],['White_F_2','Emma'],['White_M_3','Noah'],['White_F_3','Chloé'],
+  ['Hispanic_M_1','Mateo'],['Hispanic_F_1','Sofía'],['Hispanic_M_2','Diego'],['Hispanic_F_2','Lucía'],['Hispanic_M_3','Carlos'],['Hispanic_F_3','Valeria'],
+  ['NHPI_M_1','Kai'],['X_NHPI_F_1','Leilani'],['NHPI_M_2','Koa'],['X_NHPI_F_2','Malia'],['X_NHPI_M_1','Makoa'],['X_NHPI_F_3','Kalani'],
+  ['AIAN_M_1','Takoda'],['AIAN_F_1','Aiyana'],['AIAN_M_2','Chayton'],['AIAN_F_2','Winona'],['X_AIAN_M_1','Tahoma'],['X_AIAN_F_1','Kaya']];
+ const NAME={};L.forEach(([id,n])=>NAME[id]=n);
+ const R={list:L,name:NAME,ok:id=>!!NAME[id],base:'avatars/',cache:{},lib:null,fail:0};
+ const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+ R.libs=()=>R.lib||(R.lib=loadScript(R.base+'lib/three-gltf.js').then(()=>{if(!THREE.GLTFLoader||!THREE.SkeletonUtils)throw new Error('gltf libs');}));
+ R.get=id=>R.cache[id]||(R.cache[id]=R.libs().then(()=>new Promise((res,rej)=>{const ld=new THREE.GLTFLoader();if(window.MeshoptDecoder)ld.setMeshoptDecoder(MeshoptDecoder);
+   ld.load(R.base+id+'.glb',g=>{g.scene.traverse(m=>{if(m.isMesh){const mt=m.material;mt.roughness=.72;mt.metalness=0;if(mt.map)mt.map.anisotropy=4;}});res(g);},null,rej);})).catch(e=>{R.fail++;delete R.cache[id];try{window.TEL&&TEL.add('err',{m:'realav '+id+' '+(e&&e.message||e)})}catch(_){}throw e;}));
+ const tmpQ=new THREE.Quaternion(),tmpE=new THREE.Euler(),Z=new THREE.Vector3(0,0,1);
+ // rest data for one bone: parent-world inverse and bone world rotation, both relative to the model root at rest
+ function rest(b){const pw=new THREE.Quaternion(),bw=new THREE.Quaternion();b.parent.getWorldQuaternion(pw);b.getWorldQuaternion(bw);return{b,pinv:pw.invert(),bw};}
+ function setBone(r,q){r.b.quaternion.copy(r.pinv).multiply(tmpQ.copy(q).multiply(r.bw));}
+ const qDownL=new THREE.Quaternion().setFromAxisAngle(Z,-1.38),qDownR=new THREE.Quaternion().setFromAxisAngle(Z,1.38),qc=new THREE.Quaternion(),qk=new THREE.Quaternion(),X=new THREE.Vector3(1,0,0);
+ // copy the classic rig's joint angles (legs/arms/head groups) onto the real skeleton
+ R.pose=function(a){const v=a&&a.rv;if(!v)return;
+  for(let i=0;i<2;i++){const lg=a.legs[i],ar=a.arms[i];
+   if(lg&&v.leg[i]){qc.setFromEuler(tmpE.copy(lg.rotation));setBone(v.leg[i],qc);
+    if(v.knee[i]){const sit=lg.rotation.x<-.7;qk.setFromAxisAngle(X,sit?1.25:Math.max(0,-lg.rotation.x)*.6);setBone(v.knee[i],qk);}}
+   if(ar&&v.arm[i]){qc.setFromEuler(tmpE.copy(ar.rotation)).multiply(i?qDownL:qDownR);setBone(v.arm[i],qc);}}
+  if(a.head&&v.head){qc.setFromEuler(tmpE.copy(a.head.rotation));setBone(v.head,qc);}};
+ // swap a classic avatar's meshes for the real person once the model arrives
+ R.attach=function(a,id){const g=a.g,keep=new Set();if(a.chair&&a.chair.g)a.chair.g.traverse(o=>keep.add(o));
+  const classic=[];g.traverse(o=>{if((o.isMesh||o.isPoints||o.isLine)&&!keep.has(o))classic.push(o);});
+  a.realId=id;R.get(id).then(gl=>{if(a.realId!==id||a.dead)return;const m=THREE.SkeletonUtils.clone(gl.scene);
+   m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});m.updateMatrixWorld(true);
+   const B=n=>{const b=m.getObjectByName(n);return b&&b.parent?rest(b):null;};
+   a.rv={m,leg:[B('RightUpLeg'),B('LeftUpLeg')],knee:[B('RightLeg'),B('LeftLeg')],arm:[B('RightArm'),B('LeftArm')],head:B('Head')};
+   classic.forEach(o=>o.visible=false);g.add(m);R.pose(a);}).catch(()=>{});};
+ return R;})();
+// character field + network
+const _clRA=cleanChar;cleanChar=function(c){const d=_clRA(c);d.real=c&&typeof c.real==='string'&&RAV.ok(c.real)?c.real:'';return d;};
+const _ccRA=compactChar;compactChar=function(c){const a=_ccRA(c);a[32]=c.real||'';return a;};
+const _ecRA=expandChar;expandChar=function(a){const o=_ecRA(a);if(Array.isArray(a)&&typeof a[32]==='string'&&RAV.ok(a[32]))o.real=a[32];return o;};
+const _mkRA=makeAvatar;makeAvatar=function(ch){const c=cleanChar(ch),a=_mkRA(c);if(c.real)RAV.attach(a,c.real);return a;};
+const _anRA=animAvatar;animAvatar=function(a,mode,t,dt){_anRA(a,mode,t,dt);if(a&&a.rv)RAV.pose(a);};
+// creator: a "Real people" tab first
+const _rcRA=renderCreator;renderCreator=function(){_rcRA();const c=CR.ch,P=$('crPanel'),tabs=P.querySelector('.tabs'),sc=P.querySelector('.crScroll');if(!sc)return;
+ if(tabs&&!tabs.querySelector('[data-tab="real"]'))tabs.insertAdjacentHTML('afterbegin',`<div class="tab ${CR.tab==='real'?'on':''}" data-tab="real">✨ Real people</div>`);
+ if(CR.tab==='real'){sc.innerHTML=`<div class="note" style="margin-bottom:8px">Pick a realistic driver, or keep building your own. Real people work in races, at meets, in the Lounge and online.</div>
+  <div class="chips"><button class="chip ${c.real?'':'on'}" data-real="">🛠️ Build my own</button></div>
+  <div class="ravGrid">${RAV.list.map(([id,n])=>`<button class="ravCard ${c.real===id?'on':''}" data-real="${id}"><img loading="lazy" src="${RAV.base}thumbs/${id}.jpg" alt=""><span>${n}</span></button>`).join('')}</div>
+  <div class="note" style="margin-top:10px;opacity:.7">Avatars: VALID library by UCF and Google Research (MIT licence).</div>`;}
+ if(c.real){const w=[...P.querySelectorAll('.note')].find(n=>/Wearing:/.test(n.textContent));if(w)w.remove();}
+ if(CR.tab!=='real'&&c.real){sc.insertAdjacentHTML('afterbegin',`<div class="note" style="margin-bottom:8px">You're using <b>${RAV.name[c.real]}</b>. These options change your build-your-own driver. <button class="chip" data-real="">Switch to build my own</button></div>`);}};
+const _ocRA=openCreator;openCreator=function(mode,onDone){_ocRA(mode,onDone);if(CR){CR.tab='real';renderCreator();}};
+const _crcRA=creatorClick;creatorClick=function(e){const t=e.target.closest('[data-real]');if(t&&CR&&CR.ch){CR.ch.real=t.dataset.real;if(CR.ch.real&&window.TEL&&TEL.feat)TEL.feat('realav');rebuildAvatarPreview();renderCreator();return;}_crcRA(e);};
+(function(){const st=document.createElement('style');st.textContent=`.ravGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
+.ravCard{background:#1b1830;border:2px solid transparent;border-radius:10px;padding:0;overflow:hidden;cursor:pointer;color:#fff;font:600 11px system-ui;display:flex;flex-direction:column}
+.ravCard img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:#15122a}.ravCard span{padding:4px 0}.ravCard.on{border-color:#ff2a6d;box-shadow:0 0 10px #ff2a6d88}`;document.head.appendChild(st);})();
+// ---------- END REAL PEOPLE
 // ---------- REAL STREETS (beta): OpenStreetMap-based Tokyo Shibuya & Dakar Plateau ----------
 CITY.paris=Object.assign({},CITY.dakar,{name:'PARIS',sub:'Tour Eiffel & Arc de Triomphe',desc:'Real streets · Seine bridges · drives on the right',drive:'right',night:false,fog:.0016,hmin:15,hmax:30,real:true});
 CITY.nyc=Object.assign({},CITY.tokyo,{name:'NEW YORK',sub:'Midtown · Times Square',desc:'Real streets · neon night · drives on the right',drive:'right',night:true,fog:.0026,real:true});
