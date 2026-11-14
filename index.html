@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.4 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.5 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -4663,7 +4663,7 @@ function buildCivic(def,color,opt={}){
  const root=new THREE.Group(),body=new THREE.Group();root.add(body);
  const pc=opt.cop?(def.armored?0x1f2622:0x0b0c0e):color;
  const paint=new THREE.MeshPhysicalMaterial({color:new THREE.Color(pc).convertSRGBToLinear(),metalness:.45,roughness:.32,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:CITY[S.city]&&CITY[S.city].night?.9:.55});
- const bm=new THREE.Mesh(G.body,paint);bm.castShadow=true;body.add(bm);const gm=new THREE.Mesh(G.glass,MAT.tint);body.add(gm);
+ const bm=new THREE.Mesh(G.body,paint);bm.castShadow=true;body.add(bm);const gm=new THREE.Mesh(G.glass,[MAT.tint,paint]);body.add(gm);
  const roofPaint=opt.taxi==='dakar'||(opt.cop&&!def.armored)?MAT.trim:paint;const rm=new THREE.Mesh(G.roof,roofPaint);rm.castShadow=true;body.add(rm);
  const det=[];const add=(mat,w,h,d,x,y,zz,ry,rx)=>{const m=new THREE.Mesh(GEO.box,mat);m.scale.set(w,h,d);m.position.set(x,y,zz);if(ry)m.rotation.y=ry;if(rx)m.rotation.x=rx;body.add(m);det.push(m);return m;};
  const {bot,nose,hood,belt,deck}=P,mid=(bot+nose)/2;
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.4'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.5'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5705,35 +5705,40 @@ var CARX=(function(){
   for(let i=0;i<n-1;i++){if(d[i]===0){m[i]=m[i+1]=0;continue;}const a=m[i]/d[i],b=m[i+1]/d[i],s=a*a+b*b;if(s>9){const t=3/Math.sqrt(s);m[i]=t*a*d[i];m[i+1]=t*b*d[i];}}
   return x=>{if(x<=xs[0])return ys[0];if(x>=xs[n-1])return ys[n-1];let i=0;while(x>xs[i+1])i++;const h=xs[i+1]-xs[i],t=(x-xs[i])/h,t2=t*t,t3=t2*t;
    return(2*t3-3*t2+1)*ys[i]+(t3-2*t2+t)*h*m[i]+(-2*t3+3*t2)*ys[i+1]+(t3-t2)*h*m[i+1];};}
- function shape(def){const k=def.name;if(X.cache[k])return X.cache[k];const P=def.prof,L=def.L,W=def.W,zF=L/2,zR=-L/2,z=f=>f*L,wb=L*.31,rw=.36,aR=.47,bot0=.2;
-  const zws=z(P.ws),zrg=z(P.rg),zrf=z(P.rf),zrr=z(P.rr),hatch=P.deck>P.belt+.04;
-  const top=mono([[zR,P.deck*.8],[zR+.07,P.deck*.95],[zR+.3,P.deck],[Math.max(zR+.45,zrg-.05),hatch?P.deck:(P.deck+P.belt)/2],[zrg+.25,P.belt],[zws-.45,P.belt],[zws,P.hood+.015],[(zws+zF)/2,(P.hood+P.nose)/2+.025],[zF-.16,P.nose],[zF-.04,P.nose*.9],[zF,P.nose*.72]]);
-  const botf=mono([[zR,bot0+.1],[zR+.25,bot0+.02],[0,bot0],[zF-.32,bot0-.02],[zF,bot0+.06]]);
-  const hw=zz=>{const u=Math.min(1,Math.abs(zz)/(L/2)),n=zz>0?6.5:7;let w=W/2*Math.pow(Math.max(0,1-Math.pow(u,n)),1/n);
+ function shape(def){const k=def.name;if(X.cache[k])return X.cache[k];const P=def.prof,L=def.L,W=def.W,zF=L/2,zR=-L/2,z=f=>f*L,wb=L*(def.wbF||.31),rw=def.rw||.36,aR=rw+.11,bot0=def.bot||.2,lo=!!def.lo,tumT=def.tum||.74;
+  const zws=z(P.ws),zrg=z(P.rg),zrf=z(P.rf),zrr=z(P.rr),hatch=P.deck>P.belt+.04,boxy=P.rg<-.44;
+  const kp=boxy?[[zR,P.deck*.82],[zR+.04,P.deck*.97],[zR+.12,P.deck],[zws-.45,P.belt],[zws,P.hood+.015],[(zws+zF)/2,(P.hood+P.nose)/2+.02],[zF-.1,P.nose],[zF-.015,P.nose*.93],[zF,P.nose*.8]]
+   :[[zR,P.deck*.8],[zR+.06,P.deck*.96],[zR+.3,P.deck],[Math.max(zR+.45,zrg-.05),hatch?P.deck:(P.deck+P.belt)/2],[zrg+.25,P.belt],[zws-.45,P.belt],[zws,P.hood+.015],[(zws+zF)/2,(P.hood+P.nose)/2+.02],[zF-.1,P.nose],[zF-.015,P.nose*.93],[zF,P.nose*.8]];
+  kp.sort((a,b)=>a[0]-b[0]);const kq=[];for(const q of kp)if(!kq.length||q[0]-kq[kq.length-1][0]>.05)kq.push(q);
+  const top=mono(kq);
+  const botf=mono([[zR,bot0+.1],[zR+.25,bot0+.02],[0,bot0],[zF-.32,bot0-.02],[zF,bot0+.07]]);
+  const hw=zz=>{const rc=W*(zz>0?.24:.2),e=Math.abs(zz)-(L/2-rc);let w=W/2;if(e>0)w=W/2-rc+Math.sqrt(Math.max(0,rc*rc-e*e));
    for(const c of[wb,-wb]){const q=(zz-c)/.62;w+=.035*Math.exp(-q*q);}return w;};
   const arch=zz=>{let y=0;for(const c of[wb,-wb]){const dz=zz-c;if(Math.abs(dz)<aR)y=Math.max(y,rw+Math.sqrt(aR*aR-dz*dz));}return y;};
   // cross-section of the full body at z (one side, bottom-centre → top-centre), then clamp to the arch cut
-  const SH=12;
+  const SH=lo?7:12;
   function ring(zz){const w=hw(zz),yt=top(zz),yb=botf(zz),h=yt-yb,sh=Math.min(.3,h*.48),ys=yt-sh,yl=yb+Math.min(.11,h*.3),pts=[];
    const tum=y=>1-.05*(y-yb)/Math.max(.01,h);
    pts.push([0,yb],[w*.55,yb],[w*.86,yb+.004]);
    for(let i=1;i<=3;i++){const a=i/3*Math.PI/2;pts.push([w*(.86+.14*Math.sin(a)),yl-(yl-yb)*Math.cos(a)]);}
    pts.push([w*tum((yl+ys)/2)*1.005,(yl*.55+ys*.45)]);
-   for(let i=0;i<=SH;i++){const a=i/SH*Math.PI/2,c=Math.cos(a),s=Math.sin(a),nu=3.2,x=w*tum(ys)*Math.pow(c,2/nu),y=ys+sh*Math.pow(s,2/nu);pts.push([x,y]);}
+   for(let i=0;i<=SH;i++){const a=i/SH*Math.PI/2,c=Math.cos(a),s=Math.sin(a),nu=3.8,x=w*tum(ys)*Math.pow(c,2/nu),y=ys+sh*Math.pow(s,2/nu);pts.push([x,y]);}
    const ac=arch(zz);if(ac>0)for(const p of pts)if(p[1]<ac){p[1]=ac;}
    return pts;}
-  const N=72,zs=[];for(let i=0;i<=N;i++){const t=i/N;zs.push(-Math.cos(Math.PI*t)*L/2);}
+  const N=lo?40:72,zs=[];for(let i=0;i<=N;i++){const t=i/N;zs.push(-Math.cos(Math.PI*t)*L/2);}
   // extra rings at the arch edges keep the cut crisp
-  for(const c of[wb,-wb])for(const e of[-aR-.01,-aR+.03,aR-.03,aR+.01,-aR*.6,aR*.6,0])zs.push(c+e);zs.sort((a,b)=>a-b);
+  for(const c of[wb,-wb])for(const e of(lo?[-aR-.01,aR+.01,-aR*.5,aR*.5,0]:[-aR-.01,-aR+.03,aR-.03,aR+.01,-aR*.6,aR*.6,0]))zs.push(c+e);zs.sort((a,b)=>a-b);
   const R=zs.map(ring),M=R[0].length,pos=[],idx=[];
   zs.forEach((zz,i)=>{const r=R[i];for(let j=0;j<M;j++)pos.push(r[j][0],r[j][1],zz);for(let j=M-2;j>=1;j--)pos.push(-r[j][0],r[j][1],zz);});
   const RM=2*M-2;for(let i=0;i<zs.length-1;i++)for(let j=0;j<RM;j++){const a=i*RM+j,b=i*RM+(j+1)%RM,c=(i+1)*RM+j,d=(i+1)*RM+(j+1)%RM;idx.push(a,b,c,b,d,c);}
+  {const nz=zs.length;for(const[ri,dz]of[[0,-1],[nz-1,1]]){const r=R[ri];const yc=(r[0][1]+r[M-1][1])/2;const c=pos.length/3;pos.push(0,yc,zs[ri]+dz*.035);
+   for(let j=0;j<RM;j++){const a=ri*RM+j,b=ri*RM+(j+1)%RM;if(dz>0)idx.push(a,b,c);else idx.push(b,a,c);}}}
   const body=new THREE.BufferGeometry();body.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));body.setIndex(idx);body.computeVertexNormals();
   // greenhouse: glass loft sitting on the body, plus a painted roof skin
-  const zA=zws-.02,zB=Math.max(zrg+.02,zR+.5),base=zz=>top(zz)-.015;
+  const zA=zws-.02,zB=boxy?zR+.07:Math.max(zrg+.02,zR+.5),base=zz=>top(zz)-.015;
   const roofY=mono([[zB,base(zB)],[zB+(zrr-zB)*.45,hatch?P.roof-.04:base(zB)+(P.roof-base(zB))*.62],[zrr,P.roof],[zrf,P.roof],[zrf+(zA-zrf)*.45,P.roof-(P.roof-base(zA))*.4],[zA,base(zA)]]);
-  const GN=36,gz=[];for(let i=0;i<=GN;i++)gz.push(zB+(zA-zB)*i/GN);
-  const cab=zz=>{const b=base(zz),t=Math.max(b,roofY(zz)),wb0=hw(zz)*.9,wt=wb0*.74,r=Math.min(.09,(t-b)*.5),p=[[0,b-.02],[wb0,b-.02]];
+  const GN=lo?20:36,gz=[];for(let i=0;i<=GN;i++)gz.push(zB+(zA-zB)*i/GN);
+  const cab=zz=>{const b=base(zz),t=Math.max(b,roofY(zz)),wb0=hw(zz)*.9,wt=wb0*tumT,r=Math.min(.09,(t-b)*.5),p=[[0,b-.02],[wb0,b-.02]];
    for(let i=0;i<=5;i++){const f=i/5;p.push([wb0+(wt-wb0)*f,b+(t-r-b)*f]);}
    for(let i=1;i<=6;i++){const a=i/6*Math.PI/2;p.push([wt-r+r*Math.cos(a),t-r+r*Math.sin(a)]);}
    p.push([0,t]);return p;};
@@ -5752,7 +5757,7 @@ var CARX=(function(){
   const sideX=(zz,y)=>{const r=ring(zz);let best=0;for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1];if((a[1]-y)*(b[1]-y)<=0&&a[1]!==b[1]){const f=(y-a[1])/(b[1]-a[1]);best=Math.max(best,a[0]+(b[0]-a[0])*f);}}return best;};
   const frontZ=(x,y)=>{for(let zz=zF;zz>0;zz-=.01){if(sideX(zz,y)>=x&&top(zz)>=y)return zz;}return zF-.2;};
   const rearZ=(x,y)=>{for(let zz=zR;zz<0;zz+=.01){if(sideX(zz,y)>=x&&top(zz)>=y)return zz;}return zR+.2;};
-  return X.cache[k]={body,glass,roof,top,hw,sideX,frontZ,rearZ,base,roofY,cab,wb,rw,aR,zA,zB,zrf,zrr,zws,zrg,hatch};}
+  return X.cache[k]={gw:2*hw(0)*.9*tumT,body,glass,roof,top,hw,sideX,frontZ,rearZ,base,roofY,cab,wb,rw,aR,zA,zB,zrf,zrr,zws,zrg,hatch};}
  // deep-dish wheels: rounded tyre, chrome/alloy face with N spokes, dark barrel, brake disc
  function wheel(style){if(X.wc[style.k])return X.wc[style.k];const tmp=new THREE.Group(),rw=.36,rr=.255,n=style.n,alloy=style.mat==='black'?MAT.carbon:style.mat==='gold'?pm('rimGold',()=>stdM('#b89234',{metalness:.95,roughness:.22})):MAT.chrome;
   const add=(geo,mat,fn)=>{const m=new THREE.Mesh(geo,mat);fn&&fn(m);tmp.add(m);return m;};
@@ -5770,7 +5775,7 @@ var CARX=(function(){
   tmp.updateMatrixWorld(true);const merged=mergeStatic([...tmp.children],tmp,0);merged.forEach(m=>SHARED_GEO.add(m.geometry));return X.wc[style.k]=merged;}
  const RIMS={m240i:{n:5,split:true,mat:'chrome'},r32:{n:6,mat:'chrome'},ctr:{n:5,split:true,mat:'black'},supra:{n:5,mat:'chrome'},x1:{n:10,mat:'black'},gt3:{n:10,mat:'gold'}};
  X.rims=RIMS;X.shape=shape;X.wheel=wheel;X.mono=mono;return X;})();
-CARX.MATS={trim:new THREE.MeshStandardMaterial({color:0x08080a,roughness:.55,metalness:.1}),glass:new THREE.MeshPhysicalMaterial({color:0x070b12,metalness:.3,roughness:.03,clearcoat:1,transparent:true,opacity:.72,depthWrite:false}),
+CARX.MATS={trim:new THREE.MeshStandardMaterial({color:0x060607,roughness:.7,metalness:0,envMapIntensity:.15}),glass:new THREE.MeshPhysicalMaterial({color:0x070b12,metalness:.3,roughness:.03,clearcoat:1,transparent:true,opacity:.72,depthWrite:false}),
  cabin:new THREE.MeshStandardMaterial({color:0x0d0d10,roughness:.9}),seat:new THREE.MeshStandardMaterial({color:0x141418,roughness:.95}),
  liner:new THREE.MeshStandardMaterial({color:0x08080a,roughness:1,side:THREE.DoubleSide}),lens:new THREE.MeshPhysicalMaterial({color:0x050608,metalness:.1,roughness:.15,clearcoat:1,envMapIntensity:.4})};
 function buildSportCar(def,color,opt){
@@ -5840,6 +5845,11 @@ function buildSportCar(def,color,opt){
  if(opt.wings){const wg=new THREE.Group();const wm=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x05d9e8,emissiveIntensity:.6,transparent:true,opacity:.9});
   for(const sx of[-1,1]){const m=new THREE.Mesh(GEO.box,wm);m.scale.set(3.2,.06,1.4);m.position.set(sx*(W/2+1.5),P.belt+.1,-.2);m.rotation.z=sx*.12;wg.add(m);}wg.visible=false;root.add(wg);root.userData.wings=wg;}
  addCarExtras(root,def);return root;}
+// traffic, taxis and police: same lofted bodies at a lighter resolution
+civicGeo=function(key,sp,L,W,H){if(CIVIC_CACHE[key])return CIVIC_CACHE[key];const boxy=sp.rg<-.44||sp.H>1.6;
+ const G=CARX.shape({name:'cv_'+key,L,W,wbF:.3,rw:sp.rw,bot:sp.bot,lo:true,tum:boxy?.88:.8,prof:{nose:sp.nose,hood:sp.hood,belt:sp.belt,deck:sp.deck,ws:sp.ws,rf:sp.rf,rr:sp.rr,rg:sp.rg,roof:H}});
+ const sh=new THREE.PlaneGeometry(W+.7,L+.9);sh.rotateX(-Math.PI/2);SHARED_GEO.add(sh);
+ return CIVIC_CACHE[key]={body:G.body,glass:G.glass,roof:G.roof,shadow:sh,wb:G.wb,gw:G.gw};};
 // ---------- END CARX
 // ---------- REAL PEOPLE avatars (v2.3): realistic rigged humans from the VALID library (UCF & Google Research, MIT licence) ----------
 // Files live next to the game: avatars/<id>.glb (meshopt-compressed, ~0.5 MB) and avatars/thumbs/<id>.jpg. Loaded only when used.
