@@ -5407,7 +5407,7 @@ const T={};function setupTouch(){if(!('ontouchstart' in window||navigator.maxTou
   d.addEventListener('touchend',up);d.addEventListener('touchcancel',up);});
  // safety net: when no finger is on the screen, nothing can stay held
  const sweep=e=>{if(e.touches.length===0)releaseAll();};document.addEventListener('touchend',sweep);document.addEventListener('touchcancel',sweep);}
-function readInput(dt){if(S.meet)return{throttle:0,brake:1,steer:0,hand:false,nitro:false,glide:false};const thr=(K['w']||K['arrowup']||T.G)?1:0,br=(K['s']||K['arrowdown']||T.B)?1:0;let st=(K['d']||K['arrowright']||T.R?1:0)-(K['a']||K['arrowleft']||T.L?1:0);
+function readInput(dt){if(S.meet)return{throttle:0,brake:0,steer:0,hand:true,nitro:false,glide:false};const thr=(K['w']||K['arrowup']||T.G)?1:0,br=(K['s']||K['arrowdown']||T.B)?1:0;let st=(K['d']||K['arrowright']||T.R?1:0)-(K['a']||K['arrowleft']||T.L?1:0);
  player.steer=lerp(player.steer,st,clamp(dt*(st?7:10),0,1));
  const hb=!!(K[' ']||T.H);return{throttle:thr,brake:br,steer:player.steer,hand:hb,nitro:!!(K['shift']||T.N),glide:player.air&&hb&&SAVE.unlocks.glider};}
 
@@ -5426,12 +5426,12 @@ renderer.domElement.addEventListener('wheel',e=>{if(S.photo)photoOrbit.d=clamp(p
 
 /* ---------- MAIN UPDATE ---------- */
 function update(dt){S.time+=dt;const p=player;if(S.meet){if(S.meet.free)updateFoot(dt);else updateMeet(dt);}boostPre();
- const frozen=S.race&&S.race.count>0;const inp=frozen?{throttle:0,brake:1,steer:0}:readInput(dt);
+ const frozen=S.race&&S.race.count>0;const inp=frozen?{throttle:0,brake:0,steer:0,hand:true}:readInput(dt);const hold=frozen||!!S.meet;
  p.onLand=imp=>{const air=p.airT;if(imp>17){const dm=(imp-17)*1.6;p.health=Math.max(0,p.health-dm);noiseHit(.4,600);}
   if(air>.55){let bonus=Math.round(air*160);const z=ZONES.find(z=>Math.hypot(z.x-p.x,z.z-p.z)<z.r);if(z){bonus*=3;toast('BULLSEYE!',`Perfect landing +${fmt(bonus)}`,'#39ff9f',1.8);chime(true);}else feed(`🛫 Air ${air.toFixed(1)}s · +${fmt(bonus)}`);reward(bonus,Math.round(air*40),Math.round(air*6));}};
  const subs=2,h=dt/subs;
  for(let s=0;s<subs;s++){
-  p.wallHit=0;stepCar(p,inp,h);
+  if(hold){p.vx=p.vz=0;}p.wallHit=0;stepCar(p,inp,h);if(hold){p.vx=p.vz=0;}
   for(const r of racers){if(r.ghost)continue;r.wallHit=0;const ri=racerInput(r,h);r.steer=ri.steer;stepCar(r,ri,h);const hw=collideWorld(r);if(hw>8)r.health=Math.max(30,r.health-hw*.4);}
   for(const c of S.heat.cops){c.wallHit=0;const ci=copInput(c,h);if(BOOST.smoke>0){ci.throttle*=.25;ci.brake=Math.max(ci.brake||0,.3);}stepCar(c,ci,h);collideWorld(c);}
   for(const t of traffic){if(t.crashed){stepCar(t,{throttle:0,brake:.6,steer:0},h);collideWorld(t);}else{
@@ -5608,7 +5608,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.8.4'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.8.5'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
