@@ -184,7 +184,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.3 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Playable prototype v2.4 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5605,7 +5605,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.3'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.4'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5695,6 +5695,152 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
 
 
 
+// ---------- CARX (v2.4): lofted sports-car bodies — curved panels, flared arches, glass cabin with interior, deep-dish wheels and brakes ----------
+var CARX=(function(){
+ const X={cache:{},wc:{}};
+ // monotone cubic (Fritsch–Carlson) through [[x,y],...] sorted by x
+ function mono(pts){const n=pts.length,xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),d=[],m=[];
+  for(let i=0;i<n-1;i++)d.push((ys[i+1]-ys[i])/Math.max(1e-6,xs[i+1]-xs[i]));
+  m[0]=d[0];m[n-1]=d[n-2];for(let i=1;i<n-1;i++)m[i]=d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2;
+  for(let i=0;i<n-1;i++){if(d[i]===0){m[i]=m[i+1]=0;continue;}const a=m[i]/d[i],b=m[i+1]/d[i],s=a*a+b*b;if(s>9){const t=3/Math.sqrt(s);m[i]=t*a*d[i];m[i+1]=t*b*d[i];}}
+  return x=>{if(x<=xs[0])return ys[0];if(x>=xs[n-1])return ys[n-1];let i=0;while(x>xs[i+1])i++;const h=xs[i+1]-xs[i],t=(x-xs[i])/h,t2=t*t,t3=t2*t;
+   return(2*t3-3*t2+1)*ys[i]+(t3-2*t2+t)*h*m[i]+(-2*t3+3*t2)*ys[i+1]+(t3-t2)*h*m[i+1];};}
+ function shape(def){const k=def.name;if(X.cache[k])return X.cache[k];const P=def.prof,L=def.L,W=def.W,zF=L/2,zR=-L/2,z=f=>f*L,wb=L*.31,rw=.36,aR=.47,bot0=.2;
+  const zws=z(P.ws),zrg=z(P.rg),zrf=z(P.rf),zrr=z(P.rr),hatch=P.deck>P.belt+.04;
+  const top=mono([[zR,P.deck*.8],[zR+.07,P.deck*.95],[zR+.3,P.deck],[Math.max(zR+.45,zrg-.05),hatch?P.deck:(P.deck+P.belt)/2],[zrg+.25,P.belt],[zws-.45,P.belt],[zws,P.hood+.015],[(zws+zF)/2,(P.hood+P.nose)/2+.025],[zF-.16,P.nose],[zF-.04,P.nose*.9],[zF,P.nose*.72]]);
+  const botf=mono([[zR,bot0+.1],[zR+.25,bot0+.02],[0,bot0],[zF-.32,bot0-.02],[zF,bot0+.06]]);
+  const hw=zz=>{const u=Math.min(1,Math.abs(zz)/(L/2)),n=zz>0?6.5:7;let w=W/2*Math.pow(Math.max(0,1-Math.pow(u,n)),1/n);
+   for(const c of[wb,-wb]){const q=(zz-c)/.62;w+=.035*Math.exp(-q*q);}return w;};
+  const arch=zz=>{let y=0;for(const c of[wb,-wb]){const dz=zz-c;if(Math.abs(dz)<aR)y=Math.max(y,rw+Math.sqrt(aR*aR-dz*dz));}return y;};
+  // cross-section of the full body at z (one side, bottom-centre → top-centre), then clamp to the arch cut
+  const SH=12;
+  function ring(zz){const w=hw(zz),yt=top(zz),yb=botf(zz),h=yt-yb,sh=Math.min(.3,h*.48),ys=yt-sh,yl=yb+Math.min(.11,h*.3),pts=[];
+   const tum=y=>1-.05*(y-yb)/Math.max(.01,h);
+   pts.push([0,yb],[w*.55,yb],[w*.86,yb+.004]);
+   for(let i=1;i<=3;i++){const a=i/3*Math.PI/2;pts.push([w*(.86+.14*Math.sin(a)),yl-(yl-yb)*Math.cos(a)]);}
+   pts.push([w*tum((yl+ys)/2)*1.005,(yl*.55+ys*.45)]);
+   for(let i=0;i<=SH;i++){const a=i/SH*Math.PI/2,c=Math.cos(a),s=Math.sin(a),nu=3.2,x=w*tum(ys)*Math.pow(c,2/nu),y=ys+sh*Math.pow(s,2/nu);pts.push([x,y]);}
+   const ac=arch(zz);if(ac>0)for(const p of pts)if(p[1]<ac){p[1]=ac;}
+   return pts;}
+  const N=72,zs=[];for(let i=0;i<=N;i++){const t=i/N;zs.push(-Math.cos(Math.PI*t)*L/2);}
+  // extra rings at the arch edges keep the cut crisp
+  for(const c of[wb,-wb])for(const e of[-aR-.01,-aR+.03,aR-.03,aR+.01,-aR*.6,aR*.6,0])zs.push(c+e);zs.sort((a,b)=>a-b);
+  const R=zs.map(ring),M=R[0].length,pos=[],idx=[];
+  zs.forEach((zz,i)=>{const r=R[i];for(let j=0;j<M;j++)pos.push(r[j][0],r[j][1],zz);for(let j=M-2;j>=1;j--)pos.push(-r[j][0],r[j][1],zz);});
+  const RM=2*M-2;for(let i=0;i<zs.length-1;i++)for(let j=0;j<RM;j++){const a=i*RM+j,b=i*RM+(j+1)%RM,c=(i+1)*RM+j,d=(i+1)*RM+(j+1)%RM;idx.push(a,b,c,b,d,c);}
+  const body=new THREE.BufferGeometry();body.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));body.setIndex(idx);body.computeVertexNormals();
+  // greenhouse: glass loft sitting on the body, plus a painted roof skin
+  const zA=zws-.02,zB=Math.max(zrg+.02,zR+.5),base=zz=>top(zz)-.015;
+  const roofY=mono([[zB,base(zB)],[zB+(zrr-zB)*.45,hatch?P.roof-.04:base(zB)+(P.roof-base(zB))*.62],[zrr,P.roof],[zrf,P.roof],[zrf+(zA-zrf)*.45,P.roof-(P.roof-base(zA))*.4],[zA,base(zA)]]);
+  const GN=36,gz=[];for(let i=0;i<=GN;i++)gz.push(zB+(zA-zB)*i/GN);
+  const cab=zz=>{const b=base(zz),t=Math.max(b,roofY(zz)),wb0=hw(zz)*.9,wt=wb0*.74,r=Math.min(.09,(t-b)*.5),p=[[0,b-.02],[wb0,b-.02]];
+   for(let i=0;i<=5;i++){const f=i/5;p.push([wb0+(wt-wb0)*f,b+(t-r-b)*f]);}
+   for(let i=1;i<=6;i++){const a=i/6*Math.PI/2;p.push([wt-r+r*Math.cos(a),t-r+r*Math.sin(a)]);}
+   p.push([0,t]);return p;};
+  const gp=[],gi=[];const GR=cab(gz[0]),GM=GR.length;
+  gz.forEach(zz=>{const r=cab(zz);for(let j=0;j<GM;j++)gp.push(r[j][0],r[j][1],zz);for(let j=GM-2;j>=1;j--)gp.push(-r[j][0],r[j][1],zz);});
+  const GRM=2*GM-2;for(let i=0;i<GN;i++)for(let j=0;j<GRM;j++){const a=i*GRM+j,b=i*GRM+(j+1)%GRM,c=(i+1)*GRM+j,d=(i+1)*GRM+(j+1)%GRM;gi.push(a,b,c,b,d,c);}
+  const glass=new THREE.BufferGeometry();glass.setAttribute('position',new THREE.Float32BufferAttribute(gp,3));glass.setIndex(gi);glass.computeVertexNormals();
+  const zC=zB+(zrr-zB)*(hatch?.35:.7);let ic=0;while(ic<GN&&(gz[ic]+gz[ic+1])/2<zC)ic++;const per=GRM*6;glass.addGroup(0,ic*per,1);glass.addGroup(ic*per,(GN-ic)*per,0);
+  // roof skin: top arc of the cabin between the pillars
+  const rp=[],ri=[],RZ=[];for(let i=0;i<=16;i++)RZ.push(zrr-.05+(zrf+.06-(zrr-.05))*i/16);const TOPN=8;
+  RZ.forEach(zz=>{const r=cab(zz),seg=r.slice(7);const row=[...seg.map(q=>[q[0]*1.012,q[1]+.006]),...seg.slice(0,-1).reverse().map(q=>[-q[0]*1.012,q[1]+.006])];row.forEach(q=>rp.push(q[0],q[1],zz));});
+  const RW=2*(GM-7)-1;for(let i=0;i<RZ.length-1;i++)for(let j=0;j<RW-1;j++){const a=i*RW+j,b=a+1,c=a+RW,d=c+1;ri.push(a,b,c,b,d,c);}
+  const roof=new THREE.BufferGeometry();roof.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));roof.setIndex(ri);roof.computeVertexNormals();
+  [body,glass,roof].forEach(g=>SHARED_GEO.add(g));
+  // surface probes for placing parts
+  const sideX=(zz,y)=>{const r=ring(zz);let best=0;for(let i=0;i<r.length-1;i++){const a=r[i],b=r[i+1];if((a[1]-y)*(b[1]-y)<=0&&a[1]!==b[1]){const f=(y-a[1])/(b[1]-a[1]);best=Math.max(best,a[0]+(b[0]-a[0])*f);}}return best;};
+  const frontZ=(x,y)=>{for(let zz=zF;zz>0;zz-=.01){if(sideX(zz,y)>=x&&top(zz)>=y)return zz;}return zF-.2;};
+  const rearZ=(x,y)=>{for(let zz=zR;zz<0;zz+=.01){if(sideX(zz,y)>=x&&top(zz)>=y)return zz;}return zR+.2;};
+  return X.cache[k]={body,glass,roof,top,hw,sideX,frontZ,rearZ,base,roofY,cab,wb,rw,aR,zA,zB,zrf,zrr,zws,zrg,hatch};}
+ // deep-dish wheels: rounded tyre, chrome/alloy face with N spokes, dark barrel, brake disc
+ function wheel(style){if(X.wc[style.k])return X.wc[style.k];const tmp=new THREE.Group(),rw=.36,rr=.255,n=style.n,alloy=style.mat==='black'?MAT.carbon:style.mat==='gold'?pm('rimGold',()=>stdM('#b89234',{metalness:.95,roughness:.22})):MAT.chrome;
+  const add=(geo,mat,fn)=>{const m=new THREE.Mesh(geo,mat);fn&&fn(m);tmp.add(m);return m;};
+  const prof=[[rr,-.13],[.3,-.138],[.343,-.125],[rw,-.085],[rw+.002,0],[rw,.085],[.343,.125],[.3,.138],[rr,.13]].map(([r,y])=>new THREE.Vector2(r,y));
+  const tire=new THREE.LatheGeometry(prof,30);tire.rotateZ(Math.PI/2);add(tire,MAT.tire,m=>m.castShadow=true);
+  const barrel=new THREE.CylinderGeometry(rr,rr,.25,24,1,true);barrel.rotateZ(Math.PI/2);add(barrel,MAT.carbon);
+  const lip=new THREE.TorusGeometry(rr-.006,.012,6,30);lip.rotateY(Math.PI/2);add(lip,alloy,m=>m.position.x=.118);
+  const face=.098;
+  for(let k=0;k<n;k++){const a=k/n*Math.PI*2;
+   if(style.split){for(const o of[-.09,.09]){const g=new THREE.BoxGeometry(.026,rr*.9,.045);g.translate(0,rr*.5,0);add(g,alloy,m=>{m.rotation.x=a+o;m.position.x=face;});}}
+   else{const g=new THREE.CylinderGeometry(.018,.03,rr*.92,5);g.translate(0,rr*.5,0);g.scale(1,1,1.6);add(g,alloy,m=>{m.rotation.x=a;m.position.x=face;m.rotation.z=.08;});}}
+  const hub=new THREE.CylinderGeometry(.075,.085,.05,16);hub.rotateZ(Math.PI/2);add(hub,alloy,m=>m.position.x=face+.005);
+  const cap=new THREE.CylinderGeometry(.035,.035,.03,12);cap.rotateZ(Math.PI/2);add(cap,style.mat==='black'?MAT.chrome:MAT.carbon,m=>m.position.x=face+.03);
+  const disc=new THREE.CylinderGeometry(.205,.205,.026,28);disc.rotateZ(Math.PI/2);add(disc,pm('brakeDisc',()=>stdM('#6d6f74',{metalness:.85,roughness:.45})),m=>m.position.x=.03);
+  tmp.updateMatrixWorld(true);const merged=mergeStatic([...tmp.children],tmp,0);merged.forEach(m=>SHARED_GEO.add(m.geometry));return X.wc[style.k]=merged;}
+ const RIMS={m240i:{n:5,split:true,mat:'chrome'},r32:{n:6,mat:'chrome'},ctr:{n:5,split:true,mat:'black'},supra:{n:5,mat:'chrome'},x1:{n:10,mat:'black'},gt3:{n:10,mat:'gold'}};
+ X.rims=RIMS;X.shape=shape;X.wheel=wheel;X.mono=mono;return X;})();
+CARX.MATS={trim:new THREE.MeshStandardMaterial({color:0x08080a,roughness:.55,metalness:.1}),glass:new THREE.MeshPhysicalMaterial({color:0x070b12,metalness:.3,roughness:.03,clearcoat:1,transparent:true,opacity:.72,depthWrite:false}),
+ cabin:new THREE.MeshStandardMaterial({color:0x0d0d10,roughness:.9}),seat:new THREE.MeshStandardMaterial({color:0x141418,roughness:.95}),
+ liner:new THREE.MeshStandardMaterial({color:0x08080a,roughness:1,side:THREE.DoubleSide}),lens:new THREE.MeshPhysicalMaterial({color:0x050608,metalness:.1,roughness:.15,clearcoat:1,envMapIntensity:.4})};
+function buildSportCar(def,color,opt){
+ const root=new THREE.Group(),body=new THREE.Group();root.add(body);const P=def.prof,{L,W}=def,zF=L/2,zR=-L/2;const id=Object.keys(CARS).find(k=>CARS[k]===def)||'r32';
+ const night=CITY[S.city]&&CITY[S.city].night;
+ const paint=new THREE.MeshPhysicalMaterial({color:new THREE.Color(color).convertSRGBToLinear(),metalness:.4,roughness:.3,clearcoat:1,clearcoatRoughness:.06,envMapIntensity:night?.9:.6});
+ const G=CARX.shape(def),M=CARX.MATS,wb=G.wb;
+ const bm=new THREE.Mesh(G.body,paint);bm.castShadow=true;bm.receiveShadow=true;body.add(bm);
+ const gm=new THREE.Mesh(G.glass,[M.glass,paint]);gm.renderOrder=2;body.add(gm);
+ const rm=new THREE.Mesh(G.roof,id==='x1'?MAT.carbon:paint);rm.castShadow=true;body.add(rm);
+ const det=[],add=(mat,w,h,d,x,y,zz,rx,ry,rz)=>{const m=new THREE.Mesh(GEO.box,mat);m.scale.set(w,h,d);m.position.set(x,y,zz);m.rotation.set(rx||0,ry||0,rz||0);m.castShadow=true;body.add(m);det.push(m);return m;};
+ motoGeos();const tube=(mat,a,b,r)=>{const m=tubeTo(body,mat,a,b,r);det.push(m);return m;};
+ // interior (seen through the glass)
+ const bz=G.base(G.zA-.3),cz=(G.zA+G.zB)/2;
+ add(M.cabin,W*.78,.16,.42,0,G.base(G.zA)-.06,G.zA-.22,-.25);                                   // dashboard
+ add(M.cabin,W*.82,.08,(G.zA-G.zB)*.9,0,G.base(cz)-.22,cz);                                     // floor/tunnel
+ for(const sx of[-1,1]){const x=sx*W*.21,sz=cz-.12;
+  add(M.seat,.42,.56,.12,x,G.base(sz)+.14,sz-.28,-.22);add(M.seat,.42,.12,.46,x,G.base(sz)-.1,sz-.02);add(M.seat,.2,.13,.09,x,G.base(sz)+.47,sz-.36,-.22);}
+ const sw=new THREE.Mesh(new THREE.TorusGeometry(.16,.022,6,20),M.cabin);sw.position.set(W*.21,bz+.13,G.zA-.52);sw.rotation.x=-.35;body.add(sw);det.push(sw);
+ // pillars and window trim
+ for(const sx of[-1,1]){const cA=G.cab(G.zA),cF=G.cab(G.zrf),cR=G.cab(G.zrr),cB=G.cab(G.zB),tp=c=>c[7];
+  tube(M.trim,[sx*cA[2][0]*1.01,cA[2][1],G.zA],[sx*tp(cF)[0]*1.015,tp(cF)[1],G.zrf],.016);               // A-pillar
+  const zb=(G.zrf+G.zrr)/2-.05,cM=G.cab(zb);tube(M.trim,[sx*cM[2][0]*1.01,cM[2][1],zb],[sx*tp(cM)[0]*1.015,tp(cM)[1],zb],.02); // B-pillar
+  for(let i=0;i<10;i++){const za=G.zB+(G.zA-G.zB)*i/10,zb2=G.zB+(G.zA-G.zB)*(i+1)/10,a=G.cab(za),b=G.cab(zb2);tube(MAT.carbon,[sx*a[1][0]*1.004,a[1][1]+.01,za],[sx*b[1][0]*1.004,b[1][1]+.01,zb2],.012);}}
+ // front end: grille, intakes, splitter, headlights
+ const nz=G.frontZ(0,P.nose*.55),gy=(.2+P.nose)/2;
+ add(M.trim,W*.46,.13,.05,0,gy+.02,nz+.005);add(M.trim,W*.84,.035,.14,0,.17,G.frontZ(0,.3)-.05);
+ for(const sx of[-1,1]){const ix=W*.34,iz=G.frontZ(ix,.36);add(M.trim,.24,.11,.04,sx*ix,.36,iz+.002,0,sx*.35,0);
+  const hx=W*.3,hy=P.nose-.075,hz=G.frontZ(hx,hy),ang=sx*Math.atan2(Math.abs(G.frontZ(hx-.13,hy)-G.frontZ(hx+.13,hy)),.26);
+  add(M.lens,.5,.1,.06,sx*hx,hy,hz-.005,0,ang,0);add(MAT.led,.44,.02,.04,sx*hx,hy+.032,hz+.012,0,ang,0);
+  for(const o of[-.1,.07]){const pr=new THREE.Mesh(new THREE.CylinderGeometry(.034,.034,.04,12),MAT.led);pr.rotation.x=Math.PI/2;pr.position.set(sx*(hx+o),hy-.012,G.frontZ(hx+o,hy)+.004);body.add(pr);det.push(pr);}
+  add(MAT.amber,.12,.025,.06,sx*(hx+.2),hy-.03,G.frontZ(hx+.2,hy-.03)-.02,0,ang*1.4,0);}
+ // sides: skirts, mirrors, door seams and handles, arch liners
+ for(const sx of[-1,1]){const zm=G.zA-.12,mx=G.sideX(zm,P.belt)+.04;
+  add(M.trim,.05,.08,2*wb-1.05,sx*(G.sideX(0,.24)+.005),.23,0);
+  add(paint,.07,.1,.19,sx*(mx+.06),P.belt+.07,zm,0,sx*.15,0);add(MAT.carbon,.07,.025,.04,sx*(mx+.01),P.belt+.03,zm+.02);
+  const zd0=G.zA+.06,zd1=G.zB+(P.rg>-.4?.32:.5),yS=.32,yT=P.belt-.04;
+  for(const zz of[zd0,zd1])tube(MAT.carbon,[sx*(G.sideX(zz,yS)+.002),yS,zz],[sx*(G.sideX(zz,yT)+.002),yT,zz+.02],.006);
+  add(MAT.chrome,.02,.028,.14,sx*(G.sideX(zd1+.3,P.belt-.1)+.008),P.belt-.1,zd1+.25);
+  for(const sz of[1,-1]){const lg=new THREE.CylinderGeometry(G.aR-.015,G.aR-.015,.36,18,1,true,0,Math.PI);lg.rotateZ(Math.PI/2);const l=new THREE.Mesh(lg,M.liner);l.position.set(sx*(G.hw(sz*wb)-.22),G.rw,sz*wb);body.add(l);}
+  if(opt.glow||def.lightbar){const a=add(new THREE.MeshBasicMaterial({color:opt.glow||'#05d9e8'}),.02,.03,L*.5,sx*(G.hw(0)+.012),.3,0);a.castShadow=false;}}
+ // rear: tail lights, diffuser, exhausts
+ const ty=P.deck-.14;for(const sx of[-1,1]){const tx=W*.29,tz=G.rearZ(tx,ty),ta=-sx*Math.atan2(.12,Math.max(.03,G.rearZ(tx+.12,ty)-G.rearZ(tx-.12,ty)<0?G.rearZ(tx-.12,ty)-G.rearZ(tx+.12,ty):.03))*.0;
+  const a2=-sx*Math.atan2(Math.abs(G.rearZ(tx+.13,ty)-G.rearZ(tx-.13,ty)),.26);add(M.lens,.5,.11,.05,sx*tx,ty-.01,tz+.012,0,a2,0);add(MAT.tail,.46,.055,.03,sx*tx,ty,tz-.004,0,a2,0);}
+ add(MAT.tail,def.lightbar?W*.84:W*.32,.025,.04,0,ty+.02,G.rearZ(0,ty)+.01);
+ add(M.trim,W*.7,.12,.3,0,.27,G.rearZ(0,.3)+.12);for(let f=-2;f<=2;f++)add(M.trim,.025,.13,.28,f*W*.12,.24,G.rearZ(0,.3)+.1);
+ add(MAT.plate||M.trim,.5,.12,.02,0,P.deck*.58,G.rearZ(0,P.deck*.58)-.008);                               // plate recess
+ const flames=[];for(const px of[-W*.28,-W*.17,W*.17,W*.28]){const pm2=new THREE.Mesh(GEO.pipe,MAT.chrome);pm2.position.set(px,.32,zR+.02);body.add(pm2);
+  const fl=new THREE.Mesh(GEO.flame,MAT.flame);fl.position.set(px,.32,zR-.08);fl.visible=false;fl.add(new THREE.Mesh(GEO.flameCore,MAT.flameCore));body.add(fl);flames.push(fl);}
+ // hood vent, fin, wing
+ const hvz=(G.zws+zF)/2-.1,hvy=G.top(hvz);add(MAT.carbon,W*.32,.025,.44,0,hvy+.012,hvz,-.12);
+ if(def.fin)add(paint,.04,.2,L*.22,0,P.roof-.03,G.zrr-.35);
+ if(def.wingT==='lip')add(MAT.carbon,W*.86,.035,.2,0,G.top(zR+.25)+.03,zR+.22,-.2);
+ else{const ph=def.wingT==='gt'?.24:.4,dz=zR+.3,dy=G.top(dz);for(const sx of[-1,1]){add(MAT.carbon,.04,ph+.04,.12,sx*W*.28,dy+ph/2,dz+.02,.22);add(MAT.carbon,.035,.24,.48,sx*W*.5,dy+ph,dz);}
+  add(MAT.carbon,W*1.0,.05,.44,0,dy+ph+.01,dz,-.1);add(MAT.carbon,W*1.0,.02,.14,0,dy+ph+.08,dz-.2,-.45);}
+ mergeStatic(det,body,0);
+ // wheels
+ const style=Object.assign({k:id},CARX.rims[id]||{n:6,mat:'chrome'});const ws=CARX.wheel(style);
+ const wheels=[],steer=[];for(const sz of[1,-1])for(const sx of[-1,1]){const piv=new THREE.Group();piv.position.set(sx*(G.hw(sz*wb)-.17),G.rw,sz*wb);root.add(piv);
+  const spin=new THREE.Group();piv.add(spin);ws.forEach(m=>{const c=new THREE.Mesh(m.geometry,m.material);c.castShadow=m.material===MAT.tire;if(sx<0)c.rotation.y=Math.PI;spin.add(c);});
+  const cal=new THREE.Mesh(GEO.box,MAT.caliper);cal.scale.set(.06,.15,.2);cal.position.set(sx*.055,.11,-.04*sz);piv.add(cal);wheels.push(spin);if(sz>0)steer.push(piv);}
+ root.userData={body,wheels,steer,paint,flames};
+ if(opt.glow){const g2=new THREE.Mesh(new THREE.PlaneGeometry(W+1.6,L+1.4),new THREE.MeshBasicMaterial({color:opt.glow,map:softTex,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));g2.rotation.x=-Math.PI/2;g2.position.y=.06;root.add(g2);root.userData.glowMesh=g2;}
+ if(opt.decal&&SPONSORS[opt.decal]){const t=logoTex(opt.decal,false,true);const dm=new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:.35,polygonOffset:true,polygonOffsetFactor:-2});
+  const dw=Math.min(L*.22,1),dh=dw*.375,dz=-.1,dy=(.36+P.belt)/2;for(const sx of[-1,1]){const pl=new THREE.Mesh(new THREE.PlaneGeometry(dw,dh),dm);pl.position.set(sx*(G.sideX(dz,dy)+.012),dy,dz);pl.rotation.y=sx*Math.PI/2;body.add(pl);}
+  const rw2=W*.42,rf=new THREE.Mesh(new THREE.PlaneGeometry(rw2,rw2*.375),dm);rf.position.set(0,P.roof+.012,(G.zrf+G.zrr)/2);rf.rotation.set(-Math.PI/2,0,Math.PI);body.add(rf);}
+ if(opt.wings){const wg=new THREE.Group();const wm=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x05d9e8,emissiveIntensity:.6,transparent:true,opacity:.9});
+  for(const sx of[-1,1]){const m=new THREE.Mesh(GEO.box,wm);m.scale.set(3.2,.06,1.4);m.position.set(sx*(W/2+1.5),P.belt+.1,-.2);m.rotation.z=sx*.12;wg.add(m);}wg.visible=false;root.add(wg);root.userData.wings=wg;}
+ addCarExtras(root,def);return root;}
+// ---------- END CARX
 // ---------- REAL PEOPLE avatars (v2.3): realistic rigged humans from the VALID library (UCF & Google Research, MIT licence) ----------
 // Files live next to the game: avatars/<id>.glb (meshopt-compressed, ~0.5 MB) and avatars/thumbs/<id>.jpg. Loaded only when used.
 var RAV=(function(){
