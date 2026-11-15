@@ -289,7 +289,10 @@ function vPlayer(p){if(!p){ST.sel=null;return vPlayers();}const R=days(ST.range)
  <h2>Minutes played per day</h2><div class="card">${bars(D.map(k=>({l:short(k),v:p.act[k]|0})),{c:'#ff2a6d',h:110})}</div>
  <h2>Timeline</h2><input class="search" data-q="tl" placeholder="Filter, e.g. won, error, signed" value="${esc(ST.q.tl||'')}">
  <div class="card tl">${vis.slice(0,300).map(e=>`<div class="it"><b>${when(e.t)}</b><span>${evTxt(e)}</span></div>`).join('')||'<div class="mute">No activity yet.</div>'}</div>`;}
-function vErrors(){const E=allEv(e=>e.k==='err'&&inR(e)).sort((a,b)=>b.t-a.t),q=(ST.q.err||'').toLowerCase(),vis=q?E.filter(e=>(e.m+' '+e.src+' '+nmTxt(e.p)).toLowerCase().includes(q)):E;
+const FIXED=[[/evaluating 'gm\.i'/,'2.8.1','Car totaled / impounded in real-street cities'],[/evaluating 'e\.i'/,'2.1.1','Tutorial objective in real-street cities']];
+const vnum=v=>String(v||'0').split('.').map(Number).reduce((a,n,i)=>a+(n||0)*Math.pow(1000,2-i),0);
+const fixedIn=e=>{const f=FIXED.find(f=>f[0].test(e.m));return f&&vnum(e.v)<vnum(f[1])?f:null;};
+function vErrors(){const all=allEv(e=>e.k==='err'&&inR(e)).sort((a,b)=>b.t-a.t),showOld=!!ST.oldErr,E=showOld?all:all.filter(e=>!fixedIn(e)),hid=all.length-E.length,q=(ST.q.err||'').toLowerCase(),vis=q?E.filter(e=>(e.m+' '+e.src+' '+nmTxt(e.p)).toLowerCase().includes(q)):E;
  ST.exp.errors={cols:[{h:'When'},{h:'Player'},{h:'Message'},{h:'Where'},{h:'Version'}],rows:vis.map(e=>({c:[when(e.t),nmTxt(e.p),e.m,(e.src||'')+(e.l?':'+e.l:''),e.v||'']}))};
  const groups={};E.forEach(e=>{groups[e.m]=(groups[e.m]||0)+1;});const top=Object.entries(groups).sort((a,b)=>b[1]-a[1]).slice(0,5);
  return`<div class="kpis">${kpi('Errors',E.length,ST.range===1?'today':`last ${ST.range} days`,E.length?'var(--red)':'var(--green)')}${kpi('Players affected',new Set(E.map(e=>e.p.code)).size)}${kpi('Distinct errors',Object.keys(groups).length)}${kpi('Last error',E.length?ago(E[0].t):'—')}</div>
@@ -300,7 +303,7 @@ ${(()=>{const P=allEv(e=>e.k==='perf'&&inR(e));if(!P.length)return'<h2>Game spee
  <h2>By graphics setting</h2>${table('perf',[{h:'Setting'},{h:'Sessions',n:1},{h:'Avg fps',n:1},{h:'Laggy',n:1}],Object.entries(Q).map(([q,a])=>({s:q,c:[esc(q),a.length,avg(a),pct(a.filter(e=>e.f<30).length,a.length)]})))}
  <h2>Slowest players</h2>${table('slow',[{h:'Player'},{h:'Device'},{h:'Avg fps',n:1},{h:'Worst 10%',n:1},{h:'When'}],sp.filter(e=>e.f<40).slice(0,30).map(e=>({s:nmTxt(e.p),c:[nm(e.p),e.mob?'📱 Phone/tablet':'💻 Computer',e.f,e.lo!=null?e.lo:'—',ago(e.t)],click:e.p.code})))}`;})()}
  ${top.length?`<h2>Most common</h2><div class="card">${hbars(top.map(([m,n])=>({l:`<span style="font:600 12px ui-monospace,monospace">${esc(m.slice(0,80))}</span>`,v:n})),{c:'var(--red)'})}</div>`:''}
- <h2>Recent errors · newest first</h2><input class="search" data-q="err" placeholder="Filter errors" value="${esc(ST.q.err||'')}"><div class="card feed">${vis.slice(0,200).map(e=>`<div class="e"><div class="tiny">${when(e.t)} · ${nm(e.p)} · ${esc(e.src||'')}${e.l?':'+e.l:''}${e.v?' · v'+esc(e.v):''}</div><div class="m">${esc(e.m)}</div></div>`).join('')||'<div class="mute" style="padding:6px 0">✅ No errors recorded.</div>'}</div>`;}
+ <h2>Recent errors · newest first</h2><label class="tiny" style="display:block;margin:-4px 0 8px"><input type="checkbox" data-olderr ${showOld?'checked':''}> Show errors that are already fixed in a newer version${hid?` (${hid} hidden)`:''}</label><input class="search" data-q="err" placeholder="Filter errors" value="${esc(ST.q.err||'')}"><div class="card feed">${vis.slice(0,200).map(e=>`<div class="e"><div class="tiny">${when(e.t)} · ${nm(e.p)} · ${esc(e.src||'')}${e.l?':'+e.l:''}${e.v?' · v'+esc(e.v):''}</div><div class="m">${esc(e.m)}</div>${fixedIn(e)?`<div class="tiny" style="color:var(--green)">✅ Fixed in v${fixedIn(e)[1]} · ${fixedIn(e)[2]}</div>`:''}</div>`).join('')||'<div class="mute" style="padding:6px 0">✅ No errors recorded.</div>'}</div>`;}
 // ---------- frame ----------
 function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classList.toggle('reveal',ST.reveal);
  const V={map:vMap,features:vFeatures,live:vLive,overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors};
@@ -316,6 +319,7 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ST.range=+b.dataset.r;draw();});
  $('rf').onclick=load;$('out').onclick=async e=>{e.preventDefault();try{localStorage.removeItem(DK);}catch(x){}ST.admin=null;ST.P=[];try{if(AUTH&&AUTH.currentUser)await AUTH.signOut();}catch(x){}renderLogin();};$('ex').onclick=exportTab;
  document.querySelectorAll('[data-q]').forEach(el=>el.oninput=()=>{ST.q[el.dataset.q]=el.value;draw();});
+ document.querySelectorAll('[data-olderr]').forEach(el=>el.onchange=()=>{ST.oldErr=el.checked;draw();});
  if(qid){const el=document.querySelector(`[data-q="${qid}"]`);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
  document.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>{if(!r.dataset.open)return;ST.tab='players';ST.sel=r.dataset.open;draw();scrollTo(0,0);});
  document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{ST.mapCity=b.dataset.city;draw();});

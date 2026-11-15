@@ -196,7 +196,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="invite" class="panel hidden"></div>
 <div id="chatBox" class="panel hidden"><div class="qhead">QUICK CHAT <span class="note">tap a message · keys 1–9 · Esc to close</span></div><div id="qGrid"></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script>if(window.THREE){
 /* three.js r128 examples (MIT License, (c) three.js authors): EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, CopyShader, LuminosityHighPassShader, FXAAShader, Sky */
 ( function () {
@@ -2445,8 +2445,8 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 } )();
 
 }</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" crossorigin="anonymous"></script>
 <script>/* ---------- Firebase online layer (used when the game runs outside claude.ai, e.g. GitHub Pages) ----------
    Provides the same room / db / user calls the game already uses, backed by Firebase Realtime Database.
    Online play needs a signed-in Player Pass; guests play offline. */
@@ -4990,7 +4990,7 @@ function createPlayer(){
  const id=SAVE.current,cs=SAVE.cars[id],d=CARS[id];
  const mesh=buildCarMesh(d,new THREE.Color(cs.color),{glow:GLOWS[cs.glow],wings:true,decal:cs.decal});world.add(mesh);
  const old=player;player=makeEnt(mesh,effStats(id),d.mass);player.isPlayer=true;player.id=id;player.health=cs.health;
- if(old){placeOnRoad(player,old.x,old.z,old.h);}else if(SAVE.tut===0){const sp=CITY[S.city].spawn,gm=EVENTS.find(e=>e.id==='garage');const x=roadC(sp[0]),z=roadC(sp[1]);placeOnRoad(player,x,z,roadC(gm.i)>x?Math.PI/2:-Math.PI/2);}else{const gm=EVENTS.find(e=>e.id==='garage');placeOnRoad(player,roadC(gm.i),roadC(gm.j)-14,0);}
+ if(old){placeOnRoad(player,old.x,old.z,old.h);}else if(SAVE.tut===0&&EVENTS.find(e=>e.id==='garage')){const sp=CITY[S.city].spawn,gm=EVENTS.find(e=>e.id==='garage');const x=roadC(sp[0]),z=roadC(sp[1]);placeOnRoad(player,x,z,roadC(gm.i)>x?Math.PI/2:-Math.PI/2);}else{const tw=towSpot();placeOnRoad(player,tw.x,tw.z,tw.h);}
  headSpot=new THREE.SpotLight(0xfff4dd,CITY[S.city].night?3.5:0,70,.55,.6,1.2);headSpot.position.set(0,1,2);mesh.add(headSpot);const tg=new THREE.Object3D();tg.position.set(0,0,25);mesh.add(tg);headSpot.target=tg;
  if(glowLight)glowLight.parent&&glowLight.parent.remove(glowLight);glowLight=new THREE.PointLight(GLOWS[cs.glow]||0xffffff,GLOWS[cs.glow]?2.2:0,9,2);glowLight.position.y=.3;mesh.add(glowLight);
  $('carname').textContent=d.name.toUpperCase();
@@ -5608,7 +5608,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.8.5'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'2.8.6'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5616,7 +5616,7 @@ var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,
  T.unshift=q=>{T.q=q.concat(T.q).slice(-300);T.save();};
  return T;})();
 TEL.add('open',{lang:typeof LANG!=='undefined'?LANG:'en',mob:matchMedia('(pointer:coarse)').matches?1:0});
-addEventListener('error',e=>{if(TEL.errs++>8)return;TEL.add('err',{m:String(e.message||'error').slice(0,160),src:String(e.filename||'').split('/').pop().slice(0,40),l:e.lineno|0,v:TEL.ver});});
+addEventListener('error',e=>{if(TEL.errs++>8)return;TEL.add('err',{m:(String(e.message||'error')+(e.error&&e.error.stack?' | '+String(e.error.stack).split('\n').slice(1,2).join('').trim():'')).slice(0,220),src:String(e.filename||'').split('/').pop().slice(0,40),l:e.lineno|0,v:TEL.ver});});
 addEventListener('unhandledrejection',e=>{if(TEL.errs++>8)return;const r=e.reason;TEL.add('err',{m:String((r&&(r.message||r.code))||r||'promise rejected').slice(0,160),src:'promise',v:TEL.ver});});
 // sponsor boards in the 3D cities
 var SPB=[];
