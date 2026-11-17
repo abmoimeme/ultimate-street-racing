@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="lib/qrcode.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 :root{--bg:#07060f;--card:#12101f;--line:#ffffff1a;--ink:#f4f2ff;--mute:#a8a3c4;--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--red:#ff5470}
@@ -212,7 +213,7 @@ function vFeatures(){const F=allEv(e=>e.k==='f'&&inR(e)),act=ST.P.filter(p=>p.ev
  ${unused.length?`<div class="tiny" style="margin-top:8px">Nobody used: ${unused.map(r=>FEATN[r.n].replace(/^\S+ /,'')).join(', ')}. A feature nobody finds may need a clearer button or a tip in the tutorial.</div>`:''}
  <div class="tiny" style="margin-top:6px">Repeated taps within 20 seconds count once. Recorded from v2.0 on.</div>`;}
 // ---------- tabs ----------
-const TABS=[['overview','Overview'],['live','Live now'],['map','Trouble map'],['login','Login health'],['first','First steps'],['games','Games'],['features','Features'],['online','Online play'],['sponsors','Sponsors'],['players','Players'],['errors','Errors & speed']];
+const TABS=[['overview','Overview'],['live','Live now'],['map','Trouble map'],['login','Login health'],['first','First steps'],['games','Games'],['features','Features'],['online','Online play'],['sponsors','Sponsors'],['players','Players'],['errors','Errors & speed'],['codes','Player codes']];
 function vOverview(){const D=chartDays(),R=days(ST.range),today=dayK(Date.now()),P=ST.P.filter(p=>p.rec);
  const act=k=>P.filter(p=>activeOn(p,k)).length,actWeek=P.filter(p=>days(7).some(k=>activeOn(p,k))).length;
  const news=allEv(e=>e.k==='new'&&inR(e)).length,games=allEv(e=>e.k==='g'&&inR(e)),mins=P.reduce((a,p)=>a+R.reduce((b,k)=>b+(p.act[k]|0),0),0);
@@ -269,7 +270,8 @@ function vSponsors(){const D=chartDays(),V=allEv(e=>e.k==='sv'&&inR(e)),C=allEv(
  <h2>Views and taps per day</h2><div class="card">${line([{n:'Views',c:'#05d9e8',d:D.map(k=>VA.filter(e=>dayK(e.t)===k).reduce((a,e)=>a+(e.p==='start'?brands.length:1),0))},{n:'Taps',c:'#ff2a6d',d:D.map(k=>CA.filter(e=>dayK(e.t)===k).length)}],D.map(short))}</div>
  <div class="grid2"><div><h2>By sponsor</h2>${table('sponsors',[{h:'Sponsor'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsS.map(r=>({s:SPN[r.k],c:[SPN[r.k],r.v,r.c,ctr(r.c,r.v)]})))}</div>
  <div><h2>By position</h2>${table('spos',[{h:'Position'},{h:'Views',n:1},{h:'Taps',n:1},{h:'Rate',n:1}],rowsP.map(r=>({s:POS[r.p],c:[POS[r.p],r.v,r.c,ctr(r.c,r.v)]})))}</div></div>
- <div class="tiny" style="margin-top:8px">A billboard counts once per board per visit when a player drives or walks within 30 m. The start-screen strip shows all four sponsors together, so each start-screen view counts for every sponsor. Tapping a logo on a screen opens that sponsor's Instagram (Elite Global Travel has no link yet). City billboards can't be tapped.</div>`;}
+ <div class="tiny" style="margin-top:8px">A billboard counts once per board per visit when a player drives or walks within 30 m. The start-screen strip shows all four sponsors together, so each start-screen view counts for every sponsor. Tapping a logo on a screen opens that sponsor's Instagram (Elite Global Travel has no link yet). City billboards can't be tapped.</div>
+ <div class="card" style="margin-top:12px"><h3>Sponsor report</h3><p class="mute">A one-page report to send a sponsor, for the period picked above. It has counts only, never players' names or codes.</p><select id="spR">${brands.map(k=>`<option value="${k}">${SPN[k]}</option>`).join('')}</select> <button class="btn sm" id="spPrint">🖨 Make report</button></div>`;}
 function vPlayers(){if(ST.sel)return vPlayer(ST.P.find(p=>p.code===ST.sel));const R=days(ST.range);
  const lead=ST.reveal?[{h:'Given to'},{h:'Gamer tag'},{h:'Code'}]:[{h:'Player'}];
  return table('players',[...lead,{h:'Now'},{h:'Last active'},{h:'Days active',n:1},{h:'Minutes',n:1},{h:'Games',n:1},{h:'Level',n:1},{h:'Device lock'}],ST.P.map(p=>{const da=R.filter(k=>activeOn(p,k)).length,mn=R.reduce((a,k)=>a+(p.act[k]|0),0),g=p.ev.filter(e=>e.k==='g'&&inR(e)).length;
@@ -305,8 +307,73 @@ ${(()=>{const P=allEv(e=>e.k==='perf'&&inR(e));if(!P.length)return'<h2>Game spee
  ${top.length?`<h2>Most common</h2><div class="card">${hbars(top.map(([m,n])=>({l:`<span style="font:600 12px ui-monospace,monospace">${esc(m.slice(0,80))}</span>`,v:n})),{c:'var(--red)'})}</div>`:''}
  <h2>Recent errors · newest first</h2><label class="tiny" style="display:block;margin:-4px 0 8px"><input type="checkbox" data-olderr ${showOld?'checked':''}> Show errors that are already fixed in a newer version${hid?` (${hid} hidden)`:''}</label><input class="search" data-q="err" placeholder="Filter errors" value="${esc(ST.q.err||'')}"><div class="card feed">${vis.slice(0,200).map(e=>`<div class="e"><div class="tiny">${when(e.t)} · ${nm(e.p)} · ${esc(e.src||'')}${e.l?':'+e.l:''}${e.v?' · v'+esc(e.v):''}</div><div class="m">${esc(e.m)}</div>${fixedIn(e)?`<div class="tiny" style="color:var(--green)">✅ Fixed in v${fixedIn(e)[1]} · ${fixedIn(e)[2]}</div>`:''}</div>`).join('')||'<div class="mute" style="padding:6px 0">✅ No errors recorded.</div>'}</div>`;}
 // ---------- frame ----------
+
+// ---------- player codes, classes and capacity (v3.3) ----------
+const GAME_URL='https://abmoimeme.github.io/ultimate-street-racing/';
+const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const cleanGrp=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 \-]/g,'').replace(/\s+/g,' ').trim().slice(0,40);
+function newCode(){for(let n=0;n<50;n++){const r=crypto.getRandomValues(new Uint32Array(12));let t='';for(const x of r)t+=CODE_AB[x%CODE_AB.length];const c='ABMOIMEME-'+t.slice(0,4)+'-'+t.slice(4,8)+'-'+t.slice(8);if(!ST.codes[c])return c;}throw new Error('could not make a unique code');}
+async function allowCode(code,grp){const save=await sha(S1+code),net=await sha(S2+code);const e={n:net,c:'P-'+net.slice(0,4).toUpperCase(),t:Date.now()};if(grp)e.g=grp;
+ await db.ref('usr/allow/'+save).set(e);await db.ref('usr/allowNet/'+net).set(true);ST.codes[code]=Object.assign({},ST.codes[code],grp?{grp}:{} );if(!grp&&ST.codes[code])delete ST.codes[code].grp;return{save,net};}
+function codeGroups(){const g={};for(const c in ST.codes){const k=ST.codes[c].grp||'';g[k]=(g[k]||0)+1;}return g;}
+function vCodes(){const google=ST.admin&&ST.admin.mode==='google';const G=codeGroups(),f=ST.cgf||'*';
+ const list=Object.keys(ST.codes).filter(c=>f==='*'||(ST.codes[c].grp||'')===f).sort();
+ const evDays=new Set();let evN=0;for(const p of ST.P){if(p.rec&&p.rec.ev)for(const d in p.rec.ev){evDays.add(d);evN+=Object.keys(p.rec.ev[d]||{}).length;}}
+ const bytes=ST.P.reduce((a,p)=>a+(p.rec?JSON.stringify(p.rec).length:0),0);
+ const old=dayK(Date.now()-30*DAY);const oldN=ST.P.reduce((a,p)=>a+(p.rec&&p.rec.ev?Object.keys(p.rec.ev).filter(d=>d<old).length:0),0);
+ return `${google?'':'<div class="card" style="border-color:var(--red)"><b>Sign in with Google to make codes.</b> Making codes and classes changes the database, so it needs the owner\'s Google sign-in, not a code.</div>'}
+ <div class="card"><h3>Make new player codes</h3><p class="mute">Each code works on up to two devices, like the codes you have now. Put a class or club name to give those kids their own "My class" leaderboard in the game.</p>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label>How many <input id="cgN" type="number" min="1" max="60" value="${ST.cgN||10}" style="width:70px"></label>
+ <label>Class or club <input id="cgG" list="cgL" placeholder="e.g. 5th grade blue" value="${esc(ST.cgG||'')}" maxlength="40"></label><datalist id="cgL">${Object.keys(G).filter(Boolean).map(g=>`<option value="${esc(g)}">`).join('')}</datalist>
+ <button class="btn" id="cgMake" ${google?'':'disabled'}>Make codes</button></div>${ST.cgMsg?`<p style="color:var(--green);font-weight:700">${esc(ST.cgMsg)}</p>`:''}</div>
+ <div class="card"><h3>Codes <span class="mute">(${Object.keys(ST.codes).length})</span></h3>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><select id="cgF"><option value="*">All classes</option>${Object.keys(G).sort().map(g=>`<option value="${esc(g)}" ${f===g?'selected':''}>${g?esc(g):'No class'} (${G[g]})</option>`).join('')}</select>
+ <button class="btn alt sm" id="cgPrint">🖨 Print QR cards for this list</button><button class="btn alt sm" id="cgCsv">⬇ Codes CSV</button>
+ <span class="sp"></span><label class="tiny">Move ticked to class <input id="cgTo" list="cgL" maxlength="40" style="width:150px"></label><button class="btn alt sm" id="cgMove" ${google?'':'disabled'}>Move</button></div>
+ <table><tr><td><input type="checkbox" id="cgAll"></td><td><b>Player</b></td><td><b>Code</b></td><td><b>Class</b></td><td><b>Who</b></td></tr>
+ ${list.map(c=>{const p=ST.P.find(x=>x.code===c);return`<tr><td><input type="checkbox" data-cg="${esc(c)}"></td><td>${p?esc(p.pc):'—'}</td><td class="real"><code>${esc(c)}</code></td><td>${esc(ST.codes[c].grp||'')}</td><td class="real">${esc(ST.codes[c].who||'')}</td></tr>`;}).join('')}</table>
+ <p class="tiny">Codes and names show only while "Show real names" is on.</p></div>
+ <div class="card"><h3>Room to grow</h3><p class="mute">The free Firebase plan allows about <b>100 players online at the same time</b>, 1 GB stored and 10 GB of downloads a month. Your players' records use about <b>${(bytes/1048576).toFixed(2)} MB</b> (${evN.toLocaleString()} events over ${evDays.size} days). Past roughly 100 kids at once, switch the project to the pay-as-you-go plan and set a budget alert (for example $10 a month).</p>
+ <p class="mute">Events older than 30 days: <b>${oldN}</b> day-batches. Clearing them keeps the database small; charts only use the last 30 days.</p><button class="btn alt sm" id="cgPrune" ${oldN?'':'disabled'}>Clear events older than 30 days</button></div>`;}
+function cardsHtml(codes){return`<!doctype html><meta charset="utf-8"><title>USR player cards</title><style>body{font:14px Arial;margin:0}.c{display:inline-block;width:3.3in;height:2.1in;border:1px dashed #999;box-sizing:border-box;padding:.15in;margin:.05in;vertical-align:top;position:relative;page-break-inside:avoid}h2{margin:0 0 4px;font-size:16px}.q{position:absolute;right:.15in;top:.15in;width:1.2in}.k{font:bold 13px monospace;margin-top:.55in}.s{font-size:11px;color:#444;width:1.8in}</style>
+ ${codes.map(([c,svg,grp])=>`<div class="c"><h2>Ultimate Street Racing</h2><div class="s">${grp?esc(grp)+'<br>':''}Scan the code or go to abmoimeme.github.io/ultimate-street-racing and type:</div><div class="k">${esc(c)}</div><div class="s" style="margin-top:6px">Keep this card private. It's your save.</div><div class="q">${svg}</div></div>`).join('')}<script>onload=()=>print()<\/script>`;}
+function wireCodes(){if(ST.tab!=='codes')return;const g=id=>document.getElementById(id);
+ g('cgN').oninput=e=>ST.cgN=Math.max(1,Math.min(60,+e.target.value||1));g('cgG').oninput=e=>ST.cgG=e.target.value;
+ g('cgF').onchange=e=>{ST.cgf=e.target.value;draw();};
+ g('cgAll').onchange=e=>document.querySelectorAll('[data-cg]').forEach(x=>x.checked=e.target.checked);
+ const ticked=()=>[...document.querySelectorAll('[data-cg]:checked')].map(x=>x.dataset.cg);
+ const shown=()=>[...document.querySelectorAll('[data-cg]')].map(x=>x.dataset.cg);
+ g('cgMake').onclick=async()=>{const n=ST.cgN||10,grp=cleanGrp(ST.cgG);const b=g('cgMake');b.disabled=true;b.textContent='Making…';const made=[];
+  try{for(let i=0;i<n;i++){const c=newCode();ST.codes[c]={who:'',grp:grp||undefined,made:Date.now()};if(!grp)delete ST.codes[c].grp;await allowCode(c,grp);made.push(c);}await saveCodes();ST.cgMsg=`Made ${made.length} codes${grp?' for '+grp:''}. Print the cards below.`;ST.cgf=grp||'';}
+  catch(e){for(const c of made)ST.codes[c]=ST.codes[c]||{};ST.cgMsg='';alert('Could not make codes: '+(e&&e.message||e)+(made.length?`\n${made.length} were made before this.`:'')+'\nIf this says permission denied, the new database rules (v5) are not published yet.');}
+  load();};
+ g('cgMove').onclick=async()=>{const t=ticked(),grp=cleanGrp(g('cgTo').value);if(!t.length)return alert('Tick some codes first.');
+  try{for(const c of t)await allowCode(c,grp);await saveCodes();ST.cgMsg=`Moved ${t.length} code${t.length>1?"s":""} to ${grp||'no class'}.`;draw();}catch(e){alert('Could not move: '+(e&&e.message||e));}};
+ g('cgPrint').onclick=()=>{const t=ticked().length?ticked():shown();if(!t.length)return;const out=t.map(c=>{const q=qrcode(0,'M');q.addData(GAME_URL+'?code='+encodeURIComponent(c));q.make();return[c,q.createSvgTag({cellSize:3,margin:0,scalable:true}),ST.codes[c].grp||''];});
+  const w=open('','_blank');if(!w)return alert('Allow pop-ups to print cards.');w.document.write(cardsHtml(out));w.document.close();};
+ g('cgCsv').onclick=()=>{const t=shown();const rows=[['code','class','who','link']].concat(t.map(c=>[c,ST.codes[c].grp||'',ST.codes[c].who||'',GAME_URL+'?code='+c]));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'}));a.download='USR_codes'+(ST.cgf&&ST.cgf!=='*'?'_'+ST.cgf.replace(/ /g,'_'):'')+'.csv';a.click();};
+ g('cgPrune').onclick=async()=>{if(!confirm('Clear game events older than 30 days for all players? Saves and cars are not touched. This cannot be undone.'))return;const old=dayK(Date.now()-30*DAY);let n=0;
+  for(const p of ST.P){if(!(p.rec&&p.rec.ev))continue;for(const d in p.rec.ev)if(d<old){try{await db.ref('usr/players/'+p.save+'/ev/'+d).remove();n++;}catch(e){}}}ST.cgMsg=`Cleared ${n} old day-batches.`;load();};}
+
+function sponsorReport(k){const sk=e=>{const s=e.s||'';for(const x in SPN)if(s===x||SPN[x]===s)return x==='jvh'?'jollof':x;return s||'other';};
+ const brands=['jollof','pah','spark','farm','fasa','superior'],POS={start:'Start screen',board:'City billboards',race:'Race intro screen',garage:'Crew garage',menu:'Menus'};
+ let v=0,c=0;const reach=new Set(),pos={},city={},dayV={};
+ for(const pl of ST.P)for(const e of pl.ev){if(!inR(e))continue;const mine=e.k==='sv'&&(e.p==='start'||sk(e)===k),tap=e.k==='sc'&&sk(e)===k;
+  if(mine){v++;reach.add(pl.code);const P=e.p||'menu';pos[P]=pos[P]||{v:0,c:0};pos[P].v++;if(e.c)city[e.c]=(city[e.c]||0)+1;const d=dayK(e.t);dayV[d]=(dayV[d]||0)+1;}
+  if(tap){c++;const P=e.p||'menu';pos[P]=pos[P]||{v:0,c:0};pos[P].c++;}}
+ const D=chartDays(),mx=Math.max(1,...D.map(d=>dayV[d]||0)),from=new Date(since()),to=new Date();const rate=v?(c/v*100).toFixed(1)+'%':'—';
+ const CN={tokyo:'Tokyo',dakar:'Dakar',paris:'Paris',nyc:'New York',newyork:'New York'};
+ const w=open('','_blank');if(!w)return alert('Allow pop-ups to make the report.');
+ w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(SPN[k])} · Ultimate Street Racing report</title><style>body{font:14px Arial;color:#111;max-width:7.5in;margin:.5in auto}h1{margin:0;font-size:24px}.m{color:#666}.k{display:flex;gap:12px;margin:18px 0}.k div{flex:1;border:1px solid #ddd;border-radius:8px;padding:10px}.k b{display:block;font-size:26px}table{border-collapse:collapse;width:100%;margin-top:6px}td{border-bottom:1px solid #eee;padding:6px}.bars{display:flex;align-items:flex-end;gap:2px;height:90px;border-bottom:1px solid #ccc}.bars i{flex:1;background:#ff2a6d}</style>
+ <h1>${esc(SPN[k])}</h1><div class="m">Sponsor report · Ultimate Street Racing · ${from.toLocaleDateString()} – ${to.toLocaleDateString()}</div>
+ <div class="k"><div>Times shown<b>${v.toLocaleString()}</b></div><div>Players reached<b>${reach.size}</b></div><div>Taps to your page<b>${c}</b></div><div>Tap rate<b>${rate}</b></div></div>
+ <h3>Shown per day</h3><div class="bars">${D.map(d=>`<i style="height:${Math.round((dayV[d]||0)/mx*100)}%" title="${short(d)}: ${dayV[d]||0}"></i>`).join('')}</div><div class="m" style="display:flex;justify-content:space-between"><span>${short(D[0])}</span><span>${short(D[D.length-1])}</span></div>
+ <h3>Where players saw you</h3><table>${Object.keys(pos).map(p=>`<tr><td>${POS[p]||esc(p)}</td><td>${pos[p].v} shown</td><td>${pos[p].c} taps</td></tr>`).join('')||'<tr><td>No views in this period yet.</td></tr>'}</table>
+ ${Object.keys(city).length?`<h3>By city in the game</h3><table>${Object.keys(city).map(x=>`<tr><td>${CN[x]||esc(x)}</td><td>${city[x]}</td></tr>`).join('')}</table>`:''}
+ <p class="m" style="margin-top:24px;font-size:12px">Ultimate Street Racing is a kids' racing game. Game concept by Muhammad. Counts only: no names, photos or locations of players are shared. The start screen shows all sponsors together, so each start-screen view counts for every sponsor. Billboards count once per board per visit when a player passes within 30 m.</p><script>onload=()=>print()<\/script>`);w.document.close();}
 function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classList.toggle('reveal',ST.reveal);
- const V={map:vMap,features:vFeatures,live:vLive,overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors};
+ const V={map:vMap,features:vFeatures,live:vLive,overview:vOverview,login:vLogin,first:vFirst,games:vGames,online:vOnline,sponsors:vSponsors,players:vPlayers,errors:vErrors,codes:vCodes};
  const ae=document.activeElement,qid=ae&&ae.dataset&&ae.dataset.q,pos=ae&&ae.selectionStart;
  $('app').innerHTML=`<div class="wrap"><header><div class="hrow"><h1>USR <span>ADMIN</span></h1><div class="tog" id="tog" role="switch" aria-checked="${ST.reveal}" title="Show real names">${ST.reveal?'🔓':'🔒'}<i></i>Show real names</div></div>
  <div class="banner">🔓 REAL NAMES VISIBLE · switch off when you're done</div><nav>${TABS.map(([k,l])=>`<button class="${ST.tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</nav></header>
@@ -325,6 +392,7 @@ function draw(){if(!ST.admin)return renderLogin();ST.exp={};document.body.classL
  document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{ST.mapCity=b.dataset.city;draw();});
  document.querySelectorAll('[data-layer]').forEach(b=>b.onclick=()=>{ST.layers[b.dataset.layer]=!ST.layers[b.dataset.layer];draw();});
  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ST.sel=null;draw();});
+ wireCodes();if($('spPrint'))$('spPrint').onclick=()=>sponsorReport($('spR').value);
  document.querySelectorAll('[data-who]').forEach(el=>el.onclick=e=>e.stopPropagation());
  document.querySelectorAll('[data-who]').forEach(el=>el.onchange=async()=>{const c=el.dataset.who;ST.codes[c]=Object.assign({},ST.codes[c],{who:el.value.trim().slice(0,40)});const p=ST.P.find(x=>x.code===c);if(p)p.who=ST.codes[c].who;
   try{await saveCodes();el.style.borderColor='var(--green)';}catch(e){el.style.borderColor='var(--red)';}});

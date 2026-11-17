@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Ultimate Street Racing — Prototype</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0b14">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Street Racing">
+<title>Ultimate Street Racing</title>
 <style>
 :root{--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--bg:rgba(8,6,20,.72);--line:rgba(255,255,255,.14)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -182,7 +189,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Version 3.2 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Version 3.3 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -2464,14 +2471,14 @@ const FIREBASE_CFG={"databaseURL": "https://ultimate-street-racing-default-rtdb.
   return{
    peek(name){return db.ref(ROOT+'/rooms/'+safeKey(name)).once('value').then(sn=>{const v=sn.val()||{},t=now(),out=[];for(const id in v){const x=v[id];if(!x||t-(x.t||0)>STALE)continue;out.push({peer:id,presence:x.p===undefined?null:x.p});}return out;});},
    onConnection(cb){db.ref('.info/connected').on('value',s=>{try{cb(!!s.val());}catch(e){}});},
-   presence(obj){if(!lobbyArmed){lobbyArmed=true;lobbyRef.onDisconnect().remove();}return lobbyRef.set({p:obj,t:firebase.database.ServerValue.TIMESTAMP});},
+   presence(obj){if(!lobbyArmed){lobbyArmed=true;lobbyRef.onDisconnect().remove();}return lobbyRef.set({p:obj,k:uid,t:firebase.database.ServerValue.TIMESTAMP});},
    async join(name){const rref=db.ref(ROOT+'/rooms/'+safeKey(name)),me=rref.child(peerId);let snap={},peersCb=null,closeCb=null,last=0,pend=null,timer=null;
-    await me.onDisconnect().remove();await me.set({p:null,t:firebase.database.ServerValue.TIMESTAMP});
+    await me.onDisconnect().remove();await me.set({p:null,k:uid,t:firebase.database.ServerValue.TIMESTAMP});
     const list=()=>{const out=[],t=now();for(const id in snap){const v=snap[id];if(!v)continue;if(id!==peerId&&t-(v.t||0)>STALE)continue;out.push({peer:id,presence:v.p===undefined?null:v.p,sameTab:id===peerId,kind:'viewer',guest:false,updatedAt:Math.min(Date.now(),(v.t||t)-offset)});}
      if(!snap[peerId])out.push({peer:peerId,presence:null,sameTab:true,kind:'viewer',guest:false,updatedAt:Date.now()});return out;};
     const onVal=s=>{const prev=snap;snap=s.val()||{};const left=[];for(const id in prev)if(!snap[id])left.push({peer:id});if(peersCb)try{peersCb({peers:list(),left,joined:[]});}catch(e){}};
     rref.on('value',onVal,()=>{if(closeCb)closeCb();});
-    const flush=()=>{timer=null;if(pend===null)return;last=Date.now();const p=pend;pend=null;me.set({p,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});};
+    const flush=()=>{timer=null;if(pend===null)return;last=Date.now();const p=pend;pend=null;me.set({p,k:uid,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});};
     return{
      peers:list,
      onPeers(cb,onClose){peersCb=cb;closeCb=onClose;try{cb({peers:list(),left:[],joined:[]});}catch(e){}},
@@ -2485,7 +2492,8 @@ const FIREBASE_CFG={"databaseURL": "https://ultimate-street-racing-default-rtdb.
    async get(){let q=base.child(safeKey(coll)).orderByChild(field).startAt(-1e15);q=dir==='desc'?q.limitToLast(n||25):q.limitToFirst(n||25);
     const s=await q.once('value');const rows=[];s.forEach(c=>{const v=c.val();if(v&&Number.isFinite(v[field]))rows.push(v);});rows.sort((a,b)=>dir==='desc'?b[field]-a[field]:a[field]-b[field]);
     return{docs:rows.map(v=>({data:()=>v}))};}});
-  return{doc:docOf,collection:c=>query(c,null,'asc',25)};}
+  const group=(coll,f,val,n)=>({async get(){const q=base.child(safeKey(coll)).orderByChild(f).equalTo(val).limitToFirst(n||300);const s=await q.once('value');const rows=[];s.forEach(c=>{const v=c.val();if(v)rows.push(v);});return{docs:rows.map(v=>({data:()=>v}))};}});
+  return{doc:docOf,collection:c=>Object.assign(query(c,null,'asc',25),{where:(f,v,n)=>group(c,f,v,n)})};}
  window.claude={_firebase:true,use:async k=>{const uid=authUid();if(!uid)return null;
   if(k==='room')return makeRoom(uid);if(k==='db')return makeDb();if(k==='user')return{async id(){return uid;},async name(){return null;}};return null;}};
 })();
@@ -4417,7 +4425,7 @@ function onlineDuelFinish(time){if(NET.duelOut)NET.duelOut={...NET.duelOut,st:'d
 function endOnlineDuel(){setTimeout(()=>{NET.duel=null;NET.duelOut=null;},6000);}
 // ---------- leaderboards ----------
 function lbWrite(extra){if(!NET.db||!NET.me||NET.lbRO)return;const now=Date.now();if(NET.lbBusy||(!extra&&now-NET.lbLast<15000))return;const sig=[SAVE.profile&&SAVE.profile.name,levelOf(SAVE.xp),SAVE.rep,SAVE.current,S.city].join('|');if(!extra&&sig===NET.lbSig)return;NET.lbSig=sig;NET.lbBusy=true;NET.lbLast=now;
- const ref=NET.db.doc('lb/'+NET.me);const base={n:cleanTxt(SAVE.profile&&SAVE.profile.name||'Driver',18),cr:cleanTxt(SAVE.profile&&SAVE.profile.crew||'',22),lv:levelOf(SAVE.xp),rep:SAVE.rep,car:SAVE.current,city:S.city,upd:now};
+ const ref=NET.db.doc('lb/'+NET.me);const base={n:cleanTxt(SAVE.profile&&SAVE.profile.name||'Driver',18),cr:cleanTxt(SAVE.profile&&SAVE.profile.crew||'',22),lv:levelOf(SAVE.xp),rep:SAVE.rep,car:SAVE.current,city:S.city,upd:now};if(window.PASS&&PASS.grp)base.grp=PASS.grp;
  const doIt=async()=>{let cur={};try{const s=await ref.get();if(s.exists)cur=Object.assign({},s.data());}catch(e){}
   const body=Object.assign(cur,base);if(extra)for(const k in extra){if(!(k in body)||extra[k]<body[k])body[k]=extra[k];}
   try{await ref.set(body);}catch(e){NET.lbRO=true;}};
@@ -4436,6 +4444,8 @@ async function openOnlinePanel(){const peers=NET.city?NET.city.peers().filter(p=
  openModal(`<h1 style="font-size:34px">ONLINE</h1><div class="sub">${NET.city?'● Connected · '+CITY[S.city].name+' room':('● Offline · '+(window.PASS&&PASS.user?'check your internet connection, then reopen the game':'sign in with your Player Pass to race online'))}</div><h3>DRIVERS IN ${CITY[S.city].name}</h3>${list}<h3>LEADERBOARDS</h3><div id="lbBox" class="note">${NET.db?'Loading…':'Leaderboards appear when you are signed in and online.'}</div><div class="actions"><button class="btn" data-act="close">BACK</button></div>`);
  if(!NET.db)return;const lb=await lbRead();const box=$('lbBox');if(!box)return;if(!lb){box.textContent='Leaderboards can’t be reached right now.';return;}
  let h=`<table class="res"><tr><td><b>#</b></td><td><b>Driver</b></td><td><b>Crew</b></td><td><b>LV</b></td><td><b>REP</b></td></tr>${lb.top.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(kidSafe(cleanTxt(x.n,18)))}</td><td>${esc(kidSafe(cleanTxt(x.cr,22)).replace(/^Driver$/,''))}</td><td>${fin(x.lv)|0}</td><td>${(fin(x.rep)|0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan=5>No drivers yet. Be the first!</td></tr>'}</table>`;
+ if(window.PASS&&PASS.grp){try{const cs=await NET.db.collection('lb').where('grp',PASS.grp).get();const rows=cs.docs.map(d=>d.data()).filter(x=>Number.isFinite(x.rep)).sort((a,b)=>b.rep-a.rep).slice(0,20);
+  h=`<h3>MY CLASS · ${esc(PASS.grp).toUpperCase()}</h3><table class="res"><tr><td><b>#</b></td><td><b>Driver</b></td><td><b>LV</b></td><td><b>REP</b></td></tr>${rows.map((x,i)=>`<tr class="${x.n===cleanTxt(SAVE.profile&&SAVE.profile.name||'Driver',18)?'me':''}"><td>${i+1}</td><td>${esc(kidSafe(cleanTxt(x.n,18)))}</td><td>${fin(x.lv)|0}</td><td>${(fin(x.rep)|0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan=4>Your class has no scores yet.</td></tr>'}</table><h3>EVERYONE</h3>`+h;}catch(e){}}
  for(const k in lb){if(k==='top')continue;const e=lb[k];h+=`<h3>FASTEST · ${esc(e.name).toUpperCase()}</h3>${e.rows.length?e.rows.map((x,i)=>`<div class="item"><div>${i+1}. <b>${esc(kidSafe(cleanTxt(x.n,18)))}</b> <span class="note">${esc(kidSafe(cleanTxt(x.cr,22)).replace(/^Driver$/,''))}</span></div><b class="orb">${x.t.toFixed(2)}s</b></div>`).join(''):'<div class="note">No times yet</div>'}`;}
  box.className='';box.innerHTML=h;}
 
@@ -5606,7 +5616,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'3.2'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'3.3'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -5651,7 +5661,7 @@ function telTick(){if(!SAVE||!player)return;const st=SAVE.stats||{},now=Date.now
  // player-made courses
  if(S.crun&&!TEL.crun)TEL.crun={t:now};if(!S.crun&&TEL.crun){const d=Math.round((now-TEL.crun.t)/1000);TEL.add('g',{m:'course',d,w:$('modalCard')&&/FINISHED|TERMIN|FINITO/.test($('modalCard').innerText)?1:0});TEL.crun=null;}
  // sponsor billboards seen while driving or walking
- const m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;for(let i=0;i<SPB.length;i++){const b=SPB[i];if(!TEL.seenB[i]&&Math.hypot(b.x-px,b.z-pz)<30){TEL.seenB[i]=1;TEL.add('sv',{p:'board',s:b.k});}}
+ const m=S.meet&&S.meet.free?S.meet:null,px=m?m.x:player.x,pz=m?m.z:player.z;for(let i=0;i<SPB.length;i++){const b=SPB[i];if(!TEL.seenB[i]&&Math.hypot(b.x-px,b.z-pz)<30){TEL.seenB[i]=1;TEL.add('sv',{p:'board',s:b.k,c:S.city});}}
  // connection drops / reconnects
  const on=!!(NET.connected&&NET.city);if(TEL.conn===true&&!on&&NET.room)TEL.add('drop');if(TEL.conn===false&&on)TEL.add('rec');TEL.conn=on;}
 // ---- live presence + performance (owner dashboard) ----
@@ -6765,6 +6775,25 @@ var SEASON=(function(){
 })();
 // ---------- END SEASON
 
+// ===PWA=== install as an app (v3.3)
+(function(){
+  const st=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(location.protocol==='https:'&&'serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  let ev=null;const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  function btn(){if(st())return;const card=document.querySelector('#start .card');if(!card||document.getElementById('pwaBtn'))return;
+    if(!ev&&!ios)return;const b=document.createElement('button');b.id='pwaBtn';b.className='btn';b.textContent='📲 Install the game';
+    b.style.cssText='margin-top:10px;font-size:13px;padding:8px 14px;opacity:.92';
+    b.onclick=async()=>{if(ev){ev.prompt();try{const r=await ev.userChoice;if(r&&r.outcome==='accepted'){b.remove();if(window.TEL)TEL.add('pwa',{ok:1});}}catch(e){}ev=null;}
+      else{b.textContent='On iPhone/iPad: tap Share ⬆, then "Add to Home Screen"';}};
+    card.appendChild(b);}
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;btn();});
+  addEventListener('appinstalled',()=>{const b=document.getElementById('pwaBtn');if(b)b.remove();});
+  window.PWA={btn,standalone:st};
+  if(ios)setTimeout(btn,1500);
+  if(st()&&window.TEL)setTimeout(()=>{try{TEL.add('pwa',{run:1});}catch(e){}},4000);
+})();
+// ===/PWA===
+
 // ---------- NFX: street-racer graphics pack (wet-road reflections, live car reflections, light trails, headlight beams, NFS-style grade) ----------
 var NFX=(function(){
  const X={U:{tRefl:{value:null},uReflMat:{value:new THREE.Matrix4()},uWet:{value:0}},rt:null,vcam:null,roadMats:[],roadMeshes:[],asSets:[],cube:null,cubeCam:null,frameN:0,trailMesh:null,trails:new Map(),beamMat:null,shakeT:0};
@@ -6921,7 +6950,7 @@ applyQuality();buildCity(pickCity);renderStart();requestAnimationFrame(loop);
   if(v&&v.lock!==0&&P.netKey!==SUPER_NET){const devs=String(v.devs||'').split(',').filter(Boolean),me=devId();
    if(!devs.includes(me)){if(devs.length<(v.devMax||2)){devs.push(me);try{await ref().child('devs').set(devs.join(','));}catch(e){}}
     else{if(window.TEL)TEL.add('sfail',{r:'locked',auto:silent?1:0});P.busy=false;P.saveKey=P.netKey=null;P.err=LOCK_MSG;if(silent){try{localStorage.removeItem(LK);}catch(e2){}}P.mode='code';return renderStart();}}}
-  P.user={uid:P.netKey};P.code=code;P.super=P.netKey===SUPER_NET;if(window.TEL&&!P.super){TEL.add('sin',{auto:silent?1:0});telStart();}try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
+  P.user={uid:P.netKey};P.code=code;P.grp=null;try{db.ref('usr/allow/'+P.saveKey+'/g').once('value').then(x=>{const g=x.val();P.grp=typeof g==='string'&&g.length<=40?g:null;}).catch(()=>{});}catch(e){}P.super=P.netKey===SUPER_NET;if(window.TEL&&!P.super){TEL.add('sin',{auto:silent?1:0});telStart();}try{localStorage.setItem(LK,JSON.stringify({c:code}));}catch(e){}
   P.busy=false;if(P.super){P.tag=SUPER_TAG;await openPlayer(v);}else if(v&&v.tag){P.tag=v.tag;await openPlayer(v);}else{P.mode='name';renderStart();}}
  async function openPlayer(v){const p=ensureProfile(P.tag);let how='new';
   if(v&&typeof v.save==='string'&&v.save.length){let local=null;try{local=JSON.parse(localStorage.getItem(p.key)||'null');}catch(e){}const lu=local&&local._upd||0;
