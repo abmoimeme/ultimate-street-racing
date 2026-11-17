@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Ultimate Street Racing — Prototype</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--pink:#ff2a6d;--cyan:#05d9e8;--gold:#ffc23d;--green:#39ff9f;--bg:rgba(8,6,20,.72);--line:rgba(255,255,255,.14)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -184,7 +182,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Version 3.0 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Version 3.2 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5608,7 +5606,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'3.0'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'3.2'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -6638,6 +6636,134 @@ h3{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:3px;op
  const _sg=startGame;startGame=function(){UI3.hideMenuCar();return _sg.apply(this,arguments);};
 })();
 // ---------- END UI3
+
+// ---------- FX3 (v3.1): skid marks, drift combo meter, near-miss bonuses ----------
+var FX3=(function(){
+ const F={drift:{score:0,mult:1,t:0,calm:0,on:false},nm:new WeakMap()};
+ // ----- skid marks: one ring buffer of quads per city -----
+ const NSEG=900;let mesh=null,pos=null,head=0,last={},owner=null;
+ function ensure(){if(mesh&&mesh.parent===world)return;pos=new Float32Array(NSEG*4*3);const idx=new Uint32Array(NSEG*6);for(let i=0;i<NSEG;i++){const v=i*4;idx.set([v,v+1,v+2,v+1,v+3,v+2],i*6);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setIndex(new THREE.BufferAttribute(idx,1));
+  mesh=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0a0a0a,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,side:THREE.DoubleSide}));mesh.frustumCulled=false;mesh.renderOrder=1;world.add(mesh);head=0;last={};owner=world;}
+ function seg(key,x,z,w){const L=last[key];last[key]={x,z};if(!L)return;const dx=x-L.x,dz=z-L.z,d=Math.hypot(dx,dz);if(d<.25||d>4)return;const nx=-dz/d*w,nz=dx/d*w,y=.065,o=head*12;
+  pos.set([L.x+nx,y,L.z+nz,L.x-nx,y,L.z-nz,x+nx,y,z+nz,x-nx,y,z-nz],o);head=(head+1)%NSEG;const a=mesh.geometry.attributes.position;a.needsUpdate=true;}
+ F.skid=function(c,key,marking){if(!world)return;ensure();for(const s of[-1,1]){const k=key+s;if(!marking){last[k]=null;continue;}
+   const x=c.x-Math.sin(c.h)*1.35+Math.cos(c.h)*s*.78,z=c.z-Math.cos(c.h)*1.35-Math.sin(c.h)*s*.78;seg(k,x,z,.13);}};
+ F.reset=function(){last={};if(pos){pos.fill(0);mesh.geometry.attributes.position.needsUpdate=true;}};
+ // ----- drift combo meter -----
+ function el(){let d=$('drift3');if(!d){d=document.createElement('div');d.id='drift3';d.className='hidden';$('hud').appendChild(d);
+   const st=document.createElement('style');st.textContent=`#drift3{position:absolute;left:50%;top:31%;transform:translateX(-50%);text-align:center;pointer-events:none;font-family:Orbitron;font-style:italic;text-shadow:0 0 18px rgba(255,42,109,.6),0 3px 8px #000}
+   #drift3 .l{font:800 14px Orbitron;letter-spacing:4px;color:#ffc23d}#drift3 .v{font:900 40px Orbitron;color:#fff}#drift3 .m{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:12px;background:linear-gradient(90deg,#ff2a6d,#ff8a3d);font:900 18px Orbitron;vertical-align:middle}
+   #drift3.lost .v{color:#ff5a7a;text-decoration:line-through}#drift3.bank .v{color:#39ff9f}
+   .nm3{position:absolute;left:50%;top:34%;transform:translateX(-50%);font:900 italic 22px Orbitron;color:#05d9e8;text-shadow:0 0 14px rgba(5,217,232,.8),0 2px 6px #000;pointer-events:none;animation:nm3 1.1s ease-out forwards}
+   @keyframes nm3{from{opacity:0;transform:translate(-50%,10px) scale(.8)}20%{opacity:1;transform:translate(-50%,0) scale(1.1)}to{opacity:0;transform:translate(-50%,-30px) scale(1)}}
+   @media (max-width:760px){#drift3{top:42%}#drift3 .v{font-size:28px}}`;document.head.appendChild(st);}return d;}
+ function show(cls){const d=el(),D=F.drift;d.className=cls||'';d.innerHTML=`<div class="l">DRIFT</div><div class="v">${fmtN(Math.round(D.score))}<span class="m">×${D.mult}</span></div>`;}
+ const fmtN=n=>n.toLocaleString('en-US');
+ function bank(){const D=F.drift,pts=Math.round(D.score*D.mult);D.on=false;if(pts<250){el().className='hidden';D.score=0;D.mult=1;return;}
+  const cash=Math.min(1500,Math.round(pts/12/10)*10);SAVE.cash+=cash;SAVE.stats.driftBest=Math.max(SAVE.stats.driftBest||0,pts);SAVE.stats.driftPts=(SAVE.stats.driftPts||0)+pts;
+  D.score=pts;D.mult=1;show('bank');el().querySelector('.l').textContent='DRIFT BANKED · +'+fmt(cash);chime&&chime(true);
+  try{window.SEASON&&SEASON.event('drift',pts);}catch(e){}setTimeout(()=>{if(!F.drift.on)el().className='hidden';},1400);D.score=0;save();}
+ F.crash=function(){const D=F.drift;if(!D.on||D.score<50)return;show('lost');el().querySelector('.l').textContent='DRIFT LOST';D.on=false;D.score=0;D.mult=1;setTimeout(()=>{if(!F.drift.on)el().className='hidden';},1100);};
+ F.tick=function(dt){const p=player;if(!p||S.state!=='play'||S.paused||S.meet||S.photo)return;const sp=Math.hypot(p.vx,p.vz),D=F.drift;
+  const marking=!p.air&&sp>7&&(p.drift>3.2||(p.brakeIn>.6&&sp>18));F.skid(p,'p',marking);
+  for(let i=0;i<racers.length;i++){const r=racers[i];F.skid(r,'r'+i,!r.air&&Math.hypot(r.vx,r.vz)>9&&r.drift>4);}
+  if(!S.race&&p.drift>4&&sp>10&&!p.air){if(!D.on){D.on=true;D.score=0;D.mult=1;D.t=0;}D.calm=0;D.t+=dt;D.score+=p.drift*sp*dt*1.6;D.mult=Math.min(5,1+Math.floor(D.t/1.5));show();}
+  else if(D.on){D.calm+=dt;if(D.calm>.7)bank();}
+  // near misses
+  if(sp>22&&!S.meet){const fx=Math.sin(p.h),fz=Math.cos(p.h);for(const t of traffic){if(!t.mesh||!t.mesh.visible)continue;const dx=t.x-p.x,dz=t.z-p.z,d=Math.hypot(dx,dz);if(d>4.2||d<2.3)continue;
+    const along=dx*fx+dz*fz;if(Math.abs(along)>2.2)continue;const now=S.time,lastT=F.nm.get(t)||-99;if(now-lastT<4)continue;F.nm.set(t,now);
+    const rel=Math.hypot(p.vx-(t.vx||0),p.vz-(t.vz||0));if(rel<12)continue;SAVE.cash+=50;SAVE.stats.nearMiss=(SAVE.stats.nearMiss||0)+1;
+    const n=document.createElement('div');n.className='nm3';n.textContent='NEAR MISS +$50';$('hud').appendChild(n);setTimeout(()=>n.remove(),1150);try{window.SEASON&&SEASON.event('nearmiss',1);}catch(e){}}}};
+ return F;})();
+// ---- wiring ----
+(function(){
+ const _up=update;update=function(dt){_up(dt);try{FX3.tick(dt);}catch(e){if(!FX3.err){FX3.err=1;console.warn('fx3',e);}}};
+ const _sp=sparks;sparks=function(c){_sp(c);if(c===player)FX3.crash();};
+ const _bc=buildCity;buildCity=function(){const r=_bc.apply(this,arguments);try{FX3.reset();}catch(e){}return r;};
+ const _ri=readInput;readInput=function(dt){const r=_ri(dt);if(player)player.brakeIn=r&&r.brake||0;return r;};
+})();
+// ---------- END FX3
+
+// ---------- SEASON (v3.2): monthly season pass (30 tiers) + 3 weekly challenges, in-game rewards only ----------
+Object.assign(ITEMS,{p_s_chrome:{n:'Chrome Neon paint',r:3,kind:'paint',v:'#9fb4c7',ev:1},p_s_violet:{n:'Season Violet paint',r:2,kind:'paint',v:'#7b2ff7',ev:1},g_s_ice:{n:'Season Ice underglow',r:2,kind:'glow',v:'#7df9ff',ev:1},
+ t_s_racer:{n:'Season Racer',r:1,kind:'title',ev:1},t_s_legend:{n:'Season Legend',r:3,kind:'title',ev:1},t_s_drift:{n:'Drift King',r:2,kind:'title',ev:1}});
+for(const k of['g_s_ice'])GLOWS[k]=ITEMS[k].v;
+var SEASON=(function(){
+ const Z={TIER_XP:250,TIERS:30};
+ const pad=n=>String(n).padStart(2,'0');
+ Z.id=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);};
+ Z.week=()=>{const d=new Date(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),day=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-day+3);const y=t.getUTCFullYear(),f=new Date(Date.UTC(y,0,4));return y+'-W'+pad(1+Math.round(((t-f)/864e5-3+((f.getUTCDay()+6)%7))/7));};
+ Z.daysLeft=()=>{const d=new Date(),e=new Date(d.getFullYear(),d.getMonth()+1,1);return Math.max(1,Math.ceil((e-d)/864e5));};
+ const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+ Z.name=()=>MONTHS[new Date().getMonth()]+' Season · Street Legends';
+ // reward for each tier
+ Z.reward=t=>{const fixed={5:['crate'],10:['item','p_s_violet'],12:['crate'],15:['fegg'],18:['item','t_s_racer'],20:['item','g_s_ice'],22:['crate'],25:['item','t_s_drift'],28:['item','p_s_chrome'],30:['item','t_s_legend']};
+  if(fixed[t])return fixed[t];return t%3===0?['rep',100+t*10]:['cash',500+t*100];};
+ Z.label=r=>r[0]==='cash'?['💰',fmt(r[1])]:r[0]==='rep'?['⭐',r[1]+' REP']:r[0]==='crate'?['🎁','Free crate']:r[0]==='fegg'?['🌟','Golden egg']:[ITEMS[r[1]].kind==='title'?'🏷️':ITEMS[r[1]].kind==='glow'?'💡':'🎨',ITEMS[r[1]].n];
+ // weekly challenges: picked from a pool by the week id, so everyone gets the same three
+ const POOL=[['wins',3,'Win 3 street races','🏁'],['driftBest',2000,'Bank a 2,000-point drift','💨'],['nearMiss',8,'Get 8 near misses','⚡'],['escapes',2,'Escape the police twice','🚓'],
+  ['tours',1,'Finish a taxi tour','🚕'],['photos',3,'Take 3 landmark postcards','📸'],['km',15,'Drive 15 km','🛣️'],['jobs',2,'Finish 2 delivery jobs','📦'],['races',5,'Race 5 times','🏎️'],['driftPts',10000,'Score 10,000 drift points','🔥']];
+ Z.challenges=()=>{const w=Z.week();let h=0;for(const c of w)h=(h*31+c.charCodeAt(0))>>>0;const fam=k=>/^drift/.test(k)?'drift':/^(wins|races)$/.test(k)?'race':k;let pool=POOL.slice();const out=[];while(out.length<3&&pool.length){h=(h*1103515245+12345)>>>0;const c=pool.splice(h%pool.length,1)[0];out.push(c);pool=pool.filter(x=>fam(x[0])!==fam(c[0]));}return out;};
+ const stat=k=>k==='photos'?Object.keys(SAVE.photos||{}).length+(SAVE.stats.photosN||0):k==='km'?Math.floor(SAVE.stats.km||0):(SAVE.stats[k]||0);
+ Z.state=function(){if(!SAVE)return null;const id=Z.id(),wk=Z.week();let s=SAVE.season;
+  if(!s||typeof s!=='object'||s.id!==id)s=SAVE.season={id,xp:0,claimed:[]};if(!Array.isArray(s.claimed))s.claimed=[];if(!Number.isFinite(s.xp))s.xp=0;
+  if(!s.wk||s.wk.id!==wk){const base={};POOL.forEach(([k])=>base[k]=k==='driftBest'?0:stat(k));s.wk={id:wk,base,done:[]};}return s;};
+ Z.prog=([k,n])=>{const s=Z.state();if(k==='driftBest')return Math.min(n,s.wk.best||0);return Math.min(n,Math.max(0,stat(k)-(s.wk.base[k]||0)));};
+ Z.tier=()=>Math.min(Z.TIERS,Math.floor(Z.state().xp/Z.TIER_XP));
+ Z.addXP=function(n,why){const s=Z.state();if(!s||!n)return;const t0=Z.tier();s.xp=Math.min(Z.TIERS*Z.TIER_XP,s.xp+Math.round(n));const t1=Z.tier();
+  if(t1>t0){setTimeout(()=>toast('SEASON TIER '+t1,'New reward ready · tap 🏆 to claim','#ffc23d',2.4),600);Z.badge();}};
+ Z.event=function(k,v){const s=Z.state();if(!s)return;if(k==='drift'){s.wk.best=Math.max(s.wk.best||0,v);Z.addXP(Math.min(150,v/20));}if(k==='nearmiss')Z.addXP(8);Z.checkWeek();};
+ Z.checkWeek=function(){const s=Z.state();if(!s)return;let any=false;Z.challenges().forEach(c=>{if(!s.wk.done.includes(c[0])&&Z.prog(c)>=c[1]){s.wk.done.push(c[0]);any=true;SAVE.cash+=1000;Z.addXP(400);toast('WEEKLY CHALLENGE DONE',c[2]+' · +$1,000','#39ff9f',2.6);chime&&chime(true);}});if(any){save();Z.badge();}};
+ Z.claimable=()=>{const s=Z.state(),t=Z.tier();let n=0;for(let i=1;i<=t;i++)if(!s.claimed.includes(i))n++;return n;};
+ Z.claim=function(t){const s=Z.state();if(t>Z.tier()||s.claimed.includes(t))return;const r=Z.reward(t),I=inv();s.claimed.push(t);
+  if(r[0]==='cash')SAVE.cash+=r[1];else if(r[0]==='rep')SAVE.rep+=r[1];else if(r[0]==='fegg')I.fegg++;
+  else if(r[0]==='item'){if(!I.items.includes(r[1]))I.items.push(r[1]);else SAVE.cash+=2000;}
+  save();chime&&chime(true);if(r[0]==='crate'){closeModal();SAVE.cash+=CRATE_PRICE;openCrate();return;}Z.open();Z.badge();};
+ Z.badge=function(){const b=document.querySelector('[data-season]');if(!b)return;const n=Z.claimable();b.dataset.n=n?n:'';};
+ Z.open=function(){const s=Z.state(),t=Z.tier(),inT=s.xp%Z.TIER_XP,tiers=[];
+  for(let i=1;i<=Z.TIERS;i++){const r=Z.reward(i),[ic,lb]=Z.label(r),got=s.claimed.includes(i),can=i<=t&&!got;
+   tiers.push(`<div class="sTier ${got?'got':can?'can':i<=t?'':'lock'} ${r[0]==='item'?'rare':''}" ${can?`data-sclaim="${i}"`:''}><b>${i}</b><span>${ic}</span><small>${esc(lb)}</small>${got?'<em>✓</em>':can?'<i>CLAIM</i>':''}</div>`);}
+  const ch=Z.challenges().map(c=>{const p=Z.prog(c),done=s.wk.done.includes(c[0]);return`<div class="sCh ${done?'done':''}"><div class="sChI">${c[3]}</div><div style="flex:1"><b>${esc(c[2])}</b><div class="bar"><i style="width:${Math.round(p/c[1]*100)}%"></i></div><small>${done?'✓ Done · +$1,000 · +400 season XP':`${fmt0(p)} / ${fmt0(c[1])}`}</small></div></div>`;}).join('');
+  const wkLeft=7-((new Date().getDay()+6)%7);
+  openModal(`<h1 style="font-size:32px">🏆 SEASON PASS</h1><div class="sub">${Z.name()} · ${Z.daysLeft()} days left · free for everyone</div>
+   <div class="sHead"><div class="sLv">${t}<small>TIER</small></div><div style="flex:1"><div class="bar sBar"><i style="width:${t>=Z.TIERS?100:Math.round(inT/Z.TIER_XP*100)}%"></i></div><small class="note">${t>=Z.TIERS?'Season complete! 🎉':`${inT} / ${Z.TIER_XP} XP to tier ${t+1} · earn XP from races, jobs, drifts, chases, tours and photos`}</small></div></div>
+   <div class="sTrack">${tiers.join('')}</div>
+   <h3>WEEKLY CHALLENGES · ${wkLeft} ${wkLeft===1?'day':'days'} left</h3><div class="sChs">${ch}</div>
+   <div class="actions"><span class="note">Rewards are in-game only · season prizes never appear in crates</span><span style="flex:1"></span><button class="btn" data-act="close">CLOSE</button></div>`);
+  const tr=document.querySelector('.sTrack');if(tr){const cur=tr.children[Math.max(0,Math.min(Z.TIERS-1,t-1))];if(cur)tr.scrollLeft=cur.offsetLeft-tr.clientWidth/2+40;}
+  try{TEL.feat&&TEL.feat('season');}catch(e){}};
+ const fmt0=n=>Number(n).toLocaleString('en-US');
+ return Z;})();
+// ---- wiring ----
+// keep the newer stats, postcards and season progress when a save is loaded (the original loader only knew 4 stats)
+{const _sanS=sanitize;sanitize=function(src){const d=_sanS(src);const n=v=>Number.isFinite(v)&&v>=0?v:0;
+ if(src.stats)for(const k of['tours','nearMiss','driftBest','driftPts','km','jobs','photosN'])if(src.stats[k]!=null)d.stats[k]=n(src.stats[k]);
+ if(src.photos&&typeof src.photos==='object'){d.photos={};for(const k in src.photos)if(/^[a-z]{3,6}[\w-]{1,40}$/.test(k)&&Object.keys(d.photos).length<80)d.photos[k]=1;}
+ const ss=src.season;if(ss&&typeof ss==='object'&&/^\d{4}-\d\d$/.test(ss.id)){d.season={id:ss.id,xp:Math.min(30*250,n(ss.xp)),claimed:Array.isArray(ss.claimed)?[...new Set(ss.claimed.filter(t=>Number.isInteger(t)&&t>=1&&t<=30))]:[]};
+  const w=ss.wk;if(w&&typeof w==='object'&&/^\d{4}-W\d\d$/.test(w.id)){const base={};if(w.base&&typeof w.base==='object')for(const k in w.base)if(/^[a-zA-Z]{2,12}$/.test(k))base[k]=n(w.base[k]);d.season.wk={id:w.id,base,done:Array.isArray(w.done)?w.done.filter(k=>typeof k==='string'&&k.length<16).slice(0,3):[],best:n(w.best)};}}
+ return d;};}
+(function(){
+ const st=document.createElement('style');st.textContent=`.sHead{display:flex;gap:16px;align-items:center;margin:6px 0 12px}.sLv{width:70px;height:70px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:900 30px Orbitron;background:linear-gradient(160deg,#ffc23d,#ff2a6d);color:#05040c}.sLv small{font:800 9px Orbitron;letter-spacing:2px}
+ .sBar{height:10px!important}.sBar i{background:linear-gradient(90deg,#ffc23d,#ff2a6d)}
+ .sTrack{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 12px;scroll-behavior:smooth}.sTier{flex:0 0 96px;height:118px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative;text-align:center;padding:6px}
+ .sTier b{position:absolute;left:8px;top:5px;font:800 11px Orbitron;opacity:.7}.sTier span{font-size:30px}.sTier small{font-size:11px;line-height:1.15;opacity:.9}.sTier.rare{background:linear-gradient(160deg,rgba(185,103,255,.22),rgba(255,42,109,.12))}
+ .sTier.lock{opacity:.45}.sTier.can{cursor:pointer;box-shadow:0 0 0 2px #ffc23d,0 0 18px rgba(255,194,61,.5);animation:sPulse 1.2s infinite alternate}@keyframes sPulse{to{box-shadow:0 0 0 2px #ffc23d,0 0 28px rgba(255,194,61,.8)}}
+ .sTier i{font:900 10px Orbitron;letter-spacing:1px;color:#05040c;background:#ffc23d;border-radius:8px;padding:2px 7px;font-style:normal}.sTier em{position:absolute;right:7px;top:4px;color:#39ff9f;font-style:normal;font-weight:900}
+ .sChs{display:flex;flex-direction:column;gap:8px}.sCh{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}.sCh.done{border-color:rgba(57,255,159,.5);background:rgba(57,255,159,.07)}.sChI{font-size:26px}.sCh .bar{height:7px;margin:6px 0 3px}.sCh .bar i{background:linear-gradient(90deg,#39ff9f,#05d9e8)}.sCh small{font-size:12px;opacity:.75}
+ #socDock [data-season]{position:relative}#socDock [data-season]:not([data-n=""])::after{content:attr(data-n);position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:#ff2a6d;color:#fff;font:900 11px/18px Orbitron;text-align:center;padding:0 4px}`;document.head.appendChild(st);
+ // season XP from everything that already pays out
+ const _rw=reward;reward=function(cash,xp,rep){const r=_rw.apply(this,arguments);try{if(xp>0)SEASON.addXP(Math.max(10,xp*.5));SEASON.checkWeek();}catch(e){}return r;};
+ const _dc=dailyCheck;dailyCheck=function(){const r=_dc.apply(this,arguments);if(r)try{SEASON.addXP(100);}catch(e){}return r;};
+ const _ud=updateDeliv;updateDeliv=function(dt){const D=S.deliv;_ud(dt);if(D&&!S.deliv&&D.leg>=D.legs&&D.cargo!=='tour'){SAVE.stats.jobs=(SAVE.stats.jobs||0)+1;try{SEASON.checkWeek();}catch(e){}}};
+ const _up=update;update=function(dt){_up(dt);if(player&&S.state==='play'&&!S.paused){const sp=Math.hypot(player.vx,player.vz);if(sp>1&&sp<120)SAVE.stats.km=(SAVE.stats.km||0)+sp*dt/1000;}};
+ if(window.FUN){const _ph=FUN.photo;FUN.photo=function(ev){const n0=Object.keys(SAVE.photos||{}).length;const r=_ph.apply(this,arguments);if(Object.keys(SAVE.photos||{}).length===n0&&Math.hypot(player.vx,player.vz)<=3)SAVE.stats.photosN=(SAVE.stats.photosN||0)+1;try{SEASON.checkWeek();}catch(e){}return r;};}
+ // dock button + clicks
+ const addBtn=()=>{const d=$('socDock');if(!d||d.querySelector('[data-season]'))return;const b=document.createElement('button');b.dataset.season='1';b.title='Season pass';b.textContent='🏆';d.insertBefore(b,d.firstChild);b.onclick=e=>{e.stopPropagation();SEASON.open();};SEASON.badge();};
+ const _sg=startGame;startGame=function(){const r=_sg.apply(this,arguments);setTimeout(addBtn,300);try{SEASON.state();SEASON.checkWeek();}catch(e){}return r;};
+ document.addEventListener('click',e=>{const t=e.target.closest('[data-sclaim]');if(t){e.stopPropagation();SEASON.claim(+t.dataset.sclaim);}},true);
+})();
+// ---------- END SEASON
 
 // ---------- NFX: street-racer graphics pack (wet-road reflections, live car reflections, light trails, headlight beams, NFS-style grade) ----------
 var NFX=(function(){
