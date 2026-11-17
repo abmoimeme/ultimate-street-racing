@@ -310,9 +310,9 @@ ${(()=>{const P=allEv(e=>e.k==='perf'&&inR(e));if(!P.length)return'<h2>Game spee
 
 // ---------- player codes, classes and capacity (v3.3) ----------
 const GAME_URL='https://abmoimeme.github.io/ultimate-street-racing/';
-const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const cleanGrp=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 \-]/g,'').replace(/\s+/g,' ').trim().slice(0,40);
-function newCode(){for(let n=0;n<50;n++){const r=crypto.getRandomValues(new Uint32Array(12));let t='';for(const x of r)t+=CODE_AB[x%CODE_AB.length];const c='ABMOIMEME-'+t.slice(0,4)+'-'+t.slice(4,8)+'-'+t.slice(8);if(!ST.codes[c])return c;}throw new Error('could not make a unique code');}
+const WORDS='TIGER LION EAGLE FALCON SHARK PANDA KOALA OTTER COMET TURBO NITRO PIXEL STORM BLAZE FROST ORBIT METEOR CHEETAH DOLPHIN PHOENIX DRAGON WOLF FOX BEAR HAWK RAVEN COBRA VIPER BISON MOOSE LYNX PUMA ZEBRA GECKO MANGO BAOBAB SAVANNA DUNE RIVER CANYON GALAXY PLANET NEON SPARK VOLT RADAR PILOT CAPTAIN RALLY DRIFT TORQUE PISTON GEAR WHEEL BOOST APEX RACER SPEEDY THUNDER'.split(' ');
+function newCode(){for(let n=0;n<200;n++){const r=crypto.getRandomValues(new Uint32Array(2));const c=WORDS[r[0]%WORDS.length]+'-'+String(1000+r[1]%9000);if(!ST.codes[c])return c;}throw new Error('could not make a unique code');}
 async function allowCode(code,grp){const save=await sha(S1+code),net=await sha(S2+code);const e={n:net,c:'P-'+net.slice(0,4).toUpperCase(),t:Date.now()};if(grp)e.g=grp;
  await db.ref('usr/allow/'+save).set(e);await db.ref('usr/allowNet/'+net).set(true);ST.codes[code]=Object.assign({},ST.codes[code],grp?{grp}:{} );if(!grp&&ST.codes[code])delete ST.codes[code].grp;return{save,net};}
 function codeGroups(){const g={};for(const c in ST.codes){const k=ST.codes[c].grp||'';g[k]=(g[k]||0)+1;}return g;}
