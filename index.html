@@ -6612,6 +6612,8 @@ h3{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:3px;op
 #showTag{position:fixed;right:4vw;bottom:7vh;z-index:21;text-align:right;pointer-events:none;color:#fff;text-shadow:0 2px 18px #000}
 #showTag .k{font:800 12px Orbitron;letter-spacing:4px;color:var(--cyan)}#showTag .n{font:900 italic clamp(26px,3.4vw,46px) Orbitron;line-height:1.05}
 #showTag .s{display:flex;gap:16px;justify-content:flex-end;margin-top:10px;font:700 13px Rajdhani;letter-spacing:2px;opacity:.9}#showTag .s b{display:block;font:900 22px Orbitron;color:#fff}
+body:has(#creator:not(.hidden)) #showTag,body:has(#modal:not(.hidden)) #showTag,body:has(#hub.on) #showTag{display:none}
+#start.screen{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}#start .card.panel{max-height:none;overflow:visible;flex:none;height:auto}#modal .card.panel{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 @media (max-width:900px){#start.screen{background:rgba(5,4,14,.82)}#start .card{width:100%;border-radius:0}#showTag{display:none}#start .grid{grid-template-columns:1fr}}
 /* modals */
 #modal.screen:not(.side){background:radial-gradient(ellipse at 50% 0%,rgba(255,42,109,.18),transparent 60%),rgba(5,4,14,.78);backdrop-filter:blur(3px)}
