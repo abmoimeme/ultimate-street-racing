@@ -189,7 +189,7 @@ table.res tr.me{color:var(--cyan);font-weight:700}
 <div id="start" class="screen">
   <div class="card panel">
     <h1>ULTIMATE<br>STREET RACING</h1>
-    <div class="sub">Tokyo · Dakar · Paris · New York · Version 4.1 · Game concept by Muhammad</div>
+    <div class="sub">Tokyo · Dakar · Paris · New York · Version 4.2 · Game concept by Muhammad</div>
     <div id="startBody"><div style="font-size:17px;opacity:.8">Loading 3D engine…</div></div>
   </div>
 </div>
@@ -5460,14 +5460,14 @@ function update(dt){S.time+=dt;const p=player;if(S.meet){if(S.meet.free)updateFo
   if(air>.55){let bonus=Math.round(air*160);const z=ZONES.find(z=>Math.hypot(z.x-p.x,z.z-p.z)<z.r);if(z){bonus*=3;toast('BULLSEYE!',`Perfect landing +${fmt(bonus)}`,'#39ff9f',1.8);chime(true);}else feed(`🛫 Air ${air.toFixed(1)}s · +${fmt(bonus)}`);reward(bonus,Math.round(air*40),Math.round(air*6));}};
  const subs=2,h=dt/subs;
  for(let s=0;s<subs;s++){
-  if(hold){p.vx=p.vz=0;}p.wallHit=0;stepCar(p,inp,h);if(hold){p.vx=p.vz=0;}
+  if(hold){p.vx=p.vz=0;}p.wallHit=0;{const ps=Math.min(8,Math.max(1,Math.ceil(h*Math.hypot(p.vx,p.vz)/0.6)));for(let q=0;q<ps;q++){stepCar(p,inp,h/ps);const w=collideWorld(p);if(w>(p._wmax||0))p._wmax=w;}}if(hold){p.vx=p.vz=0;}
   for(const r of racers){if(r.ghost)continue;r.wallHit=0;const ri=racerInput(r,h);r.steer=ri.steer;stepCar(r,ri,h);const hw=collideWorld(r);if(hw>8)r.health=Math.max(30,r.health-hw*.4);}
   for(const c of S.heat.cops){c.wallHit=0;const ci=copInput(c,h);if(BOOST.smoke>0){ci.throttle*=.25;ci.brake=Math.max(ci.brake||0,.3);}stepCar(c,ci,h);collideWorld(c);}
   for(const t of traffic){if(t.crashed){stepCar(t,{throttle:0,brake:.6,steer:0},h);collideWorld(t);}else{
     // blocked check
     let blocked=false;const fx=Math.sin(t.h),fz=Math.cos(t.h);for(const o of(S.meet&&S.meet.free?[p,S.meet,...racers,...S.heat.cops]:[p,...racers,...S.heat.cops])){const dx=o.x-t.x,dz=o.z-t.z,fd=dx*fx+dz*fz,ld=dx*fz-dz*fx;if(fd>0&&fd<13+(t.len||0)/2&&Math.abs(ld)<(t.r<1.2?1.3:2.6)){blocked=true;break;}}
     t.cur=lerp(t.cur,blocked?0:t.spd,clamp(h*(blocked?4:1),0,1));t.along+=t.dir*t.cur*h;{const W=HALF+14+(t.len||0)/2;if(t.along*t.dir>W)t.along=-t.dir*W;}posTraffic(t);}}
-  const hit=collideWorld(p);
+  const hit=Math.max(collideWorld(p),p._wmax||0);p._wmax=0;
   if(hit>6){const dm=(hit-6)*1.05;p.health=Math.max(0,p.health-dm);noiseHit(hit/40);sparks(p);if(p.blockHit){heatUp(.12);p.blockHit=0;}}
   // car-car
   const dyn=[p,...racers.filter(r=>!r.ghost),...S.heat.cops];
@@ -5638,7 +5638,7 @@ function startGame(){initAudio();SAVE.char=cleanChar(SAVE.char);if(!activeProfil
  if(saveWarn&&!touch)setTimeout(()=>feed('⚠ '+saveWarn),3500);}
 $('crPanel').addEventListener('click',e=>creatorClick(e));$('invite').addEventListener('click',inviteClick);$('meetCard').addEventListener('click',meetCardClick);
 /* ---------- TELEMETRY (owner dashboard only): anonymous activity events. No names, numbers or emails are logged. ---------- */
-var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'4.1'};
+var TEL=(function(){const T={q:[],seenB:{},errs:0,cur:null,deliv:null,crun:null,heat:null,st:null,conn:null,ver:'4.2'};
  try{const s=JSON.parse(localStorage.getItem('usr_telq')||'[]');if(Array.isArray(s))T.q=s.filter(e=>e&&e.k&&Date.now()-e.t<20*864e5).slice(-250);}catch(e){}
  T.save=()=>{try{localStorage.setItem('usr_telq',JSON.stringify(T.q.slice(-250)));}catch(e){}};
  T.add=(k,o)=>{const e=Object.assign({k,t:Date.now(),v:T.ver},o||{});T.q.push(e);if(T.q.length>300)T.q.shift();T.save();if(T.flush)T.flush();};
@@ -7140,7 +7140,7 @@ var HUB=(function(){
   const T={race:['STREET RACE','#ff2a55','🏁 Beat your rivals to the line'],drag:['STOPLIGHT DUEL','#ffd000','🚦 Perfect launch, quick shifts'],deliv:['JOB','#39ff7a','📦 Deliver on time for cash'],garage:['CREW GARAGE','#2a8bff','🔧 Repairs, upgrades and paint'],meet:['CAR MEET','#05d9e8','🤝 Show off and hang out'],tour:['TAXI TOUR','#ffb800','🚕 Drive visitors to landmarks']};
   const seen=new Set(),cards=[];for(const m of(typeof MARKERS!=='undefined'?MARKERS:[])){const ev=m.ev;if(!ev||seen.has(ev.id))continue;seen.add(ev.id);const t=T[ev.type]||[String(ev.type).toUpperCase(),'#ffe600',''];
    const d=player?Math.round(Math.hypot(m.x-player.x,m.z-player.z)):0;cards.push(`<div class="hcard" style="--c:${t[1]}"><span class="k">${t[0]}</span><b>${esc(ev.name)}</b><p>${t[2]}${ev.laps?` · ${ev.laps} lap${ev.laps>1?'s':''}`:''}<br>${d} m away</p><button class="hbtn" data-h="gps" data-v="${esc(ev.id)}">SET GPS</button></div>`);}
-  cards.unshift(`<div class="hcard" style="--c:#ff2a6d"><span class="k">ONLINE · 2–8 PLAYERS</span><b>🏷️ Shift Tag</b><p>Bump a friend to pass on IT. Least time as IT wins. Use City Shift (Q) to escape.</p><button class="hbtn" data-h="tag">PLAY</button></div>`);
+  cards.unshift(`<div class="hcard" style="--c:#ff2a6d"><span class="k">ONLINE · 2–8 PLAYERS · OR SOLO</span><b>🌀 Shift Online</b><p>Shift Tag, Trailblazer and Shift Race. Host a game for friends in this city, or play solo.</p><button class="hbtn" data-h="tag">PLAY</button></div>`,`<div class="hcard" style="--c:#ffe600"><span class="k">STORY · 2–4 MINUTES</span><b>🎬 Chase Missions</b><p>Friendly chases in every city: an ice cream truck, a pizza prankster, a lost robot and a taxi rush.</p><button class="hbtn" data-h="missions">PLAY</button></div>`);
   cards.unshift(`<div class="hcard" style="--c:#ffe600"><span class="k">SEASON PASS</span><b>Weekly challenges</b><p>Earn season XP for paints, underglow and titles.</p><button class="hbtn" data-h="season">OPEN</button></div>`,
    `<div class="hcard" style="--c:#b967ff"><span class="k">DAILY</span><b>Daily rewards</b><p>Come back every day for a bigger prize.</p><button class="hbtn" data-h="daily">OPEN</button></div>`,
    `<div class="hcard" style="--c:#05d9e8"><span class="k">TRAVEL</span><b>Tokyo · Dakar · Paris · New York</b><p>Ship your ride to another city.</p><button class="hbtn" data-h="travel">TRAVEL</button></div>`);
@@ -7160,7 +7160,8 @@ var HUB=(function(){
    {n:'RADIO STATION',v:()=>RADIO.cur,c:RADIO.stations.map(s=>s.name),set:i=>{initAudio();RADIO.start();RADIO.set(i,true);}},
    {n:'MUSIC VOLUME',v:()=>Math.round(((SAVE.music&&SAVE.music.vol)!=null?SAVE.music.vol:.5)*10),c:['0','1','2','3','4','5','6','7','8','9','10'],set:i=>RADIO.vol(i/10)}]},
   video:{n:'VIDEO',rows:[
-   {n:'GRAPHICS',v:()=>Math.max(0,GFX_LEVELS.indexOf(GFXQ)),c:GFX_LEVELS.map(q=>GFX_NAMES[q]),set:i=>setQuality(GFX_LEVELS[i])}]},
+   {n:'GRAPHICS',v:()=>Math.max(0,GFX_LEVELS.indexOf(GFXQ)),c:GFX_LEVELS.map(q=>GFX_NAMES[q]),set:i=>setQuality(GFX_LEVELS[i])},
+   {n:'AUTO GRAPHICS',v:()=>o().autoGfx===false?0:1,c:['OFF','ON'],set:i=>{o().autoGfx=!!i;}}]},
   lang:{n:'LANGUAGE',rows:[
    {n:'LANGUAGE',v:()=>Math.max(0,['en','fr','it'].indexOf(LANG)),c:['ENGLISH','FRANÇAIS','ITALIANO'],set:i=>setLang(['en','fr','it'][i])}]},
   controls:{n:'CONTROLS',info:[['DRIVE','W / S or ↑ ↓'],['STEER','A / D or ← →'],['HANDBRAKE','SPACE'],['NITRO','SHIFT'],['INTERACT','E'],['GET OUT / IN','F'],['CAMERA','C'],['HORN','H'],['RESET','R'],['RADIO','B'],['MAP','G'],['PHOTO MODE','P'],['CITY SHIFT','Q  (gamepad Y / △)'],['MENU','ESC'],['TOUCH','On-screen pedals, wheel and buttons']]}};
@@ -7191,6 +7192,7 @@ var HUB=(function(){
   if(a==='friends'){close(()=>{try{openFriends();}catch(e){}});return;}
   if(a==='season'){close(()=>{try{SEASON.open();}catch(e){}});return;}
   if(a==='tag'){close(()=>{try{TAG.open();}catch(e){}});return;}
+  if(a==='missions'){close(()=>{try{MISSIONS.open();}catch(e){}});return;}
   if(a==='daily'){close(()=>{try{showDaily(false);}catch(e){}});return;}
   if(a==='travel'){close(()=>{try{handleAct('travel');}catch(e){}});return;}
   if(a==='gps'){const m=MARKERS.find(q=>q.ev&&q.ev.id===v);if(m){try{GPS.set({ev:m.ev,x:m.x,z:m.z,n:m.ev.name});}catch(e){S.gps=m.ev;}close();}return;}
@@ -7342,6 +7344,7 @@ var SHIFT=(function(){
   cancel:TX('CANCEL','ANNULER','ANNULLA'),zoom:TX('ZOOM','ZOOM','ZOOM'),mine:TX('MY CAR','MA VOITURE','LA MIA AUTO'),out:TX('SHIFT OUT','SHIFT OUT','SHIFT OUT'),
   wait:TX('Shift ready in','Shift prêt dans','Shift pronto tra'),range:TX('Too far — pick a car inside the circle','Trop loin : choisis une voiture dans le cercle','Troppo lontano: scegli un’auto nel cerchio'),
   now:TX('Now driving','Tu conduis','Ora guidi'),back:TX('Back in your','De retour dans ta','Di nuovo nella tua'),busy:TX('Finish what you are doing first','Termine d’abord ce que tu fais','Prima finisci quello che stai facendo'),
+  left:TX('shifts left','Shifts restants','Shift rimasti'),none:TX('No shifts left in this race','Plus de Shift pour cette course','Niente più Shift in questa gara'),
   crash:TX('Rough landing? Shift out!','Gros choc ? Fais un Shift !','Brutto colpo? Fai uno Shift!')};
  const NAMES={car:TX('City car','Citadine','Utilitaria'),taxi:TX('Taxi','Taxi','Taxi'),rapide:TX('Car rapide','Car rapide','Car rapide'),ndiaga:TX('Ndiaga Ndiaye bus','Bus Ndiaga Ndiaye','Bus Ndiaga Ndiaye'),prank:TX('Prankster van','Van du farceur','Furgone del burlone'),own:TX('Your car','Ta voiture','La tua auto')};
  X.L=L;X.W=W;
@@ -7349,7 +7352,7 @@ var SHIFT=(function(){
  function loadCfg(){try{if(!window.firebase||!firebase.apps||!firebase.apps.length)return;firebase.database().ref('usr/config/shift').once('value').then(s=>{const v=s.val()||{};const n=(x,a,b,d)=>Number.isFinite(+x)?Math.min(b,Math.max(a,+x)):d;
    X.cfg={range:n(v.range,100,2000,500),cool:n(v.cool,0,30,3),itCool:n(v.itCool,0,30,5)};}).catch(()=>{});}catch(e){}}
  setTimeout(loadCfg,4000);
- const ok=t=>t&&t.mesh&&t.mesh.visible&&!t.len&&!t.ghost&&!t.patrol&&!['cart','bike','tiak','jakarta','sport'].includes(t.kind)&&!(t.mesh.userData&&!t.mesh.userData.wheels);
+ const ok=t=>t&&t.mesh&&t.mesh.visible&&!t.len&&!t.ghost&&!t.patrol&&!t.mis&&!['cart','bike','tiak','jakarta','sport'].includes(t.kind)&&!(t.mesh.userData&&!t.mesh.userData.wheels);
  X.coolFor=()=>window.TAG&&TAG.isIt&&TAG.isIt()?X.cfg.itCool:X.cfg.cool;
  X.canStart=()=>{if(S.state!=='play'||!player||S.paused||S.photo)return W.busy;if(S.meet||(player.moto&&!player.shifted))return W.busy;if(S.race&&S.race.count>0)return W.busy;if(window.HUB&&HUB.open)return W.busy;return null;};
  // ---------- visuals ----------
@@ -7408,6 +7411,7 @@ var SHIFT=(function(){
  function airPos(){const h=hAt();return{p:new THREE.Vector3(X.fx,h,X.fz+h*.32),l:new THREE.Vector3(X.fx,0,X.fz-h*.05)};}
  X.toggle=()=>{if(X.ph==='air'){X.cancel();return;}if(X.on)return;const why=X.canStart();if(why){toast(L(W.title),L(why),'#ff8a00',1.4);return;}
   if(X.cool>0){toast(L(W.title),`${L(W.wait)} ${X.cool.toFixed(1)}s`,'#ff8a00',1);return;}
+  if(X.limit!=null&&(X.used||0)>=X.limit){toast(L(W.title),L(W.none),'#ff8a00',1.4);return;}
   dom();X.on=true;X.ph='up';X.t=0;X.t0=performance.now();X.fx=player.x;X.fz=player.z;X.lvl=0;X.from={p:camera.position.clone(),l:camLook.clone()};X.hover=null;
   if(!ring.parent)world.add(ring);if(!rng.parent)world.add(rng);sfx('up');document.getElementById('shiftOut').style.display='none';TEL.add&&TEL.add('shift',{c:S.city});};
  X.cancel=()=>{if(X.ph!=='air')return;X.ph='back';X.t=0;X.t0=performance.now();X.tgt=null;X.from=X.cp?{p:X.cp.clone(),l:X.cl.clone()}:airPos();X.cp=null;sfx('down');ui(false);};
@@ -7422,7 +7426,8 @@ var SHIFT=(function(){
   const i=traffic.indexOf(t);if(i>=0)traffic.splice(i,1);
   const base=effStats(id),heavy=t.kind==='rapide'||t.kind==='ndiaga',st=Object.assign({},base,{top:base.top*(heavy?.72:.86),accel:base.accel*(heavy?.75:.9),grip:Math.min(base.grip,.92)});
   const p=makeEnt(t.mesh,st,heavy?2.4:1.4);p.isPlayer=true;p.id=id;p.health=100;p.x=t.x;p.z=t.z;p.h=t.h;p.y=t.y||0;const sp=Math.max(6,Math.hypot(t.vx,t.vz));p.vx=Math.sin(t.h)*sp;p.vz=Math.cos(t.h)*sp;p.r=t.r||2.3;p.shifted={kind:t.kind,col:t.mesh.userData&&t.mesh.userData.paint?'#'+t.mesh.userData.paint.color.getHexString():null,prank:!!t.prank};p.nitro=old.nitro;
-  player=p;try{headSpot.position.set(0,1,2);p.mesh.add(headSpot);}catch(e){}
+  for(const k of['prog','done','ft','stuck','lap','dnf'])if(old[k]!==undefined)p[k]=old[k];if(S.race){const fi=S.race.finish.indexOf(old);if(fi>=0)S.race.finish[fi]=p;}
+  player=p;try{headSpot.position.set(0,1,2);p.mesh.add(headSpot);}catch(e){}if(X.limit!=null){X.used=(X.used||0)+1;toast(L(W.title),`${Math.max(0,X.limit-X.used)} ${L(W.left)}`,'#ffe600',1);}
   const nm=t.prank?NAMES.prank:NAMES[t.kind]||NAMES.car;$('carname').textContent=L(nm).toUpperCase();
   feed(`🌀 ${L(W.now)}: ${L(nm)}`);X.count++;X.combo.push(S.time);
   if(window.PRANK&&t.prank)PRANK.taken();if(window.TAG)TAG.onShift();}
@@ -7507,8 +7512,8 @@ var PRANK=(function(){
  Object.assign(I18N,{'Prank Stopper':['Stop aux farces','Ferma-scherzi'],'Catch a prankster':['Attrape un farceur','Prendi un burlone'],'Prank Patrol':['Patrouille anti-farces','Pattuglia anti-scherzi'],'Catch 10 pranksters':['Attrape 10 farceurs','Prendi 10 burloni'],
   'Escape the police or catch a prankster':['Échappe à la police ou attrape un farceur','Sfuggi alla polizia o prendi un burlone'],'Do it 10 times':['Fais-le 10 fois','Fallo 10 volte'],'Escape the police or catch a prankster twice':['Échappe à la police ou attrape un farceur 2 fois','Sfuggi alla polizia o prendi un burlone 2 volte'],'POLICE CHASES':['POURSUITES DE POLICE','INSEGUIMENTI DELLA POLIZIA'],'PRANKSTER':['FARCEUR','BURLONE'],'🎨 Prankster spotted!':['🎨 Farceur repéré !','🎨 Burlone avvistato!'],'Lose the cops first!':['Un instant !','Un attimo!']});
 
- const ok=t=>t&&t.mesh&&t.mesh.visible&&!t.len&&!t.ghost&&!t.patrol&&!t.crashed&&t.mesh.userData&&t.mesh.userData.paint&&!['cart','bike','tiak','jakarta','sport'].includes(t.kind);
- const busy=()=>P.police()||S.state!=='play'||S.paused||S.race||S.deliv||S.meet||S.tour||(window.TAG&&TAG.active())||(window.SHIFT&&SHIFT.on);
+ const ok=t=>t&&t.mesh&&t.mesh.visible&&!t.len&&!t.ghost&&!t.patrol&&!t.crashed&&!t.mis&&t.mesh.userData&&t.mesh.userData.paint&&!['cart','bike','tiak','jakarta','sport'].includes(t.kind);
+ const busy=()=>P.police()||S.state!=='play'||S.paused||S.race||S.deliv||S.meet||S.tour||(window.TAG&&TAG.active())||(window.MISSIONS&&MISSIONS.cur)||(window.SHIFT&&SHIFT.on);
  function start(){const c=traffic.filter(t=>ok(t)&&!t.exPlayer&&Math.hypot(t.x-player.x,t.z-player.z)>45&&Math.hypot(t.x-player.x,t.z-player.z)<170);if(!c.length)return false;
   const t=c[Math.floor(Math.random()*c.length)];t.prank=true;t._spd0=t.spd;if(t.spd)t.spd=Math.min(26,t.spd*1.55);const ud=t.mesh.userData;t._col=ud.paint.color.clone();ud.paint.color.set(0xff2a6d);ud.paint.emissive&&ud.paint.emissive.set(0x330016);
   const fl=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:0xff4fd8,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));fl.scale.set(6,6,1);fl.position.y=2.4;t.mesh.add(fl);t._fl=fl;
@@ -7533,117 +7538,306 @@ var PRANK=(function(){
  return P;})();
 // ---------- /PRANK
 
-// ---------- TAG (v4.1): Shift Tag — online, 2 to 8 players, 3-minute rounds; the host settles every tag ----------
+// ---------- TAG (v4.2): Shift Online — Tag, Trailblazer and Shift Race; 2 to 8 players, or solo; the host settles results ----------
 var TAG=(function(){
- const G={me:null,room:null,host:false,ready:false,st:null,t0:0,it:null,im:0,sc:{},seen:{},paid:null,ui:false,lastHost:0,ROUND:180,MAX:8,BUMP:5.2};
+ const G={me:null,room:null,host:false,ready:false,st:null,t0:0,it:null,im:0,sc:{},seen:{},paid:null,ui:false,lastHost:0,MAX:8,BUMP:5.2,mode:'tag',solo:false,ev:null,lp:1};
  const TX=(en,fr,it)=>({en,fr,it});const L=o=>o[(typeof LANG!=='undefined'&&o[LANG])?LANG:'en'];
- const W={name:TX('SHIFT TAG','SHIFT TAG','SHIFT TAG'),sub:TX('Online · 2 to 8 players · 3 minutes','En ligne · 2 à 8 joueurs · 3 minutes','Online · da 2 a 8 giocatori · 3 minuti'),
-  rules1:TX('One player is IT and glows pink.','Un joueur est le CHAT et brille en rose.','Un giocatore è IL TAG e brilla di rosa.'),rules2:TX('Bump another player to pass IT on.','Percute un autre joueur pour lui passer le CHAT.','Urta un altro giocatore per passargli il TAG.'),
-  rules3:TX('Lowest time as IT wins. Use City Shift (Q) to get away!','Le moins de temps en CHAT gagne. Utilise City Shift (Q) pour t’échapper !','Vince chi resta meno tempo TAG. Usa City Shift (Q) per scappare!'),
-  host:TX('HOST A GAME','CRÉER UNE PARTIE','CREA UNA PARTITA'),join:TX('JOIN','REJOINDRE','ENTRA'),ready:TX('READY','PRÊT','PRONTO'),notready:TX('NOT READY','PAS PRÊT','NON PRONTO'),start:TX('START','LANCER','INIZIA'),leave:TX('LEAVE','QUITTER','ESCI'),
+ const MODES={
+  tag:{c:'#ff2a6d',ic:'🏷️',round:180,solo:false,n:TX('SHIFT TAG','SHIFT TAG','SHIFT TAG'),win:TX('Be IT for the least time','Sois le CHAT le moins longtemps','Resta TAG il meno possibile'),
+   r:[TX('One player is IT and glows pink.','Un joueur est le CHAT et brille en rose.','Un giocatore è IL TAG e brilla di rosa.'),TX('Bump another player to pass IT on.','Percute un autre joueur pour lui passer le CHAT.','Urta un altro giocatore per passargli il TAG.'),TX('IT waits 5 s between Shifts, everyone else 3 s.','Le CHAT attend 5 s entre deux Shifts, les autres 3 s.','Il TAG aspetta 5 s tra uno Shift e l’altro, gli altri 3 s.')],len:TX('3 minutes','3 minutes','3 minuti')},
+  trail:{c:'#19d3e6',ic:'✨',round:120,solo:true,n:TX('TRAILBLAZER','TRAILBLAZER','TRAILBLAZER'),win:TX('Most points wins','Le plus de points gagne','Vince chi fa più punti'),
+   r:[TX('A ghost car races around the city leaving a glowing trail.','Une voiture fantôme file dans la ville et laisse une traînée lumineuse.','Un’auto fantasma corre per la città e lascia una scia luminosa.'),TX('Drive inside the trail to score. Stay in it for a bigger bonus.','Roule dans la traînée pour marquer. Restes-y pour un plus gros bonus.','Guida dentro la scia per fare punti. Restaci per un bonus più grande.'),TX('Shift into a car closer to the trail to cut corners.','Fais un Shift dans une voiture plus proche pour couper les virages.','Fai Shift in un’auto più vicina per tagliare le curve.')],len:TX('2 minutes','2 minutes','2 minuti')},
+  srace:{c:'#ffe600',ic:'🏁',round:300,solo:true,n:TX('SHIFT RACE','SHIFT RACE','SHIFT RACE'),win:TX('First across the line wins','Le premier à la ligne gagne','Vince chi taglia per primo il traguardo'),
+   r:[TX('Hit every checkpoint, then cross the finish.','Passe tous les points de contrôle, puis franchis l’arrivée.','Passa tutti i checkpoint, poi taglia il traguardo.'),TX('Shift into any car closer to the next checkpoint.','Fais un Shift dans une voiture plus proche du prochain point.','Fai Shift in un’auto più vicina al prossimo checkpoint.'),TX('You get 5 Shifts per race. Use them well!','Tu as 5 Shifts par course. Utilise-les bien !','Hai 5 Shift per gara. Usali bene!')],len:TX('1 to 3 laps','1 à 3 tours','da 1 a 3 giri')}};
+ const W={title:TX('SHIFT ONLINE','SHIFT EN LIGNE','SHIFT ONLINE'),sub:TX('2 to 8 players in this city','2 à 8 joueurs dans cette ville','Da 2 a 8 giocatori in questa città'),
+  host:TX('HOST','CRÉER','CREA'),solo:TX('PLAY SOLO','JOUER SEUL','GIOCA DA SOLO'),join:TX('JOIN','REJOINDRE','ENTRA'),ready:TX('READY','PRÊT','PRONTO'),notready:TX('NOT READY','PAS PRÊT','NON PRONTO'),start:TX('START','LANCER','INIZIA'),leave:TX('LEAVE','QUITTER','ESCI'),
   games:TX('Games in this city','Parties dans cette ville','Partite in questa città'),none:TX('No games yet. Host one and invite your friends!','Aucune partie. Crée-en une et invite tes amis !','Nessuna partita. Creane una e invita gli amici!'),
-  offline:TX('Shift Tag is online. Sign in with your player code to play with friends.','Shift Tag se joue en ligne. Connecte-toi avec ton code joueur.','Shift Tag è online. Entra con il tuo codice giocatore.'),
+  offline:TX('Online play needs a player code. You can still play Trailblazer and Shift Race solo.','Le jeu en ligne demande un code joueur. Tu peux jouer seul à Trailblazer et Shift Race.','Per l’online serve un codice giocatore. Puoi giocare da solo a Trailblazer e Shift Race.'),
   need:TX('Waiting for at least 2 ready players…','En attente d’au moins 2 joueurs prêts…','In attesa di almeno 2 giocatori pronti…'),youit:TX('YOU ARE IT!','C’EST TOI LE CHAT !','SEI TU IL TAG!'),isit:TX('is IT','est le CHAT','è il TAG'),
   tagged:TX('Tagged!','Touché !','Preso!'),over:TX('ROUND OVER','FIN DE LA MANCHE','FINE MANCHE'),again:TX('PLAY AGAIN','REJOUER','GIOCA ANCORA'),close:TX('CLOSE','FERMER','CHIUDI'),
   left:TX('The host left, so the round ended.','L’hôte est parti, la manche est terminée.','L’host è uscito, la manche è finita.'),full:TX('This game is full.','Cette partie est complète.','Questa partita è piena.'),players:TX('players','joueurs','giocatori'),
-  city:TX('City','Ville','Città'),coins:TX('coins','pièces','monete'),sec:TX('s as IT','s en CHAT','s da TAG')};
- G.L=L;
- const now=()=>Date.now();const online=()=>!!(NET&&NET.city&&NET.myPeer);
- const nameOf=pe=>{if(pe===NET.myPeer)return cleanTxt(SAVE.profile&&SAVE.profile.name||'Driver',18);const r=NET.remotes.get(pe);return r&&r.d?r.d.n:'Driver';};
- // what each player tells the room (inside the normal 10-per-second presence update)
- const _mp=myPresence;myPresence=function(){const o=_mp();try{if(G.room){o.tg=G.host?{r:G.room,h:1,st:G.st||'lobby',t0:G.t0,it:G.it,im:G.im,sc:G.sc,pl:G.players()}:{r:G.room,rd:G.ready?1:0};}}catch(e){}return o;};
+  city:TX('City','Ville','Città'),coins:TX('coins','pièces','monete'),sec:TX('s as IT','s en CHAT','s da TAG'),pts:TX('pts','pts','pti'),laps:TX('Laps','Tours','Giri'),win:TX('How to win','Comment gagner','Come si vince'),
+  wait:TX('Finished! Waiting for the others…','Arrivé ! On attend les autres…','Arrivato! Aspettiamo gli altri…'),dnf:TX('did not finish','pas arrivé','non arrivato'),inTrail:TX('IN THE TRAIL','DANS LA TRAÎNÉE','NELLA SCIA'),busy:TX('Finish what you are doing first','Termine d’abord ce que tu fais','Prima finisci quello che stai facendo')};
+ G.L=L;G.MODES=MODES;
+ const now=()=>Date.now();const online=()=>!!(NET&&NET.city&&NET.myPeer);const me=()=>NET&&NET.myPeer||'me';
+ const nameOf=pe=>{if(pe===me())return cleanTxt(SAVE.profile&&SAVE.profile.name||'Driver',18);const r=NET.remotes.get(pe);return r&&r.d?r.d.n:'Driver';};
+ const races=()=>(typeof EVENTS!=='undefined'?EVENTS:[]).filter(e=>e.type==='race'&&e.id!=='intro');
+ const _mp=myPresence;myPresence=function(){const o=_mp();try{if(G.room&&!G.solo){o.tg=G.host?{r:G.room,h:1,md:G.mode,st:G.st||'lobby',t0:G.t0,it:G.it,im:G.im,sc:G.sc,pl:G.players(),ev:G.ev,lp:G.lp}:{r:G.room,rd:G.ready?1:0,pts:G.myPts(),pr:G.myProg(),fin:G.myFin()};}}catch(e){}return o;};
  const okTg=t=>t&&typeof t==='object'&&typeof t.r==='string'&&/^[A-Za-z0-9_-]{4,90}$/.test(t.r);
- const hostOf=room=>{if(G.host&&G.room===room)return{me:true,tg:myPresence().tg};for(const[pe,r] of NET.remotes){const t=r.d&&r.d.tg;if(okTg(t)&&t.h&&t.r===room)return{pe,r,tg:t};}return null;};
- G.games=()=>{const out=[];if(!online())return out;for(const[pe,r] of NET.remotes){const t=r.d&&r.d.tg;if(okTg(t)&&t.h&&t.st==='lobby')out.push({pe,room:t.r,n:r.d.n,count:Array.isArray(t.pl)?t.pl.length:1});}return out;};
- // participants as the host sees them: me + remotes in my room seen in the last 10 s
- G.players=()=>{if(!G.room)return[];const list=[NET.myPeer];const t=now();for(const[pe,r] of NET.remotes){const g=r.d&&r.d.tg;if(okTg(g)&&g.r===G.room&&!g.h){G.seen[pe]=t;}}
+ const hostOf=room=>{for(const[pe,r] of NET.remotes){const t=r.d&&r.d.tg;if(okTg(t)&&t.h&&t.r===room)return{pe,r,tg:t};}return null;};
+ G.games=()=>{const out=[];if(!online())return out;for(const[pe,r] of NET.remotes){const t=r.d&&r.d.tg;if(okTg(t)&&t.h&&t.st==='lobby')out.push({pe,room:t.r,n:r.d.n,md:MODES[t.md]?t.md:'tag',count:Array.isArray(t.pl)?t.pl.length:1});}return out;};
+ G.players=()=>{if(!G.room)return[];const list=[me()];if(G.solo)return list;const t=now();for(const[pe,r] of NET.remotes){const g=r.d&&r.d.tg;if(okTg(g)&&g.r===G.room&&!g.h){G.seen[pe]=t;}}
   for(const pe in G.seen){if(t-G.seen[pe]<10000&&NET.remotes.has(pe)&&list.length<G.MAX)list.push(pe);}return list;};
+ const remoteTg=pe=>{const r=NET.remotes.get(pe);return r&&r.d&&r.d.tg||{};};
  G.active=()=>!!(G.room&&G.st==='run');
- G.isIt=()=>G.active()&&G.it===NET.myPeer;
+ G.isIt=()=>G.active()&&G.mode==='tag'&&G.it===me();
  G.onShift=()=>{};
+ G.myPts=()=>G.mode==='trail'&&TRAIL.on?Math.round(TRAIL.pts):0;
+ G.myProg=()=>{try{return G.mode==='srace'&&S.race&&S.race.shift?+progressOf(player).toFixed(3):0;}catch(e){return 0;}};
+ G.myFin=()=>G.mode==='srace'&&G.fin!=null?G.fin:null;
  // ---------- host logic ----------
- function hostTick(dt){if(!G.host||G.st!=='run')return;const pl=G.players(),t=now();
-  if(!pl.includes(G.it)&&pl.length){G.it=pl[Math.floor(Math.random()*pl.length)];G.im=t+2000;}
-  if(t<G.t0)return;
-  if(t>G.t0+G.ROUND*1000){G.st='end';return;}
-  if(G.it){G.sc[G.it]=+(((G.sc[G.it]||0)+dt)).toFixed(2);}
-  for(const pe in G.sc)if(!pl.includes(pe)&&pe!==G.it)continue;
-  if(t<G.im)return;const pos=pe=>{if(pe===NET.myPeer)return player;const r=NET.remotes.get(pe);return r?{x:r.x,z:r.z}:null;};const a=pos(G.it);if(!a)return;
-  for(const pe of pl){if(pe===G.it)continue;const b=pos(pe);if(b&&Math.hypot(a.x-b.x,a.z-b.z)<G.BUMP){G.it=pe;G.im=t+2000;break;}}
-  if(pl.length<2){G.st='end';}}
+ function hostTick(dt){if(!G.host||G.st!=='run')return;const pl=G.players(),t=now(),M=MODES[G.mode];
+  if(t>G.t0+M.round*1000){G.st='end';return;}
+  if(!G.solo&&pl.length<2&&t>G.t0+3000){G.st='end';return;}
+  if(G.mode==='tag'){if(!pl.includes(G.it)&&pl.length){G.it=pl[Math.floor(Math.random()*pl.length)];G.im=t+2000;}if(t<G.t0)return;
+   if(G.it){G.sc[G.it]=+(((G.sc[G.it]||0)+dt)).toFixed(2);}
+   if(t<G.im)return;const pos=pe=>{if(pe===me())return player;const r=NET.remotes.get(pe);return r?{x:r.x,z:r.z}:null;};const a=pos(G.it);if(!a)return;
+   for(const pe of pl){if(pe===G.it)continue;const b=pos(pe);if(b&&Math.hypot(a.x-b.x,a.z-b.z)<G.BUMP){G.it=pe;G.im=t+2000;break;}}}
+  if(G.mode==='trail'){for(const pe of pl)G.sc[pe]=pe===me()?G.myPts():Math.max(0,Math.min(99999,+remoteTg(pe).pts||0));}
+  if(G.mode==='srace'){let all=true;for(const pe of pl){const g=pe===me()?{fin:G.myFin(),pr:G.myProg()}:remoteTg(pe);const fin=g.fin!=null&&Number.isFinite(+g.fin)?+g.fin:null;G.sc[pe]=fin!=null?{f:+fin.toFixed(2)}:{p:+(+g.pr||0).toFixed(3)};if(fin==null)all=false;}
+   if(all&&pl.length&&t>G.t0+5000){G.st='end';}}}
  // ---------- everyone follows the host ----------
  let lastIt=null,lastSt=null;
- function follow(){if(!G.room)return;if(G.host)return;const h=hostOf(G.room);
-  if(!h){if(now()-G.lastHost>10000&&G.st==='run'){G.st='end';G.hostLeft=true;}return;}G.lastHost=now();const t=h.tg;G.st=t.st;G.t0=+t.t0||0;G.it=typeof t.it==='string'?t.it:null;G.im=+t.im||0;G.sc=t.sc&&typeof t.sc==='object'?t.sc:{};G.pl=Array.isArray(t.pl)?t.pl.slice(0,G.MAX):[];}
+ function follow(){if(!G.room||G.host)return;const h=hostOf(G.room);
+  if(!h){if(now()-G.lastHost>10000&&G.st==='run'){G.st='end';G.hostLeft=true;}return;}G.lastHost=now();const t=h.tg;G.mode=MODES[t.md]?t.md:'tag';G.st=t.st;G.t0=+t.t0||0;G.it=typeof t.it==='string'?t.it:null;G.im=+t.im||0;G.sc=t.sc&&typeof t.sc==='object'?t.sc:{};G.pl=Array.isArray(t.pl)?t.pl.slice(0,G.MAX):[];G.ev=typeof t.ev==='string'?t.ev:null;G.lp=Math.min(3,Math.max(1,+t.lp||1));}
+ function begin(){closeUI();const M=MODES[G.mode];toast(M.ic+' '+L(M.n),L(M.win),M.c,2.2);G.fin=null;
+  if(G.mode==='trail')TRAIL.begin(G.ev,G.t0);
+  if(G.mode==='srace'){const ev=races().find(e=>e.id===G.ev)||races()[0];if(ev){const e2=Object.assign({},ev,{laps:G.lp,rivals:G.solo?3:0});try{if(S.race)S.race=null;startRace(e2);if(S.race){S.race.shift=true;S.race.count=Math.max(1.5,(G.t0-now())/1000);}SHIFT.limit=5;SHIFT.used=0;}catch(e){console.warn('srace',e);}}}}
  G.step=dt=>{if(!G.room)return;follow();hostTick(dt);
-  if(G.st!==lastSt){if(G.st==='run'){closeUI();toast(L(W.name),'3 · 2 · 1','#ff2a6d',2);}if(G.st==='end')finish();lastSt=G.st;}
-  if(G.st==='run'&&G.it!==lastIt){if(lastIt!==null){if(G.it===NET.myPeer){toast(L(W.youit),'','#ff2a6d',1.6);noiseHit(.25,700);}else toast(L(W.tagged),`${nameOf(G.it)} ${L(W.isit)}`,'#ffe600',1.2);}lastIt=G.it;}
+  if(G.st!==lastSt){if(G.st==='run')begin();if(G.st==='end')finish();lastSt=G.st;}
+  if(G.mode==='tag'&&G.st==='run'&&G.it!==lastIt){if(lastIt!==null){if(G.it===me()){toast(L(W.youit),'','#ff2a6d',1.6);noiseHit(.25,700);}else toast(L(W.tagged),`${nameOf(G.it)} ${L(W.isit)}`,'#ffe600',1.2);}lastIt=G.it;}
+  if(G.mode==='srace'&&G.st==='run'&&G.fin==null&&player&&player.done&&Number.isFinite(player.ft)){G.fin=+player.ft.toFixed(2);if(!G.solo)feed('🏁 '+L(W.wait));}
+  if(G.mode==='trail'&&G.st==='run')TRAIL.step(dt);
   hudBox();beacons();};
  // ---------- screens ----------
  const css=`#tagUI{position:fixed;inset:0;z-index:57;display:none;place-items:center;background:rgba(10,10,14,.72);font-family:'Rajdhani',system-ui,sans-serif;color:#fff}#tagUI.on{display:grid}
- #tagUI .card{width:min(720px,94vw);max-height:92vh;overflow:auto;background:rgba(30,31,36,.97);border-left:5px solid #ff2a6d;padding:22px 26px;clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)}
- #tagUI h2{margin:0;font:italic 900 32px 'Rajdhani';letter-spacing:.06em;color:#ff2a6d}#tagUI .s{color:#bbb;font:600 15px 'Rajdhani';margin:2px 0 14px}
- #tagUI .rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 16px}#tagUI .rules div{background:#23252b;padding:12px;font:600 15px/1.3 'Rajdhani';border-top:3px solid #ffe600;animation:tgIn .6s both}#tagUI .rules div:nth-child(2){animation-delay:.25s}#tagUI .rules div:nth-child(3){animation-delay:.5s}
- #tagUI .rules b{display:block;font:900 26px 'Rajdhani';color:#ffe600}@keyframes tgIn{from{opacity:0;transform:translateY(10px)}}
- #tagUI h3{margin:12px 0 6px;font:800 16px 'Rajdhani';letter-spacing:.1em;color:#ddd}.tgRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#23252b;margin-bottom:6px;font:700 17px 'Rajdhani'}
- .tgRow .ok{color:#59e36b}.tgRow .no{color:#888}.tgRow .it{color:#ff2a6d}
- .tgBtn{all:unset;cursor:pointer;background:#ffe600;color:#16171b;font:800 17px 'Rajdhani';letter-spacing:.08em;padding:11px 24px;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);display:inline-block}.tgBtn.dk{background:#2b2d33;color:#fff}.tgBtn[disabled]{opacity:.45;cursor:default}
+ #tagUI .card{width:min(980px,96vw);max-height:92vh;overflow:auto;background:rgba(30,31,36,.97);border-left:5px solid var(--mc,#ff2a6d);padding:22px 26px;clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)}
+ #tagUI h2{margin:0;font:italic 900 32px 'Rajdhani';letter-spacing:.06em;color:var(--mc,#ff2a6d)}#tagUI .s{color:#bbb;font:600 15px 'Rajdhani';margin:2px 0 14px}
+ .mCards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.mCard{background:#23252b;padding:16px;border-top:4px solid var(--c);display:flex;flex-direction:column;gap:8px;min-height:290px}
+ .mCard .ic{font-size:40px}.mCard b{font:italic 900 24px 'Rajdhani';letter-spacing:.06em;color:var(--c)}.mCard .w{font:700 15px 'Rajdhani';color:#fff}.mCard .ln{font:600 13px 'Rajdhani';color:#aaa;letter-spacing:.06em}
+ .mCard .rl{position:relative;height:72px;overflow:hidden;font:600 15px/1.3 'Rajdhani';color:#d5d7dc}.mCard .rl div{position:absolute;inset:0;opacity:0;animation:rlStep 10s infinite}.mCard .rl div:nth-child(2){animation-delay:3.33s}.mCard .rl div:nth-child(3){animation-delay:6.66s}
+ .mCard .rl div i{font-style:normal;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--c);color:#16171b;font:900 13px 'Rajdhani';margin-right:6px}
+ @keyframes rlStep{0%{opacity:0;transform:translateX(12px)}4%,30%{opacity:1;transform:none}34%,100%{opacity:0}}
+ .mCard .rb{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+ #tagUI h3{margin:14px 0 6px;font:800 16px 'Rajdhani';letter-spacing:.1em;color:#ddd}.tgRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#23252b;margin-bottom:6px;font:700 17px 'Rajdhani'}
+ .tgRow .ok{color:#59e36b}.tgRow .no{color:#888}
+ .tgBtn{all:unset;display:inline-block;cursor:pointer;background:#ffe600;color:#16171b;font:800 16px 'Rajdhani';letter-spacing:.08em;padding:10px 20px;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}.tgBtn.dk{background:#2b2d33;color:#fff}.tgBtn[disabled]{opacity:.45;cursor:default}
  #tagUI .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
- #tagHud{position:fixed;right:14px;top:120px;z-index:21;width:220px;background:rgba(14,14,20,.82);border-left:4px solid #ff2a6d;padding:10px 12px;font:700 15px 'Rajdhani';color:#fff;display:none}#tagHud.on{display:block}
+ #tagHud{position:fixed;right:84px;top:120px;z-index:21;width:220px;background:rgba(14,14,20,.82);border-left:4px solid var(--mc,#ff2a6d);padding:10px 12px;font:700 15px 'Rajdhani';color:#fff;display:none}#tagHud.on{display:block}
  #tagHud .tm{font:900 30px 'Rajdhani';letter-spacing:.04em}#tagHud .r{display:flex;justify-content:space-between;padding:2px 0}#tagHud .r.it{color:#ff2a6d}#tagHud .r.me{text-decoration:underline}
  #tagBanner{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:21;background:#ff2a6d;color:#fff;font:italic 900 22px 'Rajdhani';letter-spacing:.1em;padding:6px 18px;display:none;animation:tgPulse 1s infinite}@keyframes tgPulse{50%{opacity:.7}}
  .podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:14px 0}.podium div{width:150px;text-align:center;background:#23252b;padding:10px 6px;font:700 16px 'Rajdhani'}.podium b{display:block;font:900 30px 'Rajdhani';color:#ffe600}
- @media (max-width:820px),(max-height:520px){#tagUI .rules{grid-template-columns:1fr}#tagHud{top:60px;width:170px;font-size:13px}#tagHud .tm{font-size:22px}#tagUI h2{font-size:24px}}`;
+ #trailHud{position:fixed;left:50%;top:118px;transform:translateX(-50%);z-index:21;font:italic 900 22px 'Rajdhani';color:#19d3e6;text-shadow:0 2px 10px #000;display:none;letter-spacing:.08em}
+ @media (max-width:820px),(max-height:520px){.mCards{grid-template-columns:1fr}.mCard{min-height:0}#tagHud{right:62px;top:60px;width:170px;font-size:13px}#tagHud .tm{font-size:22px}#tagUI h2{font-size:24px}#trailHud{top:64px;font-size:16px}}`;
  function shell(){if(document.getElementById('tagUI'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
   const d=document.createElement('div');d.id='tagUI';d.innerHTML='<div class="card"></div>';document.body.appendChild(d);d.addEventListener('click',onClick);
-  const h=document.createElement('div');h.id='tagHud';document.body.appendChild(h);const b=document.createElement('div');b.id='tagBanner';document.body.appendChild(b);}
- function rules(){return`<div class="rules"><div><b>1</b>${L(W.rules1)}</div><div><b>2</b>${L(W.rules2)}</div><div><b>3</b>${L(W.rules3)}</div></div>`;}
- function render(){const c=document.querySelector('#tagUI .card');if(!c)return;let h=`<h2>🏷️ ${L(W.name)}</h2><div class="s">${L(W.sub)} · ${L(W.city)}: ${esc(CITY[S.city]?CITY[S.city].name:S.city)}</div>${rules()}`;
-  if(!online()){h+=`<p>${L(W.offline)}</p><div class="acts"><button class="tgBtn dk" data-t="close">${L(W.close)}</button></div>`;}
-  else if(!G.room){const gs=G.games();h+=`<h3>${L(W.games)}</h3>`+(gs.length?gs.map(g=>`<div class="tgRow"><span>${esc(g.n)} · ${g.count}/${G.MAX} ${L(W.players)}</span><button class="tgBtn" data-t="join" data-v="${esc(g.room)}" ${g.count>=G.MAX?'disabled':''}>${L(W.join)}</button></div>`).join(''):`<p style="color:#bbb">${L(W.none)}</p>`)+
-   `<div class="acts"><button class="tgBtn dk" data-t="close">${L(W.close)}</button><button class="tgBtn" data-t="host">${L(W.host)}</button></div>`;}
+  const h=document.createElement('div');h.id='tagHud';document.body.appendChild(h);const b=document.createElement('div');b.id='tagBanner';document.body.appendChild(b);const tr=document.createElement('div');tr.id='trailHud';document.body.appendChild(tr);}
+ const card=(k,btns)=>{const M=MODES[k];return`<div class="mCard" style="--c:${M.c}"><div class="ic">${M.ic}</div><b>${L(M.n)}</b><div class="w">${L(W.win)}: ${L(M.win)}</div><div class="ln">${L(M.len)}</div>
+   <div class="rl">${M.r.map((x,i)=>`<div><i>${i+1}</i>${L(x)}</div>`).join('')}</div>
+   ${btns?`<div class="rb">${online()?`<button class="tgBtn" data-t="host" data-v="${k}">${L(W.host)}</button>`:''}${M.solo?`<button class="tgBtn dk" data-t="solo" data-v="${k}">${L(W.solo)}</button>`:''}</div>`:''}</div>`;};
+ function render(){const c=document.querySelector('#tagUI .card');if(!c)return;const M=MODES[G.mode]||MODES.tag;c.style.setProperty('--mc',G.room?M.c:'#ffe600');
+  let h=`<h2>${G.room?M.ic+' '+L(M.n):'🌀 '+L(W.title)}</h2><div class="s">${G.room?L(M.len)+' · ':L(W.sub)+' · '}${L(W.city)}: ${esc(CITY[S.city]?CITY[S.city].name:S.city)}</div>`;
+  if(!G.room){h+=`<div class="mCards">${['tag','trail','srace'].map(k=>card(k,true)).join('')}</div>`;
+   if(!online())h+=`<p style="color:#bbb">${L(W.offline)}</p>`;
+   else{const gs=G.games();h+=`<h3>${L(W.games)}</h3>`+(gs.length?gs.map(g=>`<div class="tgRow"><span>${MODES[g.md].ic} ${L(MODES[g.md].n)} · ${esc(g.n)} · ${g.count}/${G.MAX} ${L(W.players)}</span><button class="tgBtn" data-t="join" data-v="${esc(g.room)}" ${g.count>=G.MAX?'disabled':''}>${L(W.join)}</button></div>`).join(''):`<p style="color:#bbb">${L(W.none)}</p>`);}
+   h+=`<div class="acts"><button class="tgBtn dk" data-t="close">${L(W.close)}</button></div>`;}
   else if(G.st==='end'){h=endHtml();}
-  else{const pl=G.host?G.players():(G.pl||[]);const rd=pe=>{if(pe===NET.myPeer)return G.host||G.ready;const r=NET.remotes.get(pe);const t=r&&r.d&&r.d.tg;return!!(t&&(t.h||t.rd));};
-   const nReady=pl.filter(rd).length;h+=`<h3>${L(W.players)} · ${pl.length}/${G.MAX}</h3>`+pl.map(pe=>`<div class="tgRow"><span>${pe===NET.myPeer?'⭐ ':''}${esc(nameOf(pe))}</span><span class="${rd(pe)?'ok':'no'}">${rd(pe)?'✓ '+L(W.ready):L(W.notready)}</span></div>`).join('');
+  else{const pl=G.host?G.players():(G.pl||[]);const rd=pe=>{if(pe===me())return G.host||G.ready;const t=remoteTg(pe);return!!(t&&(t.h||t.rd));};
+   const nReady=pl.filter(rd).length;h+=`<div class="mCards" style="grid-template-columns:1fr">${card(G.mode,false)}</div>`;
+   if(G.mode==='srace'&&G.host)h+=`<h3>${L(W.laps)}</h3><div style="display:flex;gap:8px">${[1,2,3].map(n=>`<button class="tgBtn ${G.lp===n?'':'dk'}" data-t="laps" data-v="${n}">${n}</button>`).join('')}</div>`;
+   h+=`<h3>${L(W.players)} · ${pl.length}/${G.MAX}</h3>`+pl.map(pe=>`<div class="tgRow"><span>${pe===me()?'⭐ ':''}${esc(nameOf(pe))}</span><span class="${rd(pe)?'ok':'no'}">${rd(pe)?'✓ '+L(W.ready):L(W.notready)}</span></div>`).join('');
    h+=nReady<2?`<p style="color:#bbb">${L(W.need)}</p>`:'';
    h+=`<div class="acts"><button class="tgBtn dk" data-t="leave">${L(W.leave)}</button>${G.host?`<button class="tgBtn" data-t="start" ${nReady<2?'disabled':''}>${L(W.start)}</button>`:`<button class="tgBtn" data-t="ready">${G.ready?L(W.notready):L(W.ready)}</button>`}</div>`;}
   c.innerHTML=h;}
- function endHtml(){const pl=Object.keys(G.sc||{});const rows=pl.map(pe=>({pe,s:+G.sc[pe]||0})).sort((a,b)=>a.s-b.s);const pay=[600,400,250];
-  return`<h2>🏁 ${L(W.over)}</h2>${G.hostLeft?`<p>${L(W.left)}</p>`:''}<div class="podium">${[1,0,2].map(i=>rows[i]?[rows[i],i]:null).filter(Boolean).map(([r,i])=>`<div style="height:${[150,120,100][i]}px"><b>${['🥇','🥈','🥉'][i]}</b>${esc(nameOf(r.pe))}<br><small>${r.s.toFixed(1)}${L(W.sec)}</small></div>`).join('')}</div>`+
-   rows.slice(3).map((r,i)=>`<div class="tgRow"><span>${i+4}. ${esc(nameOf(r.pe))}</span><span>${r.s.toFixed(1)}${L(W.sec)}</span></div>`).join('')+
+ function ranked(){const sc=G.sc||{},ks=Object.keys(sc);
+  if(G.mode==='tag')return ks.map(pe=>({pe,v:+sc[pe]||0,t:`${(+sc[pe]||0).toFixed(1)}${L(W.sec)}`})).sort((a,b)=>a.v-b.v);
+  if(G.mode==='trail')return ks.map(pe=>({pe,v:+sc[pe]||0,t:`${Math.round(+sc[pe]||0).toLocaleString()} ${L(W.pts)}`})).sort((a,b)=>b.v-a.v);
+  return ks.map(pe=>{const s=sc[pe]||{};return{pe,f:s.f!=null?+s.f:null,p:+s.p||0,t:s.f!=null?`${(+s.f).toFixed(2)} s`:L(W.dnf)};}).sort((a,b)=>(a.f!=null&&b.f!=null)?a.f-b.f:a.f!=null?-1:b.f!=null?1:b.p-a.p);}
+ function endHtml(){const rows=ranked(),M=MODES[G.mode];
+  return`<h2>🏁 ${L(W.over)}</h2><div class="s">${M.ic} ${L(M.n)}</div>${G.hostLeft?`<p>${L(W.left)}</p>`:''}<div class="podium">${[1,0,2].map(i=>rows[i]?[rows[i],i]:null).filter(Boolean).map(([r,i])=>`<div style="height:${[150,120,100][i]}px"><b>${['🥇','🥈','🥉'][i]}</b>${esc(nameOf(r.pe))}<br><small>${r.t}</small></div>`).join('')}</div>`+
+   rows.slice(3).map((r,i)=>`<div class="tgRow"><span>${i+4}. ${esc(nameOf(r.pe))}</span><span>${r.t}</span></div>`).join('')+
    `<div class="tgRow"><span>💵 +${fmt(G.myPay||0)} ${L(W.coins)}</span><span>${(typeof QUICK!=='undefined')?'💬 '+QUICK.slice(0,4).join(' · '):''}</span></div><div class="acts"><button class="tgBtn dk" data-t="leave">${L(W.close)}</button>${G.host?`<button class="tgBtn" data-t="again">${L(W.again)}</button>`:''}</div>`;}
- function finish(){const key=G.room+':'+G.t0;if(G.paid===key){openUI();return;}G.paid=key;const rows=Object.keys(G.sc||{}).map(pe=>({pe,s:+G.sc[pe]||0})).sort((a,b)=>a.s-b.s);const i=rows.findIndex(r=>r.pe===NET.myPeer);
-  const pay=i<0?100:[600,400,250][i]||150;G.myPay=pay;reward(pay,i===0?80:30,i===0?60:20);if(i===0){SAVE.stats.tagWins=(SAVE.stats.tagWins||0)+1;}save();try{TEL.add('tag',{n:rows.length,r:i+1});}catch(e){}
-  document.getElementById('tagBanner').style.display='none';document.getElementById('tagHud').classList.remove('on');openUI();}
+ function finish(){const key=G.room+':'+G.t0;if(G.paid===key){openUI();return;}G.paid=key;const rows=ranked();const i=rows.findIndex(r=>r.pe===me());
+  if(G.mode==='trail'){TRAIL.end();}if(G.mode==='srace'){SHIFT.limit=null;SHIFT.used=0;if(S.race&&S.race.shift){try{S.race=null;racers.forEach(r=>world.remove(r.mesh));racers=[];S.mode='free';const el=$('count');el&&el.classList.add('hidden');}catch(e){}}}
+  const solo=G.solo;let pay=i<0?100:[600,400,250][i]||150;if(solo&&G.mode==='trail')pay=Math.min(600,Math.max(50,Math.round((rows[0]&&rows[0].v||0)/6)));if(solo&&G.mode==='srace')pay=G.fin!=null?500:100;
+  G.myPay=pay;reward(pay,i===0?80:30,i===0?60:20);if(i===0&&!solo){SAVE.stats.tagWins=(SAVE.stats.tagWins||0)+1;}save();try{TEL.add('online',{m:G.mode,n:rows.length,r:i+1,s:solo?1:0});}catch(e){}
+  document.getElementById('tagBanner').style.display='none';document.getElementById('tagHud').classList.remove('on');document.getElementById('trailHud').style.display='none';openUI();}
  function openUI(){shell();document.getElementById('tagUI').classList.add('on');G.ui=true;render();}
  function closeUI(){const u=document.getElementById('tagUI');if(u)u.classList.remove('on');G.ui=false;}
  G.open=()=>{if(S.state!=='play')return;if(window.HUB&&HUB.open)HUB.close();openUI();};
+ function startRound(){const pl=G.players();G.sc={};pl.forEach(pe=>G.sc[pe]=G.mode==='srace'?{p:0}:0);G.it=pl[Math.floor(Math.random()*pl.length)];G.t0=now()+4000;G.im=G.t0+2000;
+  if(G.mode!=='tag'){const rs=races();G.ev=rs.length?rs[Math.floor(Math.random()*rs.length)].id:null;}G.st='run';G.paid=null;closeUI();}
  function onClick(e){const t=e.target.closest('[data-t]');if(!t||t.disabled)return;const a=t.dataset.t,v=t.dataset.v;
   if(a==='close'){closeUI();if(G.st==='end')leave();return;}
-  if(a==='host'){G.room=(NET.myPeer||'p').slice(0,40)+'-'+now().toString(36);G.host=true;G.ready=true;G.st='lobby';G.sc={};G.seen={};G.paid=null;G.hostLeft=false;render();return;}
-  if(a==='join'){const g=G.games().find(x=>x.room===v);if(!g)return;if(g.count>=G.MAX){toast(L(W.name),L(W.full),'#ff8a00',1.4);return;}G.room=v;G.host=false;G.ready=false;G.st='lobby';G.paid=null;G.hostLeft=false;G.lastHost=now();render();return;}
+  if(a==='host'||a==='solo'){if(S.race||S.deliv){toast(L(W.title),L(W.busy),'#ff8a00',1.4);return;}G.mode=MODES[v]?v:'tag';G.room=(me()).slice(0,40)+'-'+now().toString(36);G.host=true;G.ready=true;G.st='lobby';G.sc={};G.seen={};G.paid=null;G.hostLeft=false;G.solo=a==='solo';G.lp=1;
+   if(G.solo){startRound();return;}render();return;}
+  if(a==='join'){const g=G.games().find(x=>x.room===v);if(!g)return;if(g.count>=G.MAX){toast(L(W.title),L(W.full),'#ff8a00',1.4);return;}G.room=v;G.mode=g.md;G.host=false;G.ready=false;G.st='lobby';G.paid=null;G.hostLeft=false;G.solo=false;G.lastHost=now();render();return;}
   if(a==='ready'){G.ready=!G.ready;render();return;}
+  if(a==='laps'){G.lp=+v||1;render();return;}
   if(a==='leave'){leave();closeUI();return;}
-  if(a==='start'||a==='again'){const pl=G.players();G.sc={};pl.forEach(pe=>G.sc[pe]=0);G.it=pl[Math.floor(Math.random()*pl.length)];G.t0=now()+4000;G.im=G.t0+2000;G.st='run';G.paid=null;closeUI();return;}}
- function leave(){G.room=null;G.host=false;G.ready=false;G.st=null;G.it=null;G.sc={};G.seen={};lastSt=null;lastIt=null;const h=document.getElementById('tagHud');if(h)h.classList.remove('on');const b=document.getElementById('tagBanner');if(b)b.style.display='none';beaconsOff();}
+  if(a==='start'||a==='again'){startRound();return;}}
+ function leave(){if(G.mode==='trail')TRAIL.end();if(G.mode==='srace'){SHIFT.limit=null;SHIFT.used=0;}G.room=null;G.host=false;G.ready=false;G.st=null;G.it=null;G.sc={};G.seen={};G.solo=false;G.fin=null;lastSt=null;lastIt=null;
+  const h=document.getElementById('tagHud');if(h)h.classList.remove('on');const b=document.getElementById('tagBanner');if(b)b.style.display='none';const tr=document.getElementById('trailHud');if(tr)tr.style.display='none';beaconsOff();}
  G.leave=leave;
- // ---------- in-game HUD + pink beacon on IT ----------
- let lastHud=0;function hudBox(){if(!G.active()){return;}shell();const t=now();if(t-lastHud<250)return;lastHud=t;const h=document.getElementById('tagHud');h.classList.add('on');
-  const left=Math.max(0,Math.ceil((G.t0+G.ROUND*1000-t)/1000)),pre=t<G.t0;const rows=Object.keys(G.sc).map(pe=>({pe,s:+G.sc[pe]||0})).sort((a,b)=>a.s-b.s);
-  h.innerHTML=`<div>🏷️ ${L(W.name)}</div><div class="tm">${pre?Math.ceil((G.t0-t)/1000):`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`}</div>`+rows.map(r=>`<div class="r ${r.pe===G.it?'it':''} ${r.pe===NET.myPeer?'me':''}"><span>${r.pe===G.it?'🔴 ':''}${esc(nameOf(r.pe))}</span><span>${r.s.toFixed(1)}s</span></div>`).join('');
+ let lastHud=0;function hudBox(){if(!G.active())return;shell();const t=now();if(t-lastHud<250)return;lastHud=t;const h=document.getElementById('tagHud');h.classList.add('on');const M=MODES[G.mode];h.style.setProperty('--mc',M.c);
+  const left=Math.max(0,Math.ceil((G.t0+M.round*1000-t)/1000)),pre=t<G.t0;const rows=ranked();
+  const tm=pre?Math.ceil((G.t0-t)/1000):G.mode==='srace'?`${(((t-G.t0)/1000)|0)}s`:`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;
+  h.innerHTML=`<div>${M.ic} ${L(M.n)}</div><div class="tm">${tm}</div>`+rows.map(r=>`<div class="r ${G.mode==='tag'&&r.pe===G.it?'it':''} ${r.pe===me()?'me':''}"><span>${G.mode==='tag'&&r.pe===G.it?'🔴 ':''}${esc(nameOf(r.pe))}</span><span>${r.t.replace(L(W.sec),'s')}</span></div>`).join('')+(G.mode==='srace'&&SHIFT.limit!=null?`<div class="r"><span>🌀</span><span>${Math.max(0,SHIFT.limit-(SHIFT.used||0))}/5</span></div>`:'');
   const b=document.getElementById('tagBanner');b.style.display=G.isIt()&&!pre?'block':'none';b.textContent=L(W.youit);}
  const bmat=new THREE.SpriteMaterial({map:softTex,color:0xff2a6d,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});let bsp=null;
- function beacons(){if(!G.active()){beaconsOff();return;}if(!bsp){bsp=new THREE.Sprite(bmat);bsp.scale.set(10,10,1);world.add(bsp);}const it=G.it===NET.myPeer?player:(NET.remotes.get(G.it)||null);
+ function beacons(){if(!G.active()||G.mode!=='tag'){beaconsOff();return;}if(!bsp){bsp=new THREE.Sprite(bmat);bsp.scale.set(10,10,1);world.add(bsp);}const it=G.it===me()?player:(NET.remotes.get(G.it)||null);
   if(!it){bsp.visible=false;return;}bsp.visible=true;bsp.position.set(it.x,(it.y||0)+3+Math.sin(performance.now()/180)*.4,it.z);}
  function beaconsOff(){if(bsp)bsp.visible=false;}
+ // ---------- Trailblazer: a ghost car laps a race route; drive in its glowing trail ----------
+ const TRAIL={on:false,pts:0,mult:1,inT:0,wps:null,cum:null,len:0,t0:0,v:21,ghost:null,spr:[]};
+ const tmat=new THREE.SpriteMaterial({map:softTex,color:0x19d3e6,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending});
+ TRAIL.begin=(evId,t0)=>{const ev=races().find(e=>e.id===evId)||races()[0];if(!ev)return;const C=CITY[S.city];const wps=ev.rw?ev.rw.map(q=>({x:q[0],z:q[1]})):C.routes[ev.route].map(([i,j])=>({x:roadC(i),z:roadC(j)}));
+  TRAIL.wps=wps;TRAIL.cum=[0];for(let i=1;i<=wps.length;i++){const a=wps[i-1],b=wps[i%wps.length];TRAIL.cum.push(TRAIL.cum[i-1]+Math.hypot(b.x-a.x,b.z-a.z));}TRAIL.len=TRAIL.cum[wps.length];TRAIL.t0=t0;TRAIL.pts=0;TRAIL.mult=1;TRAIL.inT=0;TRAIL.on=true;
+  if(!TRAIL.ghost){TRAIL.ghost=buildCarMesh(CARS.x1||Object.values(CARS)[0],new THREE.Color('#19d3e6'),{glow:'#19d3e6'});TRAIL.ghost.traverse(o=>{if(o.isMesh&&o.material&&!Array.isArray(o.material)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.55;o.material.depthWrite=false;}});}
+  world.add(TRAIL.ghost);while(TRAIL.spr.length<30){const s=new THREE.Sprite(tmat);s.scale.set(5,5,1);world.add(s);TRAIL.spr.push(s);}TRAIL.spr.forEach(s=>{if(!s.parent)world.add(s);});
+  try{const a=wps[0],b=wps[1];placeOnRoad(player,a.x-(b.x-a.x)*.15,a.z-(b.z-a.z)*.15,Math.atan2(b.x-a.x,b.z-a.z));}catch(e){}};
+ TRAIL.at=s=>{const L2=TRAIL.len;s=((s%L2)+L2)%L2;let i=1;while(i<TRAIL.cum.length&&TRAIL.cum[i]<s)i++;const a=TRAIL.wps[(i-1)%TRAIL.wps.length],b=TRAIL.wps[i%TRAIL.wps.length],seg=TRAIL.cum[i]-TRAIL.cum[i-1]||1,k=(s-TRAIL.cum[i-1])/seg;return{x:a.x+(b.x-a.x)*k,z:a.z+(b.z-a.z)*k,h:Math.atan2(b.x-a.x,b.z-a.z)};};
+ TRAIL.step=dt=>{if(!TRAIL.on||!player)return;const t=(now()-TRAIL.t0)/1000;if(t<0)return;const s=t*TRAIL.v,g=TRAIL.at(s);TRAIL.ghost.position.set(g.x,0,g.z);TRAIL.ghost.rotation.y=g.h;
+  let inside=false;for(let i=0;i<TRAIL.spr.length;i++){const d=s-8-i*4.2,sp=TRAIL.spr[i];if(d<0){sp.visible=false;continue;}const q=TRAIL.at(d);sp.position.set(q.x,.6,q.z);sp.visible=true;if(Math.hypot(player.x-q.x,player.z-q.z)<4.5)inside=true;}
+  if(inside){TRAIL.inT+=dt;TRAIL.mult=Math.min(3,1+Math.floor(TRAIL.inT/3)*.5);TRAIL.pts+=dt*12*TRAIL.mult;}else{TRAIL.inT=Math.max(0,TRAIL.inT-dt*2);TRAIL.mult=Math.max(1,TRAIL.mult-dt);}
+  const hd=document.getElementById('trailHud');if(hd){hd.style.display='block';hd.textContent=inside?`✨ ${L(W.inTrail)} ×${TRAIL.mult.toFixed(1)} · ${Math.round(TRAIL.pts)}`:`${Math.round(TRAIL.pts)} ${L(W.pts)} · ${Math.round(Math.hypot(player.x-g.x,player.z-g.z))} m`;}};
+ TRAIL.end=()=>{TRAIL.on=false;if(TRAIL.ghost)world.remove(TRAIL.ghost);TRAIL.spr.forEach(s=>s.visible=false);const hd=document.getElementById('trailHud');if(hd)hd.style.display='none';};
+ G.TRAIL=TRAIL;
  const _upd=update;update=function(dt){_upd(dt);try{G.step(dt);}catch(e){console.warn('tag',e);}};
- // keep the lobby list fresh while it is open
- setInterval(()=>{try{if(G.ui&&G.st!=='end')render();}catch(e){}},1000);
- // dock button
- setInterval(()=>{const d=document.getElementById('socDock');if(d&&!d.querySelector('[data-tag]')){const b=document.createElement('button');b.dataset.tag='1';b.title='Shift Tag';b.textContent='🏷️';d.appendChild(b);b.onclick=e=>{e.stopPropagation();G.open();};}},1500);
- Object.assign(I18N,{'SHIFT TAG':['SHIFT TAG','SHIFT TAG'],'Shift Tag':['Shift Tag','Shift Tag']});
+ let gk='';setInterval(()=>{try{if(!G.ui||G.st==='end')return;if(G.room){render();return;}const k=JSON.stringify(G.games());if(k!==gk){gk=k;render();}}catch(e){}},1000);
+ setInterval(()=>{const d=document.getElementById('socDock');if(d&&!d.querySelector('[data-tag]')){const b=document.createElement('button');b.dataset.tag='1';b.title='Shift Online';b.textContent='🌀';d.appendChild(b);b.onclick=e=>{e.stopPropagation();G.open();};}},1500);
  return G;})();
 // ---------- /TAG
+
+// ---------- MISSIONS (v4.2): kid-friendly chase missions — comic intro with voice, big arrow, gentle timers, 1 to 3 stars ----------
+var MISSIONS=(function(){
+ const M={cur:null,easy:false};
+ const TX=(en,fr,it)=>({en,fr,it});const L=o=>o[(typeof LANG!=='undefined'&&o[LANG])?LANG:'en'];
+ const W={title:TX('CHASE MISSIONS','MISSIONS POURSUITE','MISSIONI INSEGUIMENTO'),easy:TX('EASY · no timer','FACILE · sans chrono','FACILE · senza tempo'),normal:TX('NORMAL','NORMAL','NORMALE'),play:TX('PLAY','JOUER','GIOCA'),
+  go:TX('TRAVEL & PLAY','VOYAGER & JOUER','VIAGGIA E GIOCA'),skip:TX('SKIP','PASSER','SALTA'),done:TX('MISSION COMPLETE','MISSION RÉUSSIE','MISSIONE COMPIUTA'),again:TX('Try again — you can do it!','Réessaie, tu vas y arriver !','Riprova, ce la puoi fare!'),
+  best:TX('Best','Meilleur','Record'),quit:TX('QUIT MISSION','QUITTER LA MISSION','ESCI DALLA MISSIONE'),close:TX('CLOSE','FERMER','CHIUDI'),more:TX('More missions arrive soon.','D’autres missions arrivent bientôt.','Altre missioni in arrivo.'),
+  spotted:TX('Too close — the robot spotted you!','Trop près, le robot t’a vu !','Troppo vicino, il robot ti ha visto!'),lost:TX('Catch up!','Rattrape-le !','Raggiungilo!'),good:TX('Perfect distance','Distance parfaite','Distanza perfetta'),
+  pick:TX('Pick up the passenger','Prends le passager','Fai salire il passeggero'),drop:TX('Drop them at','Dépose-le à','Lascialo a'),got:TX('Passenger on board!','Passager à bord !','Passeggero a bordo!'),thanks:TX('Thanks, driver!','Merci, chauffeur !','Grazie, autista!')};
+ M.L=L;
+ // ---------- the missions (Phase 2: the first one in each city) ----------
+ const LIST=[
+  {id:'icecream',city:'dakar',ic:'🍦',kind:'catch',time:100,goal:'sorano',col:0xffffff,acc:0xff7ab8,
+   n:TX('Runaway Ice Cream Truck','Le camion de glaces fugueur','Il camioncino dei gelati in fuga'),
+   g:TX('Catch the truck before it reaches Théâtre Sorano','Attrape le camion avant le Théâtre Sorano','Prendi il camioncino prima del Teatro Sorano'),
+   panels:[['🍦','The ice cream truck lost its brakes… no, its driver just wants to dance at Sorano!','Le camion de glaces a perdu ses freins… non, son chauffeur veut juste danser à Sorano !','Il camioncino ha perso i freni… no, l’autista vuole solo ballare al Sorano!'],
+    ['🥁','The kids at the school party are waiting for their ice cream.','Les enfants de la fête de l’école attendent leurs glaces.','I bambini della festa a scuola aspettano i gelati.'],['🚗','Catch it before it reaches Théâtre Sorano!','Rattrape-le avant le Théâtre Sorano !','Prendilo prima del Teatro Sorano!']],stars:[35,65]},
+  {id:'pizza',city:'paris',ic:'🍕',kind:'bump',hits:3,time:150,goal:'arc',col:0xff2a6d,acc:0xffd000,
+   n:TX('Prankster Pizza Car','La voiture pizza du farceur','L’auto pizza del burlone'),
+   g:TX('Bump the prankster 3 times before it laps the Arc de Triomphe','Percute le farceur 3 fois avant qu’il fasse le tour de l’Arc','Urta il burlone 3 volte prima che giri attorno all’Arco'),
+   panels:[['🍕','A prankster swapped every pizza in Paris for… pineapple!','Un farceur a remplacé toutes les pizzas de Paris par… de l’ananas !','Un burlone ha cambiato tutte le pizze di Parigi con… l’ananas!'],
+    ['🏛️','He is racing to the Arc de Triomphe to show off.','Il fonce vers l’Arc de Triomphe pour frimer.','Corre all’Arco di Trionfo per fare il furbo.'],['💥','Bump his car 3 times to stop the prank!','Percute sa voiture 3 fois pour arrêter la farce !','Urta la sua auto 3 volte per fermare lo scherzo!']],stars:[60,100]},
+  {id:'robot',city:'tokyo',ic:'🤖',kind:'follow',need:70,time:180,col:0xeeeeee,acc:0x19d3e6,
+   n:TX('Lost Robot Delivery','La livraison du robot perdu','La consegna del robot perduto'),
+   g:TX('Follow the delivery van without being spotted','Suis la camionnette sans te faire voir','Segui il furgone senza farti vedere'),
+   panels:[['🤖','A tiny robot was packed into the wrong delivery van!','Un petit robot a été mis dans la mauvaise camionnette !','Un piccolo robot è finito nel furgone sbagliato!'],
+    ['📦','We need to see where the van goes, but the driver is shy.','Il faut voir où va la camionnette, mais le chauffeur est timide.','Dobbiamo vedere dove va il furgone, ma l’autista è timido.'],['👀','Stay close, but not too close!','Reste près, mais pas trop !','Stai vicino, ma non troppo!']],stars:[0,2]},
+  {id:'taxirush',city:'nyc',ic:'🚕',kind:'taxi',legs:5,time:180,
+   n:TX('Taxi Rush','La course des taxis','Corsa in taxi'),
+   g:TX('Carry 5 passengers across Midtown in 3 minutes','Transporte 5 passagers dans Midtown en 3 minutes','Porta 5 passeggeri a Midtown in 3 minuti'),
+   panels:[['🚕','The big parade starts soon and every taxi in Midtown is busy.','La grande parade commence et tous les taxis de Midtown sont pris.','La grande parata sta per iniziare e i taxi di Midtown sono tutti occupati.'],
+    ['🙋','Five people still need a ride!','Cinq personnes ont encore besoin d’un taxi !','Cinque persone hanno ancora bisogno di un passaggio!'],['⏱️','Pick them up and drop them off as fast as you can.','Prends-les et dépose-les le plus vite possible.','Falli salire e scendere il più in fretta possibile.']],stars:[5,3]}];
+ M.LIST=LIST;
+ const best=id=>(SAVE.missions&&SAVE.missions[id]&&SAVE.missions[id].s)||0;
+ // save field survives the save cleaner
+ const _san=sanitize;sanitize=function(src){const d=_san(src);d.missions={};try{if(src&&src.missions&&typeof src.missions==='object')for(const k of LIST.map(x=>x.id)){const v=src.missions[k];if(v&&Number.isInteger(v.s))d.missions[k]={s:Math.min(3,Math.max(0,v.s)),n:Math.min(9999,Math.max(0,v.n|0))};}}catch(e){}return d;};
+ // ---------- helpers ----------
+ const lm=id=>{const l=(typeof REAL!=='undefined'&&REAL.lms||[]).find(q=>q.id===id);return l?{x:l.x,z:l.z,n:l.n}:null;};
+ const okV=t=>t&&t.mesh&&t.mesh.visible&&!t.len&&!t.ghost&&!t.patrol&&!t.crashed&&!t.prank&&!t.exPlayer&&t.mesh.userData&&t.mesh.userData.paint&&!['cart','bike','tiak','jakarta','sport'].includes(t.kind);
+ function grabVehicle(def){let c=traffic.filter(t=>okV(t)&&Math.hypot(t.x-player.x,t.z-player.z)>35&&Math.hypot(t.x-player.x,t.z-player.z)<160);if(!c.length)c=traffic.filter(t=>okV(t)&&Math.hypot(t.x-player.x,t.z-player.z)>20);if(!c.length)return null;
+  c.sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z));const t=c[0];t.mis=true;t._spd0=t.spd;if(t.spd)t.spd=Math.min(24,t.spd*(def.kind==='follow'?1.05:1.5));
+  const ud=t.mesh.userData;t._col=ud.paint.color.clone();ud.paint.color.set(def.col||0xffffff);const fl=new THREE.Sprite(new THREE.SpriteMaterial({map:softTex,color:def.acc||0xffe600,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));fl.scale.set(6,6,1);fl.position.y=2.6;t.mesh.add(fl);t._fl=fl;return t;}
+ function freeVehicle(t){if(!t)return;t.mis=false;if(t._spd0)t.spd=t._spd0;try{if(t._col)t.mesh.userData.paint.color.copy(t._col);if(t._fl)t.mesh.remove(t._fl);}catch(e){}}
+ // a beam of light marks a goal on the map
+ let beam=null;function setBeam(p,col){if(!beam){beam=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.4,140,16,1,true),new THREE.MeshBasicMaterial({color:col||0xffe600,transparent:true,opacity:.35,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));world.add(beam);}
+  if(!p){beam.visible=false;return;}if(!beam.parent)world.add(beam);beam.material.color.set(col||0xffe600);beam.position.set(p.x,70,p.z);beam.visible=true;}
+ function farPoint(d){const c=traffic.filter(t=>t.mesh&&!t.len).sort((a,b)=>Math.hypot(b.x-player.x,b.z-player.z)-Math.hypot(a.x-player.x,a.z-player.z));const t=c[Math.min(c.length-1,2)];return t?{x:t.x,z:t.z}:{x:player.x+d,z:player.z};}
+ function taxiPoint(i){const ls=(typeof REAL!=='undefined'&&REAL.lms||[]).filter(l=>Math.hypot(l.x-player.x,l.z-player.z)>120&&Math.hypot(l.x-player.x,l.z-player.z)<700);
+  if(ls.length){const l=ls[(i*3+Math.floor(Math.random()*ls.length))%ls.length];const q=RP&&RP.near?RP.near(l.x,l.z):null;return{x:q?q.x:l.x,z:q?q.z:l.z,n:l.n};}
+  const c=traffic.filter(t=>t.mesh&&!t.len&&Math.hypot(t.x-player.x,t.z-player.z)>120&&Math.hypot(t.x-player.x,t.z-player.z)<500);const t=c[Math.floor(Math.random()*c.length)];return t?{x:t.x,z:t.z,n:'Midtown'}:{x:player.x+200,z:player.z,n:'Midtown'};}
+ // ---------- HUD: big arrow + distance ----------
+ const css=`#misArrow{position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:21;display:none;text-align:center;font-family:'Rajdhani',sans-serif;color:#fff;pointer-events:none;text-shadow:0 2px 8px #000}
+ #misArrow svg{width:64px;height:64px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}#misArrow b{display:block;font:900 26px 'Rajdhani';letter-spacing:.04em}#misArrow span{font:700 15px 'Rajdhani';display:block;max-width:60vw}#misArrow i{font-style:normal;font:800 14px 'Rajdhani';color:#ffe600}
+ #misComic{position:fixed;inset:0;z-index:60;display:none;background:rgba(8,8,12,.88);place-items:center;font-family:'Rajdhani',sans-serif}#misComic.on{display:grid}
+ #misComic .pn{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:min(1000px,94vw)}#misComic .p{background:#fffbea;color:#16171b;border:5px solid #16171b;box-shadow:8px 8px 0 #ff2a6d;padding:18px;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;opacity:0;transform:scale(.9) rotate(-1deg);animation:cmIn .45s forwards}
+ #misComic .p:nth-child(2){animation-delay:2s;transform:scale(.9) rotate(1deg)}#misComic .p:nth-child(3){animation-delay:4s}@keyframes cmIn{to{opacity:1;transform:none}}
+ #misComic .p .e{font-size:76px;text-align:center}#misComic .p .t{font:800 18px/1.25 'Comic Sans MS','Rajdhani',sans-serif;background:#fff;border:3px solid #16171b;border-radius:14px;padding:10px 12px}
+ #misComic h2{grid-column:1/-1;margin:0 0 4px;font:italic 900 36px 'Rajdhani';color:#ffe600;letter-spacing:.06em;text-align:center}
+ #misComic .sk{grid-column:1/-1;justify-self:end}
+ #misList .ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}#misList .mi{background:#23252b;padding:14px;border-left:5px solid #ffe600;display:flex;flex-direction:column;gap:6px}#misList .mi.off{opacity:.75}
+ #misList .mi b{font:800 19px 'Rajdhani'}#misList .mi .st{font-size:20px;letter-spacing:2px}#misList .mi small{color:#bbb;font:600 14px 'Rajdhani'}
+ .tgBtn{all:unset;display:inline-block;cursor:pointer;background:#ffe600;color:#16171b;font:800 16px 'Rajdhani';letter-spacing:.08em;padding:10px 20px;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}.tgBtn.dk{background:#2b2d33;color:#fff}
+ @media (max-width:820px),(max-height:520px){#misComic .pn{grid-template-columns:1fr;gap:6px}#misComic .p{min-height:0;padding:8px;flex-direction:row;align-items:center;gap:8px}#misComic .p .e{font-size:34px}#misComic .p .t{font-size:14px}#misComic h2{font-size:22px}#misArrow{top:60px}#misArrow svg{width:44px;height:44px}#misArrow b{font-size:20px}}`;
+ function shell(){if(document.getElementById('misArrow'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+  const a=document.createElement('div');a.id='misArrow';a.innerHTML='<svg viewBox="0 0 64 64"><path d="M32 4 L56 54 L32 42 L8 54 Z" fill="#ffe600" stroke="#16171b" stroke-width="3" stroke-linejoin="round"/></svg><b></b><span></span><i></i>';document.body.appendChild(a);
+  const c=document.createElement('div');c.id='misComic';document.body.appendChild(c);c.addEventListener('click',e=>{if(e.target.closest('[data-m="skip"]'))go();});}
+ function arrow(tx,tz,label,extra){const a=document.getElementById('misArrow');if(!a)return;a.style.display='block';const f=new THREE.Vector3();camera.getWorldDirection(f);const camH=Math.atan2(f.x,f.z),toH=Math.atan2(tx-player.x,tz-player.z);
+  let d=toH-camH;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;a.querySelector('svg').style.transform=`rotate(${(-d*180/Math.PI).toFixed(1)}deg)`;
+  a.querySelector('b').textContent=Math.round(Math.hypot(tx-player.x,tz-player.z))+' m';a.querySelector('span').textContent=label||'';a.querySelector('i').textContent=extra||'';}
+ function arrowOff(){const a=document.getElementById('misArrow');if(a)a.style.display='none';}
+ // ---------- voice (built into the browser; nothing downloaded) ----------
+ function say(t){try{if(S.muted||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang={en:'en-US',fr:'fr-FR',it:'it-IT'}[LANG]||'en-US';u.rate=1.02;u.pitch=1.15;speechSynthesis.speak(u);}catch(e){}}
+ // ---------- list screen ----------
+ M.open=()=>{if(S.state!=='play')return;if(window.HUB&&HUB.open)HUB.close();shell();
+  const rows=LIST.map(d=>{const here=d.city===S.city,b=best(d.id);return`<div class="mi ${here?'':'off'}" style="border-color:${here?'#ffe600':'#555'}"><span style="font-size:34px">${d.ic}</span><b>${L(d.n)}</b><small>${esc(CITY[d.city].name)} · ${L(d.g)}</small>
+   <div class="st">${'★'.repeat(b)}${'☆'.repeat(3-b)}</div><button class="tgBtn" data-mis="${d.id}">${here?L(W.play):L(W.go)}</button></div>`;}).join('');
+  openModal(`<div id="misList"><h2 style="margin:0 0 4px">🎬 ${L(W.title)}</h2><p class="note">${L(W.more)}</p>
+   <div style="display:flex;gap:8px;margin:8px 0 12px"><button class="tgBtn ${M.easy?'':'dk'}" data-mez="1">${L(W.easy)}</button><button class="tgBtn ${M.easy?'dk':''}" data-mez="0">${L(W.normal)}</button></div>
+   <div class="ms">${rows}</div><div style="text-align:right;margin-top:12px"><button class="tgBtn dk" data-mcl="1">${L(W.close)}</button></div></div>`);
+  const mc=document.getElementById('modalCard');mc.onclick=e=>{const z=e.target.closest('[data-mez]');if(z){M.easy=z.dataset.mez==='1';M.open();return;}if(e.target.closest('[data-mcl]')){closeModal();return;}
+   const b=e.target.closest('[data-mis]');if(!b)return;const d=LIST.find(x=>x.id===b.dataset.mis);closeModal();if(d.city!==S.city){travel(d.city);setTimeout(()=>M.start(d.id),2500);}else M.start(d.id);};};
+ // ---------- run ----------
+ let pend=null;
+ M.start=id=>{const d=LIST.find(x=>x.id===id);if(!d||S.state!=='play')return;if(S.race||S.deliv||(window.TAG&&TAG.active())){toast(L(W.title),'Finish what you are doing first','#ff8a00',1.6);return;}
+  if(M.cur)M.stop(false);shell();try{if(S.heat.level>0)endPursuit(true);}catch(e){}pend=d;
+  const c=document.getElementById('misComic');c.innerHTML=`<div class="pn"><h2>${d.ic} ${L(d.n)}</h2>${d.panels.map(p=>`<div class="p"><div class="e">${p[0]}</div><div class="t">${p[{en:1,fr:2,it:3}[LANG]||1]}</div></div>`).join('')}<button class="tgBtn sk" data-m="skip">${L(W.skip)} ▶</button></div>`;
+  c.classList.add('on');S.paused=true;const lines=d.panels.map(p=>p[{en:1,fr:2,it:3}[LANG]||1]);say(lines.join(' '));clearTimeout(M._t);M._t=setTimeout(go,7200);};
+ function go(){if(!pend)return;const d=pend;pend=null;clearTimeout(M._t);try{speechSynthesis.cancel();}catch(e){}document.getElementById('misComic').classList.remove('on');S.paused=false;
+  const R={d,t:0,limit:M.easy?null:d.time,hits:0,hitT:0,inT:0,spot:0,spotT:0,farT:0,leg:0,carry:false,stop:null,veh:null,goal:null};
+  if(d.kind==='catch'||d.kind==='bump'||d.kind==='follow'){R.veh=grabVehicle(d);if(!R.veh){toast(L(d.n),'…','#ff8a00',1);pend=d;setTimeout(go,1500);return;}}
+  if(d.goal){R.goal=lm(d.goal)||farPoint(400);setBeam(R.goal,d.id==='icecream'?0xff7ab8:0xffd000);}
+  if(d.kind==='taxi'){R.stop=taxiPoint(0);setBeam(R.stop,0x39ff9f);}
+  M.cur=R;toast(d.ic+' '+L(d.n),L(d.g),'#ffe600',2.6);try{TEL.add('mission',{id:d.id,e:M.easy?1:0});}catch(e){}}
+ M.stop=(won,stars)=>{const R=M.cur;if(!R)return;M.cur=null;freeVehicle(R.veh);setBeam(null);arrowOff();const d=R.d;
+  if(!won){feed(`${d.ic} ${L(W.again)}`);return;}
+  const prev=best(d.id);if(!SAVE.missions)SAVE.missions={};SAVE.missions[d.id]={s:Math.max(prev,stars),n:((SAVE.missions[d.id]&&SAVE.missions[d.id].n)||0)+1};
+  const pay=[0,300,500,800][stars]*(prev?.4:1)|0;reward(pay,40*stars,30*stars);save();chime(true);
+  openModal(`<div style="text-align:center"><div style="font-size:64px">${d.ic}</div><h2 style="margin:4px 0">${L(W.done)}</h2><div style="font-size:44px;color:#ffe600;letter-spacing:6px">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
+   <p>${L(d.n)} · +${fmt(pay)}${prev&&stars<=prev?` · ${L(W.best)}: ${'★'.repeat(prev)}`:''}</p><button class="tgBtn" onclick="closeModal()">OK</button></div>`);
+  say(L(W.done));try{TEL.add('missionDone',{id:d.id,s:stars});}catch(e){}};
+ M.step=dt=>{const R=M.cur;if(!R||!player||S.paused)return;const d=R.d;R.t+=dt;if(R.hitT>0)R.hitT-=dt;const tl=R.limit!=null?Math.max(0,R.limit-R.t):null;const tlT=tl!=null?`⏱️ ${Math.ceil(tl)}s`:'';
+  if(R.veh&&!traffic.includes(R.veh)){R.veh=grabVehicle(d);if(!R.veh){M.stop(false);return;}}
+  if(d.kind==='catch'||d.kind==='bump'){const t=R.veh,dd=Math.hypot(t.x-player.x,t.z-player.z);
+   if(player.shifted&&!t.mesh.parent){}
+   if((t.crashed||dd<5.05)&&R.hitT<=0&&dd<6.5){R.hits++;R.hitT=1.2;t.crashed=false;t.crashT=0;noiseHit(.2,900);const need=d.hits||1;toast(`${d.ic} ${R.hits}/${need}`,'','#ff2a6d',1);
+    if(R.hits>=need){const s=R.t<d.stars[0]?3:R.t<d.stars[1]?2:1;M.stop(true,s);return;}}else if(t.crashed){t.crashed=false;t.crashT=0;}
+   arrow(t.x,t.z,L(d.g),`${d.hits?`💥 ${R.hits}/${d.hits} · `:''}${tlT}`);
+   if(tl===0){M.stop(false);toast(L(d.n),L(W.again),'#ff8a00',2.2);}return;}
+  if(d.kind==='follow'){const t=R.veh;try{if(t.axis&&typeof nearestRoad==='function'&&t.along*t.dir>HALF-160){const nr=nearestRoad(t.along).c;if(Math.abs(t.along-nr)<1.6&&(!R.turnT||S.time-R.turnT>3)){const lat=t.axis==='x'?t.lz:t.lx,nax=t.axis==='x'?'z':'x',ndir=lat>0?-1:1,ref=traffic.find(q=>q!==t&&q.axis===nax&&q.dir===ndir&&!q.len),off=ref?(nax==='x'?ref.lz-nearestRoad(ref.lz).c:ref.lx-nearestRoad(ref.lx).c):0;t.axis=nax;if(nax==='x')t.lz=nr+off;else t.lx=nr+off;t.along=lat;t.dir=ndir;R.turnT=S.time;posTraffic(t);R.px=t.x;R.pz=t.z;}}}catch(e){}const dd=Math.hypot(t.x-player.x,t.z-player.z);let msg=L(W.good);if(R.px!=null){const mx=t.x-R.px,mz=t.z-R.pz,ml=Math.hypot(mx,mz);if(ml>40){R.px=t.x;R.pz=t.z;R.spotT=0;R.farT=0;try{placeOnRoad(player,t.x-Math.sin(t.h)*35,t.z-Math.cos(t.h)*35,t.h);}catch(e){}toast('🤖',L(W.lost),'#19d3e6',1.2);return;}if(ml>.01){R.mx=mx/ml;R.mz=mz/ml;}}R.px=t.x;R.pz=t.z;
+   if(dd<9){R.spotT+=dt;msg=L(W.spotted);if(R.spotT>1){R.spot++;R.spotT=-2;R.inT=Math.max(0,R.inT-3);toast('👀',L(W.spotted),'#ff8a00',1.2);}}else{R.spotT=Math.max(0,R.spotT-dt);}
+   if(dd>=9&&dd<=70)R.inT+=dt;if(dd>90){msg=L(W.lost);R.farT+=dt;}else R.farT=0;
+   if(R.farT>25){R.farT=0;try{const b=R.veh;placeOnRoad(player,b.x-Math.sin(b.h)*40,b.z-Math.cos(b.h)*40,b.h);}catch(e){}}
+   arrow(t.x,t.z,msg,`🤖 ${Math.round(R.inT)}/${d.need}s ${tlT}`);
+   if(R.inT>=d.need){const s=R.spot<=d.stars[0]?3:R.spot<=d.stars[1]?2:1;M.stop(true,s);return;}
+   if(tl===0){const s=R.inT>d.need*.5?1:0;if(s)M.stop(true,1);else{M.stop(false);toast(L(d.n),L(W.again),'#ff8a00',2.2);}}return;}
+  if(d.kind==='taxi'){const q=R.stop,dd=Math.hypot(q.x-player.x,q.z-player.z),v=Math.hypot(player.vx,player.vz);
+   arrow(q.x,q.z,R.carry?`${L(W.drop)} ${q.n||''}`:L(W.pick),`🚕 ${R.leg}/${d.legs} ${tlT}`);
+   if(dd<12&&v<9){if(!R.carry){R.carry=true;toast('🙋',L(W.got),'#39ff9f',1.2);say(L(W.got));R.stop=taxiPoint(R.leg+1);setBeam(R.stop,0xffd000);}
+    else{R.carry=false;R.leg++;reward(80,10,5);toast('🚕',`${L(W.thanks)} ${R.leg}/${d.legs}`,'#39ff9f',1.2);if(R.leg>=d.legs){const s=R.limit==null||R.t<=d.time?3:2;M.stop(true,s);return;}R.stop=taxiPoint(R.leg+7);setBeam(R.stop,0x39ff9f);}}
+   if(tl===0){const s=R.leg>=d.stars[1]?2:R.leg>=1?1:0;if(s)M.stop(true,s);else{M.stop(false);toast(L(d.n),L(W.again),'#ff8a00',2.2);}}return;}};
+ const _upd=update;update=function(dt){_upd(dt);try{M.step(dt);}catch(e){console.warn('mission',e);}};
+ // a quit button rides in the pause menu text; Escape also offers it
+ M.quit=()=>{if(M.cur){M.stop(false);}};
+ // no police chases or prank vans while a mission runs
+ const _sp=startPursuit;startPursuit=function(){if(M.cur||pend)return;return _sp.apply(this,arguments);};
+ return M;})();
+// ---------- /MISSIONS
+
+// ---------- PERF (v4.2): smooth play first — lower the graphics by itself when the frame rate stays low ----------
+var PERF=(function(){
+ const P={low:0,last:0,hist:[]};
+ const TX=(en,fr,it)=>({en,fr,it});const L=o=>o[(typeof LANG!=='undefined'&&o[LANG])?LANG:'en'];
+ const W={t:TX('SMOOTHER GRAPHICS','GRAPHISMES PLUS FLUIDES','GRAFICA PIÙ FLUIDA'),s:TX('Graphics lowered so the game runs faster. Change it in Options.','Graphismes baissés pour que le jeu soit plus rapide. Modifiable dans Options.','Grafica ridotta per un gioco più veloce. Puoi cambiarla in Opzioni.')};
+ P.on=()=>!(SAVE&&SAVE.opt&&SAVE.opt.autoGfx===false);
+ setInterval(()=>{try{if(!P.on()||S.state!=='play'||S.paused||document.hidden||(window.HUB&&HUB.open)||(window.SHIFT&&SHIFT.on))return;const f=TEL.fps&&TEL.fps();if(!f)return;P.hist.push(f);if(P.hist.length>4)P.hist.shift();
+  const i=GFX_LEVELS.indexOf(GFXQ);if(i<=0||P.hist.length<3)return;if(performance.now()-P.last<8000)return;
+  const h3=P.hist.slice(-3);if(h3.every(x=>x<26)){const avg=h3.reduce((a,b)=>a+b,0)/3,to=Math.max(0,i-(avg<16?2:1));P.last=performance.now();P.hist=[];setQuality(GFX_LEVELS[to]);if(!P.low++)toast('⚡ '+L(W.t),L(W.s),'#39ff9f',2.6);try{TEL.add('autogfx',{from:GFX_LEVELS[i],to:GFX_LEVELS[to],f});}catch(e){}}}catch(e){}},2000);
+ return P;})();
+// ---------- /PERF
 
 // ---------- NFX: street-racer graphics pack (wet-road reflections, live car reflections, light trails, headlight beams, NFS-style grade) ----------
 var NFX=(function(){
