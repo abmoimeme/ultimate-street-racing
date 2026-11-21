@@ -1,5 +1,5 @@
 // Ultimate Street Racing service worker: fast reloads and an installable app.
-const V='usr-3.3';
+const V='usr-4.0';
 const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|www\.gstatic\.com\/firebasejs)\//;
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(CORE)).catch(()=>{}).then(()=>self.skipWaiting()));});
